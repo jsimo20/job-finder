@@ -1,0 +1,7 @@
+from .greenhouse import fetch as fetch_greenhouse
+from .lever import fetch as fetch_lever
+
+REGISTRY = {
+    "greenhouse": fetch_greenhouse,
+    "lever": fetch_lever,
+}

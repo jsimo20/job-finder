@@ -1,0 +1,11 @@
+[
+  {
+    "id": "abc-123",
+    "text": "Staff Product Manager, Agents",
+    "hostedUrl": "https://jobs.lever.co/example/abc-123",
+    "workplaceType": "remote",
+    "createdAt": 1747094400000,
+    "categories": {"location": "Remote - US", "commitment": "Full-time"},
+    "descriptionPlain": "Lead our agent platform. 6+ years of PM experience required."
+  }
+]
