@@ -72,7 +72,7 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
         stretch_rows = conn.execute(_new_today_sql("stretch"), (target,)).fetchall()
         closed_rows = conn.execute(
             """
-            SELECT c.name AS company_name, p.title, p.last_seen_at
+            SELECT c.name AS company_name, p.title, p.url, p.last_seen_at
             FROM postings p
             JOIN companies c ON c.id = p.company_id
             WHERE date(p.closed_at) = ?
@@ -111,7 +111,13 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
     lines.append(f"## Closed ({len(closed_rows)})")
     if closed_rows:
         for r in closed_rows:
-            lines.append(f"- **{r['company_name']}** — {r['title']} · last seen {r['last_seen_at']}")
+            # Link the title even though the role is gone — the URL often still
+            # resolves to an "archived" or "no longer accepting applications" page
+            # that's useful for verification or to see the cached JD.
+            lines.append(
+                f"- **{r['company_name']}** — [{r['title']}]({r['url']}) · "
+                f"last seen {r['last_seen_at']}"
+            )
     else:
         lines.append("_(none today)_")
     lines.append("")

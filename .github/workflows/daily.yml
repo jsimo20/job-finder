@@ -1,8 +1,11 @@
-name: daily-pm-digest
+name: pm-digest
 
 on:
   schedule:
-    - cron: "0 13 * * *"
+    # 13:00 UTC every 3rd day of the month (1, 4, 7, 10, ...).
+    # The day-of-month counter resets each month, so a calendar rollover can
+    # produce a 1- or 2-day gap — acceptable for a low-frequency digest.
+    - cron: "0 13 */3 * *"
   workflow_dispatch:
 
 permissions:
@@ -39,6 +42,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "no changes"
           else
-            git commit -m "chore(daily): pipeline run $(date -u +%Y-%m-%d) [skip ci]"
+            git commit -m "chore(digest): pipeline run $(date -u +%Y-%m-%d) [skip ci]"
             git push
           fi
