@@ -66,5 +66,12 @@ and `digests/*.md` back to `main`. Manual trigger via `workflow_dispatch`.
 
 ## Editing the company universe
 
-Edit `seeds/companies.json`. Each row needs `name`, `ats_provider`
-(`greenhouse` | `lever`), and `ats_slug` (verify by visiting the public board).
+Two ways:
+
+- **Manually**: edit `seeds/companies.json`. Each row needs `name`, `ats_provider`
+  (`greenhouse` | `lever`), and `ats_slug` (verify by visiting the public board).
+- **Via Claude**: a project-level skill at [.claude/skills/manage-seeds/SKILL.md](.claude/skills/manage-seeds/SKILL.md)
+  handles add / remove / swap / probe / audit operations. Just ask in plain
+  English ("add Anthropic to the seeds", "audit sector coverage", "fix
+  whichever slug just 404'd") — Claude will pick it up and follow the skill's
+  conventions (probe before adding, don't auto-run the pipeline, etc.).
