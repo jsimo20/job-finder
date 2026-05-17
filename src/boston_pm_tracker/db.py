@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS postings (
   first_seen_at TEXT NOT NULL,
   last_seen_at TEXT NOT NULL,
   closed_at TEXT,
+  applied_at TEXT,
+  dismissed_at TEXT,
   hard_filter_verdict TEXT,
   UNIQUE(company_id, external_id)
 );
@@ -106,6 +108,39 @@ def connect(db_path: Path = DEFAULT_DB_PATH) -> Iterator[sqlite3.Connection]:
 def init_db(db_path: Path = DEFAULT_DB_PATH) -> None:
     with connect(db_path) as conn:
         conn.executescript(SCHEMA)
+        # Idempotent column additions for DBs created before these columns existed.
+        _ensure_column(conn, "postings", "applied_at", "TEXT")
+        _ensure_column(conn, "postings", "dismissed_at", "TEXT")
+
+
+def _ensure_column(conn: sqlite3.Connection, table: str, column: str, decl: str) -> None:
+    cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+    if column not in cols:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+
+
+def mark_applied(conn: sqlite3.Connection, *, external_id: str) -> int:
+    cur = conn.execute(
+        "UPDATE postings SET applied_at = ?, dismissed_at = NULL WHERE external_id = ?",
+        (now_iso(), external_id),
+    )
+    return cur.rowcount
+
+
+def mark_dismissed(conn: sqlite3.Connection, *, external_id: str) -> int:
+    cur = conn.execute(
+        "UPDATE postings SET dismissed_at = ?, applied_at = NULL WHERE external_id = ?",
+        (now_iso(), external_id),
+    )
+    return cur.rowcount
+
+
+def unmark(conn: sqlite3.Connection, *, external_id: str) -> int:
+    cur = conn.execute(
+        "UPDATE postings SET applied_at = NULL, dismissed_at = NULL WHERE external_id = ?",
+        (external_id,),
+    )
+    return cur.rowcount
 
 
 def upsert_company(conn: sqlite3.Connection, *, name: str, ats_provider: str, ats_slug: str,

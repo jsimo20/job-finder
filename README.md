@@ -34,12 +34,24 @@ python -m boston_pm_tracker.cli init-db
 ## Run
 
 ```bash
-python -m boston_pm_tracker.cli run        # full pipeline: collect → extract → score → digest
-python -m boston_pm_tracker.cli collect    # ATS fetch only
-python -m boston_pm_tracker.cli extract    # Claude extraction on new postings
-python -m boston_pm_tracker.cli score      # deterministic scoring
-python -m boston_pm_tracker.cli digest     # render today's markdown
+python -m boston_pm_tracker.cli run             # full pipeline: collect → extract → score → digest
+python -m boston_pm_tracker.cli collect         # ATS fetch only
+python -m boston_pm_tracker.cli extract         # Claude extraction on new postings
+python -m boston_pm_tracker.cli score           # deterministic scoring
+python -m boston_pm_tracker.cli digest          # render today's markdown
+python -m boston_pm_tracker.cli review          # interactive picker: mark roles applied/dismissed
+python -m boston_pm_tracker.cli mark-applied <id>  # mark by ATS external id (the gh_jid number)
+python -m boston_pm_tracker.cli dismiss <id>       # hide from future carry-forward
+python -m boston_pm_tracker.cli unmark <id>        # undo applied/dismissed
 ```
+
+## Application tracking
+
+The digest shows two sections per queue: **new** (first seen in this run) and
+**carried forward** (top 20 by score, pending from prior digests, still open,
+not stale, not yet applied or dismissed). Use `cli review` to walk the pending
+list interactively: `a` to mark applied, `d` to dismiss, `s` to skip, `o` to
+open the JD in your browser, `q` to quit.
 
 ## Tests
 

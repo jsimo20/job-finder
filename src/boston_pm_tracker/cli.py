@@ -9,7 +9,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from . import collect, db, digest, extract, score
+from . import collect, db, digest, extract, review, score
 
 load_dotenv(override=True)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -54,6 +54,35 @@ def _cmd_digest(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_review(args: argparse.Namespace) -> int:
+    review.run(db_path=Path(args.db) if args.db else db.DEFAULT_DB_PATH)
+    return 0
+
+
+def _cmd_mark_applied(args: argparse.Namespace) -> int:
+    db_path = Path(args.db) if args.db else db.DEFAULT_DB_PATH
+    with db.connect(db_path) as conn:
+        n = db.mark_applied(conn, external_id=args.external_id)
+    print(f"updated {n} posting(s)")
+    return 0 if n else 1
+
+
+def _cmd_dismiss(args: argparse.Namespace) -> int:
+    db_path = Path(args.db) if args.db else db.DEFAULT_DB_PATH
+    with db.connect(db_path) as conn:
+        n = db.mark_dismissed(conn, external_id=args.external_id)
+    print(f"updated {n} posting(s)")
+    return 0 if n else 1
+
+
+def _cmd_unmark(args: argparse.Namespace) -> int:
+    db_path = Path(args.db) if args.db else db.DEFAULT_DB_PATH
+    with db.connect(db_path) as conn:
+        n = db.unmark(conn, external_id=args.external_id)
+    print(f"updated {n} posting(s)")
+    return 0 if n else 1
+
+
 def _cmd_run(args: argparse.Namespace) -> int:
     db_path = Path(args.db) if args.db else db.DEFAULT_DB_PATH
     db.init_db(db_path)
@@ -90,6 +119,20 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(func=_cmd_digest)
 
     sub.add_parser("run").set_defaults(func=_cmd_run)
+
+    sub.add_parser("review").set_defaults(func=_cmd_review)
+
+    p = sub.add_parser("mark-applied")
+    p.add_argument("external_id", help="ATS posting id (the gh_jid number, etc.)")
+    p.set_defaults(func=_cmd_mark_applied)
+
+    p = sub.add_parser("dismiss")
+    p.add_argument("external_id")
+    p.set_defaults(func=_cmd_dismiss)
+
+    p = sub.add_parser("unmark")
+    p.add_argument("external_id")
+    p.set_defaults(func=_cmd_unmark)
 
     args = parser.parse_args(argv)
     return args.func(args)

@@ -9,6 +9,7 @@ from . import db
 from .taxonomy import STALE_DAYS
 
 DEFAULT_DIGEST_DIR = Path(__file__).resolve().parents[2] / "digests"
+CARRY_FORWARD_CAP = 20
 
 
 def _fmt_comp(lo: int | None, hi: int | None, source: str | None) -> str:
@@ -42,24 +43,47 @@ def _row_md(row) -> str:
     )
 
 
+_BASE_COLS = """
+    p.id, p.title, p.location, p.workplace_type, p.url,
+    c.name AS company_name,
+    e.yoe_required, e.comp_base_min, e.comp_base_max, e.comp_source,
+    e.domain_tags, e.company_stage, e.stretch_reason,
+    s.total_score
+"""
+
+_BASE_JOIN_WHERE = f"""
+    FROM scores s
+    JOIN postings p ON p.id = s.posting_id
+    JOIN companies c ON c.id = p.company_id
+    JOIN extractions e ON e.posting_id = p.id
+    WHERE p.closed_at IS NULL
+      AND p.applied_at IS NULL
+      AND p.dismissed_at IS NULL
+      AND (julianday('now') - julianday(COALESCE(p.posted_at, p.first_seen_at))) <= {STALE_DAYS}
+"""
+
+
 def _new_today_sql(queue: str) -> str:
-    # Exclude resume-fishing reqs: anything where the source-side posted_at
-    # (or our first_seen_at if posted_at is missing) is older than STALE_DAYS.
+    # New = first seen on the digest's target date.
     return f"""
-        SELECT p.id, p.title, p.location, p.workplace_type, p.url,
-               c.name AS company_name,
-               e.yoe_required, e.comp_base_min, e.comp_base_max, e.comp_source,
-               e.domain_tags, e.company_stage, e.stretch_reason,
-               s.total_score
-        FROM scores s
-        JOIN postings p ON p.id = s.posting_id
-        JOIN companies c ON c.id = p.company_id
-        JOIN extractions e ON e.posting_id = p.id
-        WHERE s.queue = '{queue}'
-          AND p.closed_at IS NULL
+        SELECT {_BASE_COLS}
+        {_BASE_JOIN_WHERE}
+          AND s.queue = '{queue}'
           AND date(p.first_seen_at) = ?
-          AND (julianday('now') - julianday(COALESCE(p.posted_at, p.first_seen_at))) <= {STALE_DAYS}
         ORDER BY s.total_score DESC
+    """
+
+
+def _carry_forward_sql(queue: str) -> str:
+    # Carry forward = seen earlier, still open, in-scope, not stale, neither
+    # applied nor dismissed. Capped to keep the digest readable.
+    return f"""
+        SELECT {_BASE_COLS}
+        {_BASE_JOIN_WHERE}
+          AND s.queue = '{queue}'
+          AND date(p.first_seen_at) < ?
+        ORDER BY s.total_score DESC, p.first_seen_at DESC
+        LIMIT {CARRY_FORWARD_CAP}
     """
 
 
@@ -69,7 +93,9 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
     target = target_date or datetime.now(timezone.utc).date().isoformat()
     with db.connect(db_path) as conn:
         main_rows = conn.execute(_new_today_sql("main"), (target,)).fetchall()
+        main_carry = conn.execute(_carry_forward_sql("main"), (target,)).fetchall()
         stretch_rows = conn.execute(_new_today_sql("stretch"), (target,)).fetchall()
+        stretch_carry = conn.execute(_carry_forward_sql("stretch"), (target,)).fetchall()
         closed_rows = conn.execute(
             """
             SELECT c.name AS company_name, p.title, p.url, p.last_seen_at
@@ -87,26 +113,33 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
               (SELECT COUNT(*) FROM postings WHERE closed_at IS NULL) AS open_postings,
               (SELECT COUNT(*) FROM postings WHERE hard_filter_verdict = 'keep' AND closed_at IS NULL) AS survived,
               (SELECT COUNT(*) FROM scores WHERE queue = 'main') AS main_total,
-              (SELECT COUNT(*) FROM scores WHERE queue = 'stretch') AS stretch_total
+              (SELECT COUNT(*) FROM scores WHERE queue = 'stretch') AS stretch_total,
+              (SELECT COUNT(*) FROM postings WHERE applied_at IS NOT NULL) AS applied_total,
+              (SELECT COUNT(*) FROM postings p JOIN scores s ON s.posting_id = p.id
+                 WHERE p.closed_at IS NULL AND p.applied_at IS NULL AND p.dismissed_at IS NULL
+                 AND s.queue IN ('main','stretch')) AS pending_total
             """
         ).fetchone()
 
-    lines: list[str] = [f"# PM Jobs — {target}", ""]
-    lines.append(f"## Main queue — new ({len(main_rows)})")
-    lines.append("Sorted by score desc.\n")
-    if main_rows:
-        for r in main_rows:
-            lines.append(_row_md(r))
-    else:
-        lines.append("_(none today)_\n")
+    def _section(header: str, blurb: str, rows) -> None:
+        lines.append(f"## {header} ({len(rows)})")
+        lines.append(blurb + "\n")
+        if rows:
+            for r in rows:
+                lines.append(_row_md(r))
+        else:
+            lines.append("_(none)_\n")
 
-    lines.append(f"## Stretch queue — new ({len(stretch_rows)})")
-    lines.append("YOE ≥ 8; review only.\n")
-    if stretch_rows:
-        for r in stretch_rows:
-            lines.append(_row_md(r))
-    else:
-        lines.append("_(none today)_\n")
+    lines: list[str] = [f"# PM Jobs — {target}", ""]
+    _section("Main queue — new", "Sorted by score desc.", main_rows)
+    _section(
+        "Main queue — carried forward",
+        f"Pending from prior digests (top {CARRY_FORWARD_CAP} by score). "
+        "Mark applied or dismissed via `python -m boston_pm_tracker.cli review`.",
+        main_carry,
+    )
+    _section("Stretch queue — new", "YOE ≥ 8; review only.", stretch_rows)
+    _section("Stretch queue — carried forward", "YOE ≥ 8; review only.", stretch_carry)
 
     lines.append(f"## Closed ({len(closed_rows)})")
     if closed_rows:
@@ -126,7 +159,9 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
     lines.append(
         f"- Companies: {totals['companies']} · Open postings: {totals['open_postings']} "
         f"· Survived Stage 1: {totals['survived']} · Main total: {totals['main_total']} "
-        f"· Stretch total: {totals['stretch_total']}"
+        f"· Stretch total: {totals['stretch_total']} "
+        f"· Pending unapplied: {totals['pending_total']} "
+        f"· Applied lifetime: {totals['applied_total']}"
     )
 
     body = "\n".join(lines).rstrip() + "\n"
