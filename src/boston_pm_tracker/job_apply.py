@@ -1,0 +1,418 @@
+"""Apply-prep: turn a posting row into a per-job folder with tailored resume,
+cover letter, standard answers, and apply notes.
+
+Two entry points:
+- tailor(posting_row): runs an LLM call to propose RESUME_DATA + cover letter
+  + why-this-matches. Used when called from a plain script (no Claude in loop).
+- render(posting_row, resume_data, cover_letter, why_this_matches): pure,
+  deterministic. Writes the per-job folder. Called by /job-apply after the
+  user approves the tailoring proposals shown by Claude.
+"""
+from __future__ import annotations
+
+import json
+import re
+import shutil
+import sys
+import tomllib
+import webbrowser
+from datetime import date
+from pathlib import Path
+from typing import Any, Mapping
+
+try:
+    from anthropic import Anthropic
+except ImportError:  # pragma: no cover - optional for render()
+    Anthropic = None  # type: ignore[assignment]
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_RESUME_SKILL = Path.home() / ".claude" / "ai_skills" / "resume_generator" / "generate_resume.py"
+DEFAULT_COVER_SKILL = Path.home() / ".claude" / "ai_skills" / "cover_letter_skill" / "generate_cover_letter.py"
+DEFAULT_SESSION_CONTEXT = Path.home() / ".claude" / "ai_skills" / "SESSION_CONTEXT_Jobsearch.md"
+DEFAULT_INPUTS = Path.home() / "OneDrive" / "Documents" / "Job Search" / "2026" / "inputs"
+DEFAULT_APPLICATIONS = Path.home() / "OneDrive" / "Documents" / "Job Search" / "2026" / "applications"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Config
+# ─────────────────────────────────────────────────────────────────────────────
+
+class Config:
+    """Resolved paths for apply-prep, read from pyproject.toml's [tool.job_apply]."""
+
+    def __init__(self, *, inputs_dir: Path, applications_dir: Path,
+                 session_context_path: Path, resume_skill: Path, cover_skill: Path) -> None:
+        self.inputs_dir = inputs_dir
+        self.applications_dir = applications_dir
+        self.session_context_path = session_context_path
+        self.resume_skill = resume_skill
+        self.cover_skill = cover_skill
+
+    @property
+    def resume_master_md(self) -> Path:
+        return self.inputs_dir / "resume_master.md"
+
+    @property
+    def personal_statement_md(self) -> Path:
+        return self.inputs_dir / "personal_statement.md"
+
+    @property
+    def standard_answers_md(self) -> Path:
+        return self.inputs_dir / "standard_answers.md"
+
+
+def load_config(pyproject_path: Path | None = None) -> Config:
+    pyproject_path = pyproject_path or (REPO_ROOT / "pyproject.toml")
+    cfg: dict = {}
+    if pyproject_path.exists():
+        with pyproject_path.open("rb") as f:
+            cfg = tomllib.load(f).get("tool", {}).get("job_apply", {})
+
+    def _resolve(key: str, default: Path) -> Path:
+        raw = cfg.get(key)
+        return Path(raw).expanduser() if raw else default
+
+    return Config(
+        inputs_dir=_resolve("inputs_dir", DEFAULT_INPUTS),
+        applications_dir=_resolve("applications_dir", DEFAULT_APPLICATIONS),
+        session_context_path=_resolve("session_context_path", DEFAULT_SESSION_CONTEXT),
+        resume_skill=_resolve("resume_skill_path", DEFAULT_RESUME_SKILL),
+        cover_skill=_resolve("cover_skill_path", DEFAULT_COVER_SKILL),
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Path helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def slugify(value: str, *, max_len: int = 40) -> str:
+    s = _SLUG_RE.sub("-", value.lower()).strip("-")
+    return s[:max_len].rstrip("-") or "untitled"
+
+
+def outdir_for(posting_row: Mapping[str, Any], applications_dir: Path) -> Path:
+    today = date.today().isoformat()
+    company = slugify(str(posting_row["company_name"]))
+    role = slugify(str(posting_row["title"]))
+    return applications_dir / f"{today}_{company}_{role}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Resume rendering
+# ─────────────────────────────────────────────────────────────────────────────
+
+RESUME_DATA_BLOCK = re.compile(
+    r"# ---------- RESUME DATA \(EDIT ONLY THIS BLOCK\) ----------\n"
+    r".*?\n"
+    r"# ---------- STYLES \(LOCKED\) ----------",
+    re.DOTALL,
+)
+
+RESUME_MAIN_BLOCK = re.compile(
+    r'if __name__ == "__main__":\n.*?(?=\n\S|\Z)', re.DOTALL,
+)
+
+
+def _render_resume(skill_path: Path, resume_data: dict, output_pdf: Path) -> None:
+    """Copy generate_resume.py, swap RESUME_DATA + output path, run it."""
+    if not skill_path.exists():
+        raise FileNotFoundError(f"resume_generator script not found: {skill_path}")
+    src = skill_path.read_text(encoding="utf-8")
+
+    new_block = (
+        "# ---------- RESUME DATA (EDIT ONLY THIS BLOCK) ----------\n"
+        f"RESUME_DATA = {json.dumps(resume_data, indent=4, ensure_ascii=False)}\n\n"
+        "# ---------- STYLES (LOCKED) ----------"
+    )
+    patched, n = RESUME_DATA_BLOCK.subn(lambda _m: new_block, src, count=1)
+    if n != 1:
+        raise RuntimeError("Could not locate RESUME_DATA block in generate_resume.py — has the skill template changed?")
+
+    main_replacement = (
+        f'if __name__ == "__main__":\n'
+        f"    build_pdf({json.dumps(str(output_pdf))})\n"
+        f'    print("Built:", {json.dumps(str(output_pdf))})\n'
+    )
+    patched, n = RESUME_MAIN_BLOCK.subn(lambda _m: main_replacement, patched, count=1)
+    if n != 1:
+        patched = patched.rstrip() + "\n\n" + main_replacement
+
+    script_copy = output_pdf.with_suffix(".py")
+    script_copy.write_text(patched, encoding="utf-8")
+
+    import subprocess
+    result = subprocess.run(
+        [sys.executable, str(script_copy)],
+        cwd=script_copy.parent,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Resume PDF build failed.\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}\n"
+            f"Script preserved at: {script_copy}"
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Cover letter rendering
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_cover_letter(skill_path: Path, cover_letter: dict, output_pdf: Path) -> None:
+    """Build a single-page cover letter PDF using the skill's design system.
+
+    cover_letter dict shape:
+      {
+        "date": "May 17, 2026",
+        "recipient": "Hiring Team\\nCompany Name\\nCity, State",
+        "salutation": "To the Hiring Team,",
+        "paragraphs": ["First para...", "Second para...", ...],
+        "closing": "Looking forward to talking,",
+        "title_subtitle": "Principal Product Manager | AI, Platforms & Consumer Products",
+      }
+    """
+    if not skill_path.exists():
+        raise FileNotFoundError(f"cover_letter skill script not found: {skill_path}")
+
+    # We don't reuse the skill's hardcoded BODY; we re-implement the layout
+    # inline using the same constants. This keeps Claude-driven content
+    # generation decoupled from the file.
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_JUSTIFY
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable
+    from reportlab.lib import colors
+
+    NAVY = colors.HexColor("#1B2A4A")
+    CHARCOAL = colors.HexColor("#2D3436")
+    ACCENT = colors.HexColor("#2C5F8A")
+    LIGHT = colors.HexColor("#A3BAC3")
+
+    s = {
+        "name_header": ParagraphStyle("nh", fontName="Helvetica-Bold", fontSize=18,
+                                      textColor=NAVY, spaceAfter=1, alignment=TA_CENTER, leading=20),
+        "title_header": ParagraphStyle("th", fontName="Helvetica", fontSize=10,
+                                       textColor=ACCENT, spaceAfter=1, alignment=TA_CENTER, leading=12),
+        "contact_header": ParagraphStyle("ch", fontName="Helvetica", fontSize=8.5,
+                                         textColor=CHARCOAL, spaceAfter=0, alignment=TA_CENTER, leading=11),
+        "date": ParagraphStyle("d", fontName="Helvetica", fontSize=9,
+                               textColor=CHARCOAL, spaceAfter=4, alignment=TA_LEFT, leading=12),
+        "recipient": ParagraphStyle("r", fontName="Helvetica", fontSize=9,
+                                    textColor=CHARCOAL, spaceAfter=1, alignment=TA_LEFT, leading=13),
+        "recipient_last": ParagraphStyle("rl", fontName="Helvetica", fontSize=9,
+                                         textColor=CHARCOAL, spaceAfter=10, alignment=TA_LEFT, leading=13),
+        "salutation": ParagraphStyle("sa", fontName="Helvetica", fontSize=9.5,
+                                     textColor=CHARCOAL, spaceAfter=6, alignment=TA_LEFT, leading=13),
+        "body": ParagraphStyle("b", fontName="Helvetica", fontSize=9.5,
+                               textColor=CHARCOAL, spaceAfter=7, alignment=TA_JUSTIFY, leading=14),
+        "closing": ParagraphStyle("cl", fontName="Helvetica", fontSize=9.5,
+                                  textColor=CHARCOAL, spaceAfter=2, alignment=TA_LEFT, leading=14),
+        "sig_name": ParagraphStyle("sn", fontName="Helvetica-Bold", fontSize=10,
+                                   textColor=NAVY, spaceAfter=1, alignment=TA_LEFT, leading=13),
+        "sig_contact": ParagraphStyle("sc", fontName="Helvetica", fontSize=8.5,
+                                      textColor=CHARCOAL, alignment=TA_LEFT, leading=11),
+    }
+
+    doc = SimpleDocTemplate(
+        str(output_pdf), pagesize=letter,
+        leftMargin=0.65 * inch, rightMargin=0.65 * inch,
+        topMargin=0.55 * inch, bottomMargin=0.55 * inch,
+        title="Sample User — Cover Letter",
+        author="Sample User",
+        subject="Product Management Cover Letter",
+        creator="Sample User",
+    )
+
+    story = []
+    title_subtitle = cover_letter.get("title_subtitle", "Principal Product Manager | AI, Platforms & Consumer Products")
+    story.append(Paragraph("Sample User", s["name_header"]))
+    story.append(Paragraph(title_subtitle.replace("&", "&amp;"), s["title_header"]))
+    story.append(Paragraph(
+        '555-555-0100  &middot;  <a href="mailto:owner@example.com" color="#2C5F8A">owner@example.com</a>'
+        '  &middot;  <a href="https://www.linkedin.com/in/your-handle/" color="#2C5F8A">LinkedIn</a>',
+        s["contact_header"]
+    ))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=LIGHT, spaceBefore=3, spaceAfter=8))
+
+    story.append(Paragraph(cover_letter["date"], s["date"]))
+    recipient_lines = cover_letter["recipient"].split("\n")
+    for i, line in enumerate(recipient_lines):
+        style = s["recipient_last"] if i == len(recipient_lines) - 1 else s["recipient"]
+        story.append(Paragraph(line, style))
+
+    story.append(Paragraph(cover_letter["salutation"], s["salutation"]))
+    for para in cover_letter["paragraphs"]:
+        story.append(Paragraph(para, s["body"]))
+
+    story.append(Spacer(1, 4))
+    story.append(Paragraph(cover_letter.get("closing", "Looking forward,"), s["closing"]))
+    story.append(Paragraph("Sample User", s["sig_name"]))
+    story.append(Paragraph(
+        '<a href="mailto:owner@example.com" color="#2C5F8A">owner@example.com</a>  ·  555-555-0100',
+        s["sig_contact"]
+    ))
+
+    doc.build(story)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Per-job folder assembly
+# ─────────────────────────────────────────────────────────────────────────────
+
+APPLY_MD_TEMPLATE = """# Apply notes — {company} / {title}
+
+- **External ID:** `{external_id}` (use `boston-pm-tracker mark-applied {external_id}` after submit)
+- **Score / Queue:** {score} / {queue}
+- **Location:** {location}
+- **URL:** {url}
+
+## Why this matches
+{why_bullets}
+
+## QA checklist (from resume_generator/SKILL.md)
+- [ ] Single page?
+- [ ] All bullet dots at same x?
+- [ ] No "orphan" wrapped word you can eliminate by tightening?
+- [ ] LinkedIn + email hyperlinks render in ACCENT blue?
+- [ ] Patent count = 6 filed, 2 granted?
+- [ ] Connection Manager NOT claimed as 0→1?
+- [ ] AI agent framed as Phase 1 development / business case projection?
+- [ ] Smart home framed with leading indicator + addressable market (not delivered across 8M)?
+- [ ] Exactly 4 skill categories?
+- [ ] No skills outside the source pool?
+- [ ] PDF metadata set (title, author, subject, creator)?
+- [ ] Fun bullet present, fourth clause rotated for this application?
+"""
+
+
+def render(
+    *,
+    posting_row: Mapping[str, Any],
+    resume_data: dict,
+    cover_letter: dict,
+    why_this_matches: list[str],
+    config: Config | None = None,
+    open_browser: bool = True,
+) -> Path:
+    """Write the per-job folder. Returns the folder path.
+
+    Idempotent: re-running on the same role overwrites in place.
+    """
+    config = config or load_config()
+    outdir = outdir_for(posting_row, config.applications_dir)
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    company_slug = slugify(str(posting_row["company_name"]))
+    resume_pdf = outdir / f"Sample_User_Resume_{company_slug}.pdf"
+    cover_pdf = outdir / f"Sample_User_CoverLetter_{company_slug}.pdf"
+
+    try:
+        _render_resume(config.resume_skill, resume_data, resume_pdf)
+    except Exception as exc:
+        raw = outdir / "_resume_call_raw.json"
+        raw.write_text(json.dumps(resume_data, indent=2, ensure_ascii=False), encoding="utf-8")
+        raise RuntimeError(f"Resume render failed; RESUME_DATA dumped to {raw}") from exc
+
+    _render_cover_letter(config.cover_skill, cover_letter, cover_pdf)
+
+    if config.standard_answers_md.exists():
+        shutil.copy2(config.standard_answers_md, outdir / "standard_answers.md")
+    else:
+        (outdir / "standard_answers.md").write_text(
+            f"# standard_answers.md not found at {config.standard_answers_md}\n",
+            encoding="utf-8",
+        )
+
+    why_bullets = "\n".join(f"- {b}" for b in why_this_matches) or "- (none provided)"
+    (outdir / "apply.md").write_text(
+        APPLY_MD_TEMPLATE.format(
+            company=posting_row["company_name"],
+            title=posting_row["title"],
+            external_id=posting_row["external_id"],
+            score=posting_row.get("total_score", "?"),
+            queue=posting_row.get("queue", "?"),
+            location=posting_row.get("location", "?"),
+            url=posting_row["url"],
+            why_bullets=why_bullets,
+        ),
+        encoding="utf-8",
+    )
+
+    if open_browser:
+        try:
+            webbrowser.open(str(posting_row["url"]))
+        except Exception as exc:
+            print(f"[job_apply] webbrowser.open failed: {exc}. URL: {posting_row['url']}", file=sys.stderr)
+
+    return outdir
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# tailor() — LLM call. Optional convenience for non-Claude-Code usage.
+# /job-apply slash command does this work itself so it can show diffs.
+# ─────────────────────────────────────────────────────────────────────────────
+
+TAILOR_SYSTEM = """You are Sample User's resume + cover letter tailoring assistant.
+
+You will be given a job description, James's master resume (markdown), his personal statement, and the anti-overstatement rules from SESSION_CONTEXT_Jobsearch.md.
+
+Your job: produce a JSON object with three keys:
+
+1. resume_data — a Python-style dict matching the RESUME_DATA schema in generate_resume.py:
+   keys: name, title, contact, experience (list of {company, role, dates, bullets}),
+         skills (list of [category, body] pairs), education, certifications (list)
+   Edit ONLY the order and wording of bullets, the title subtitle, the skill category order,
+   and the fourth clause of the fun-bullet. Keep all factual content traceable to the master.
+
+2. cover_letter — dict with keys: date, recipient, salutation, paragraphs (list of strings),
+   closing, title_subtitle. Body should be 3-5 paragraphs, traceable to source material.
+
+3. why_this_matches — list of 3-5 short bullets justifying the fit.
+
+Return ONLY valid JSON. No commentary."""
+
+
+def tailor(posting_row: Mapping[str, Any], *, config: Config | None = None,
+           model: str = "claude-opus-4-7") -> dict:
+    """Run a single Claude call to propose resume_data + cover_letter + why_this_matches.
+
+    Used standalone. /job-apply slash command does this work conversationally
+    instead, so it can show diffs and accept feedback before render().
+    """
+    if Anthropic is None:
+        raise RuntimeError("anthropic package not installed")
+    config = config or load_config()
+
+    resume_master = config.resume_master_md.read_text(encoding="utf-8")
+    personal_statement = config.personal_statement_md.read_text(encoding="utf-8")
+    session_ctx = (
+        config.session_context_path.read_text(encoding="utf-8")
+        if config.session_context_path.exists() else "(SESSION_CONTEXT_Jobsearch.md not found)"
+    )
+
+    user_prompt = (
+        f"## Job description\n\n**Company:** {posting_row['company_name']}\n"
+        f"**Role:** {posting_row['title']}\n"
+        f"**URL:** {posting_row['url']}\n\n"
+        f"```\n{posting_row.get('jd_text') or '(no jd_text in DB — fall back to title + company)'}\n```\n\n"
+        f"## Master resume\n\n{resume_master}\n\n"
+        f"## Personal statement\n\n{personal_statement}\n\n"
+        f"## Anti-overstatement rules (SESSION_CONTEXT_Jobsearch.md)\n\n{session_ctx}\n"
+    )
+
+    client = Anthropic()
+    msg = client.messages.create(
+        model=model,
+        max_tokens=8000,
+        system=[{"type": "text", "text": TAILOR_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+    text = msg.content[0].text.strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\n", "", text)
+        text = re.sub(r"\n```$", "", text)
+    return json.loads(text)

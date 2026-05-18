@@ -53,6 +53,31 @@ not stale, not yet applied or dismissed). Use `cli review` to walk the pending
 list interactively: `a` to mark applied, `d` to dismiss, `s` to skip, `o` to
 open the JD in your browser, `q` to quit.
 
+## Apply-prep (`/job-apply` in Claude Code)
+
+For roles you want to pursue, the `/job-apply` slash command (project-scoped, in
+`.claude/commands/`) drives a conversational loop with Claude: pick a pending
+role from the DB, review a tailored `RESUME_DATA` diff + cover-letter draft, then
+on approval Claude calls `boston_pm_tracker.job_apply.render()` to produce a
+per-job folder with a tailored resume PDF, cover letter PDF, standard answers,
+and apply notes. The browser auto-opens the JD URL. You submit by hand and run
+`mark-applied <external_id>` after.
+
+The tailoring rules live in three skill files at `~/.claude/ai_skills/`:
+- `resume_generator/SKILL.md` — locked PDF design system + per-app workflow
+- `cover_letter_skill/SKILL.md` — voice and structure for cover letters
+- `SESSION_CONTEXT_Jobsearch.md` — anti-overstatement rules (must be present)
+
+### Phase 0 prep (one-time, before first use)
+
+Three static input files at `~/path/to/job-search/inputs/`:
+- `resume_master.md` — markdown source of truth for resume content
+- `personal_statement.md` — career narrative, voice for cover letters
+- `standard_answers.md` — work auth, salary, EEO defaults, short-answer stems
+
+Per-job output folders land at `~/path/to/job-search/applications/`.
+Paths are overridable via the `[tool.job_apply]` block in `pyproject.toml`.
+
 ## Tests
 
 ```bash
