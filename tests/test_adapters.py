@@ -31,3 +31,20 @@ def test_lever_normalize():
     assert staff.location == "Remote - US"
     assert "6+ years" in staff.jd_text
     assert staff.posted_at and staff.posted_at.startswith("2025-")
+
+
+def test_ashby_normalize():
+    from boston_pm_tracker.adapters import ashby
+
+    jobs = json.loads((FIXTURES / "ashby_sample.json").read_text())
+    normalized = [ashby.normalize(j, slug="benchling") for j in jobs if j.get("isListed")]
+    assert len(normalized) == 1
+    p = normalized[0]
+    assert p.title == "Senior Product Manager, Platform"
+    assert p.level == "senior"
+    assert p.workplace_type == "hybrid"
+    assert p.location == "Boston, MA"
+    assert "5+ years" in p.jd_text
+    assert "<p>" not in p.jd_text
+    assert p.posted_at == "2026-05-01"
+    assert p.url == "https://jobs.ashbyhq.com/benchling/abc-123"

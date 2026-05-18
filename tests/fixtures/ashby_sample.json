@@ -1,0 +1,22 @@
+[
+  {
+    "id": "abc-123",
+    "title": "Senior Product Manager, Platform",
+    "isListed": true,
+    "locationName": "Boston, MA",
+    "workplaceType": "Hybrid",
+    "descriptionHtml": "<p>5+ years PM experience required.</p><ul><li>Drive roadmap</li></ul>",
+    "publishedDate": "2026-05-01",
+    "compensationTierSummary": null
+  },
+  {
+    "id": "xyz-999",
+    "title": "Staff Product Manager, Data",
+    "isListed": false,
+    "locationName": "Remote",
+    "workplaceType": "Remote",
+    "descriptionHtml": "<p>Unlisted draft role.</p>",
+    "publishedDate": "2026-05-10",
+    "compensationTierSummary": null
+  }
+]
