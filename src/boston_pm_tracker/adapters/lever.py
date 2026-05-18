@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any
 
 import httpx
 
@@ -24,7 +23,6 @@ class NormalizedPosting:
     url: str
     jd_text: str | None
     posted_at: str | None
-    raw_json: dict[str, Any]
 
 
 _LEVEL_RE = re.compile(
@@ -93,7 +91,6 @@ def normalize(posting: dict[str, Any]) -> NormalizedPosting:
         url=posting["hostedUrl"],
         jd_text=_jd_text(posting),
         posted_at=posted_at,
-        raw_json=posting,
     )
 
 

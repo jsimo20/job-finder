@@ -34,7 +34,6 @@ CREATE TABLE IF NOT EXISTS postings (
   level TEXT,
   url TEXT NOT NULL,
   jd_text TEXT,
-  raw_json TEXT NOT NULL,
   posted_at TEXT,
   first_seen_at TEXT NOT NULL,
   last_seen_at TEXT NOT NULL,
@@ -164,22 +163,21 @@ def upsert_company(conn: sqlite3.Connection, *, name: str, ats_provider: str, at
 
 def upsert_posting(conn: sqlite3.Connection, *, company_id: int, external_id: str, title: str,
                    location: str | None, workplace_type: str | None, level: str | None,
-                   url: str, jd_text: str | None, raw_json: dict, posted_at: str | None,
+                   url: str, jd_text: str | None, posted_at: str | None,
                    hard_filter_verdict: str) -> int:
     row = conn.execute(
         "SELECT id, closed_at FROM postings WHERE company_id = ? AND external_id = ?",
         (company_id, external_id),
     ).fetchone()
-    raw_str = json.dumps(raw_json)
     if row:
         conn.execute(
-            "UPDATE postings SET title = ?, location = ?, workplace_type = ?, level = ?, url = ?, jd_text = ?, raw_json = ?, posted_at = COALESCE(?, posted_at), last_seen_at = ?, closed_at = NULL, hard_filter_verdict = ? WHERE id = ?",
-            (title, location, workplace_type, level, url, jd_text, raw_str, posted_at, now_iso(), hard_filter_verdict, row["id"]),
+            "UPDATE postings SET title = ?, location = ?, workplace_type = ?, level = ?, url = ?, jd_text = ?, posted_at = COALESCE(?, posted_at), last_seen_at = ?, closed_at = NULL, hard_filter_verdict = ? WHERE id = ?",
+            (title, location, workplace_type, level, url, jd_text, posted_at, now_iso(), hard_filter_verdict, row["id"]),
         )
         return row["id"]
     cur = conn.execute(
-        "INSERT INTO postings (company_id, external_id, title, location, workplace_type, level, url, jd_text, raw_json, posted_at, first_seen_at, last_seen_at, hard_filter_verdict) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (company_id, external_id, title, location, workplace_type, level, url, jd_text, raw_str, posted_at, now_iso(), now_iso(), hard_filter_verdict),
+        "INSERT INTO postings (company_id, external_id, title, location, workplace_type, level, url, jd_text, posted_at, first_seen_at, last_seen_at, hard_filter_verdict) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (company_id, external_id, title, location, workplace_type, level, url, jd_text, posted_at, now_iso(), now_iso(), hard_filter_verdict),
     )
     return cur.lastrowid
 

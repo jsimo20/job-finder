@@ -20,7 +20,7 @@ def test_upsert_company_and_posting(tmp_path):
         pid = db.upsert_posting(
             conn, company_id=cid, external_id="1", title="Senior PM",
             location="Boston", workplace_type="hybrid", level="senior",
-            url="https://example.com/1", jd_text="JD", raw_json={"id": 1},
+            url="https://example.com/1", jd_text="JD",
             posted_at="2026-05-01T00:00:00+00:00",
             hard_filter_verdict="keep",
         )
@@ -43,7 +43,7 @@ def test_mark_applied_and_dismiss_round_trip(tmp_path):
         db.upsert_posting(
             conn, company_id=cid, external_id="42", title="Senior PM",
             location="Boston", workplace_type="hybrid", level="senior",
-            url="https://example.com/42", jd_text="JD", raw_json={},
+            url="https://example.com/42", jd_text="JD",
             posted_at=None, hard_filter_verdict="keep",
         )
         assert db.mark_applied(conn, external_id="42") == 1

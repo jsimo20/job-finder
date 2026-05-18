@@ -8,7 +8,6 @@ from __future__ import annotations
 import html
 import re
 from dataclasses import dataclass
-from typing import Any
 
 import httpx
 from bs4 import BeautifulSoup
@@ -26,7 +25,6 @@ class NormalizedPosting:
     url: str
     jd_text: str | None
     posted_at: str | None
-    raw_json: dict[str, Any]
 
 
 def _strip_html(content: str | None) -> str | None:
@@ -76,7 +74,6 @@ def normalize(job: dict[str, Any]) -> NormalizedPosting:
         url=job["absolute_url"],
         jd_text=_strip_html(job.get("content")),
         posted_at=posted_at,
-        raw_json=job,
     )
 
 

@@ -27,3 +27,6 @@ dist/
 # Local-only
 *.local.*
 scratch/
+
+# Generated database (rebuilt by pipeline)
+data/jobs.db

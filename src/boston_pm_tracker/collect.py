@@ -77,7 +77,6 @@ def run(seeds_path: Path = DEFAULT_SEEDS, db_path: Path = db.DEFAULT_DB_PATH) ->
                     level=p.level,
                     url=p.url,
                     jd_text=p.jd_text,
-                    raw_json=p.raw_json,
                     posted_at=p.posted_at,
                     hard_filter_verdict=verdict.reason,
                 )
