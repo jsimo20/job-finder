@@ -29,7 +29,7 @@ b. **Show the user a one-paragraph read of the JD** — what they're hiring for,
 
 c. **Draft `RESUME_DATA`** as a Python dict, following the tailoring workflow in `resume_generator/SKILL.md`:
    - Reorder Contoso bullets to lead with the strongest JD match
-   - Adjust title subtitle (e.g., "Mobile, AI & SaaS Growth"; "AI, Platforms & 0→1 Consumer Products")
+   - Adjust title subtitle (e.g., "Mobile, AI & SaaS Growth"; "AI, Platforms & Zero-to-One Consumer Products"). Use "zero-to-one" spelled out — never the "0→1" glyph.
    - Re-prioritize/rename skill categories per `SESSION_CONTEXT` rules
    - Rotate the fourth clause in the fun bullet
    - Honor the anti-overstatement rules. If a JD keyword tempts overstatement, find a different angle or flag the gap for the cover letter.
@@ -90,7 +90,7 @@ If James said `all` or multiple ids, process them sequentially. Between roles, s
 ## Rules
 
 - **Never invent facts.** Every claim must be in `resume_master.md` or `personal_statement.md` or something James said in this conversation.
-- **Anti-overstatement.** Read `SESSION_CONTEXT_Jobsearch.md` rules and apply them. Specifically: Connection Manager is not 0→1; AI agent is Phase 1 / business case projection; smart home is leading indicator + addressable market (not "delivered across 8M"); exactly 4 skill categories; no skills outside the source pool.
+- **Anti-overstatement.** Read `SESSION_CONTEXT_Jobsearch.md` rules and apply them. Specifically: Connection Manager is not zero-to-one; AI agent is Phase 1 / business case projection; smart home is leading indicator + addressable market (not "delivered across 8M"); exactly 4 skill categories; no skills outside the source pool.
 - **Show before render.** Always show James the RESUME_DATA changes and cover letter draft before invoking `render()`. He gets the last word.
 - **Don't auto-mark applied.** James submits by hand. He runs `mark-applied` after.
 - **One role at a time** unless he explicitly says `all`.

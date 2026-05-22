@@ -30,3 +30,6 @@ scratch/
 
 # Generated database (rebuilt by pipeline)
 data/jobs.db
+
+# Playwright MCP session artifacts
+.playwright-mcp/
