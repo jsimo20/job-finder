@@ -48,3 +48,25 @@ def test_ashby_normalize():
     assert "<p>" not in p.jd_text
     assert p.posted_at == "2026-05-01"
     assert p.url == "https://jobs.ashbyhq.com/benchling/abc-123"
+
+
+def test_ashby_normalize_strips_utf8_bom():
+    from boston_pm_tracker.adapters import ashby
+
+    job = {
+        "id": "bom-1",
+        "title": "﻿Senior Product Manager, Payments",
+        "locationName": "Boston, MA",
+        "workplaceType": "Hybrid",
+        "descriptionHtml": "﻿<p>Lead our payments roadmap.</p>",
+        "publishedDate": "2026-05-20",
+        "isListed": True,
+    }
+    p = ashby.normalize(job, slug="acme")
+    assert p.title == "Senior Product Manager, Payments"
+    assert not p.title.startswith("﻿")
+    assert p.level == "senior"
+    assert p.jd_text is not None
+    assert not p.jd_text.startswith("﻿")
+    assert "Lead our payments roadmap." in p.jd_text
+    assert p.jd_text.encode("ascii", errors="strict")

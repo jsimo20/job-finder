@@ -48,8 +48,8 @@ class NormalizedPosting:
 def _strip_html(content: str | None) -> str | None:
     if not content:
         return None
-    text = html.unescape(content)
-    return BeautifulSoup(text, "html.parser").get_text(separator="\n").strip()
+    text = html.unescape(content).lstrip("﻿")
+    return BeautifulSoup(text, "html.parser").get_text(separator="\n").strip().lstrip("﻿")
 
 
 def _infer_workplace(job: dict[str, Any]) -> str | None:
@@ -80,6 +80,7 @@ def _infer_level(title: str) -> str | None:
 
 
 def normalize(job: dict[str, Any], slug: str) -> NormalizedPosting:
+    title = job["title"].lstrip("﻿")
     jd_parts: list[str] = []
     if comp := job.get("compensationTierSummary"):
         jd_parts.append(f"Compensation: {comp}")
@@ -89,27 +90,35 @@ def normalize(job: dict[str, Any], slug: str) -> NormalizedPosting:
 
     return NormalizedPosting(
         external_id=str(job["id"]),
-        title=job["title"],
+        title=title,
         location=job.get("locationName"),
         workplace_type=_infer_workplace(job),
-        level=_infer_level(job["title"]),
+        level=_infer_level(title),
         url=f"{JOB_BASE}/{slug}/{job['id']}",
         jd_text=jd_text,
         posted_at=job.get("publishedDate"),
     )
 
 
-_DETAIL_DELAY = 0.15  # seconds between detail requests to stay under rate limit
+_DETAIL_DELAY = 0.15  # seconds between detail requests within a single fetch()
+_MIN_INTERVAL = 0.3   # global floor between any two Ashby requests, across slugs
+_last_request_at = 0.0
 
 
 def _gql(client: httpx.Client, query: str, variables: dict[str, str],
           operation: str, timeout: float) -> dict[str, Any]:
-    for attempt in range(3):
+    global _last_request_at
+    for attempt in range(5):
+        if _MIN_INTERVAL > 0:
+            elapsed = time.monotonic() - _last_request_at
+            if elapsed < _MIN_INTERVAL:
+                time.sleep(_MIN_INTERVAL - elapsed)
         resp = client.post(
             API_URL,
             json={"operationName": operation, "variables": variables, "query": query},
             timeout=timeout,
         )
+        _last_request_at = time.monotonic()
         if resp.status_code == 429:
             retry_after = int(resp.headers.get("Retry-After", 2 ** attempt))
             time.sleep(retry_after)
