@@ -11,6 +11,7 @@ from dataclasses import dataclass
 import httpx
 
 API_BASE = "https://api.lever.co/v0/postings"
+_BOM = chr(0xfeff)  # U+FEFF byte-order mark; some Lever feeds embed it in descriptions
 
 
 @dataclass
@@ -67,7 +68,7 @@ def _jd_text(posting: dict[str, Any]) -> str | None:
         parts.append(content)
     if extra := posting.get("additionalPlain"):
         parts.append(extra)
-    txt = "\n".join(p for p in parts if p).strip()
+    txt = "\n".join(p for p in parts if p).replace(_BOM, "").strip()
     return txt or None
 
 
@@ -82,12 +83,13 @@ def normalize(posting: dict[str, Any]) -> NormalizedPosting:
             posted_at = datetime.fromtimestamp(int(created) / 1000, tz=timezone.utc).isoformat(timespec="seconds")
         except (ValueError, TypeError, OSError):
             posted_at = None
+    title = posting["text"].replace(_BOM, "")
     return NormalizedPosting(
         external_id=str(posting["id"]),
-        title=posting["text"],
+        title=title,
         location=categories.get("location"),
         workplace_type=_infer_workplace(posting),
-        level=_infer_level(posting["text"]),
+        level=_infer_level(title),
         url=posting["hostedUrl"],
         jd_text=_jd_text(posting),
         posted_at=posted_at,

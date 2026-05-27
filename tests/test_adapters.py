@@ -71,3 +71,25 @@ def test_ashby_normalize_strips_utf8_bom():
     assert bom not in p.jd_text
     assert "Lead our payments roadmap." in p.jd_text
     p.jd_text.encode("ascii", errors="strict")
+
+
+def test_lever_normalize_strips_utf8_bom():
+    bom = chr(0xfeff)
+    posting = {
+        "id": "bom-1",
+        "text": f"{bom}Staff Product Manager,{bom} Agents",
+        "hostedUrl": "https://jobs.lever.co/acme/bom-1",
+        "categories": {"location": "Remote - US"},
+        "workplaceType": "remote",
+        "descriptionPlain": f"{bom}Lead our agents roadmap.{bom}",
+        "lists": [{"text": f"{bom}Requirements", "content": f"6+ years{bom} of PM experience"}],
+        "additionalPlain": f"{bom}Equal opportunity employer.",
+        "createdAt": 1735689600000,
+    }
+    p = lever.normalize(posting)
+    assert p.title == "Staff Product Manager, Agents"
+    assert p.level == "staff"
+    assert bom not in p.title
+    assert p.jd_text is not None
+    assert bom not in p.jd_text
+    p.jd_text.encode("ascii", errors="strict")
