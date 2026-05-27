@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: uv pip install --system -e .
 
+      - name: Compute digest date
+        run: echo "DIGEST_DATE=$(date -u +%Y-%m-%d)" >> $GITHUB_ENV
+
       - name: Run pipeline
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -42,7 +45,22 @@ jobs:
           if git diff --cached --quiet; then
             echo "no changes"
           else
-            git commit -m "chore(digest): pipeline run $(date -u +%Y-%m-%d) [skip ci]"
+            git commit -m "chore(digest): pipeline run ${{ env.DIGEST_DATE }} [skip ci]"
             git pull --rebase origin main
             git push
           fi
+
+      - name: Email digest
+        if: hashFiles(format('digests/{0}.md', env.DIGEST_DATE)) != ''
+        uses: dawidd6/action-send-mail@v6
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "PM Digest — ${{ env.DIGEST_DATE }}"
+          to: ${{ secrets.GMAIL_USER }}
+          from: "PM Tracker <${{ secrets.GMAIL_USER }}>"
+          body: file://digests/${{ env.DIGEST_DATE }}.md
+          convert_markdown: true
