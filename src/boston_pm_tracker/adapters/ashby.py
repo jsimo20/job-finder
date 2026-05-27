@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 
 API_URL = "https://jobs.ashbyhq.com/api/non-user-graphql"
 JOB_BASE = "https://jobs.ashbyhq.com"
+_BOM = chr(0xfeff)  # U+FEFF byte-order mark; escape avoids source-encoding ambiguity
 
 _BRIEF_QUERY = (
     "query ApiJobBoardWithTeams($organizationHostedJobsPageName: String!) {"
@@ -48,7 +49,7 @@ class NormalizedPosting:
 def _strip_html(content: str | None) -> str | None:
     if not content:
         return None
-    text = html.unescape(content).replace("﻿", "")
+    text = html.unescape(content).replace(_BOM, "")
     return BeautifulSoup(text, "html.parser").get_text(separator="\n").strip()
 
 
@@ -80,7 +81,7 @@ def _infer_level(title: str) -> str | None:
 
 
 def normalize(job: dict[str, Any], slug: str) -> NormalizedPosting:
-    title = job["title"].replace("﻿", "")
+    title = job["title"].replace(_BOM, "")
     jd_parts: list[str] = []
     if comp := job.get("compensationTierSummary"):
         jd_parts.append(f"Compensation: {comp}")

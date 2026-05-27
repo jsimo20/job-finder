@@ -23,6 +23,9 @@ MODEL = "claude-haiku-4-5-20251001"
 _DOMAIN_LIST = "\n".join(f"- {k}: {v}" for k, v in DOMAIN_DEFINITIONS.items())
 _STAGE_LIST = "\n".join(f"- {k}: {v}" for k, v in STAGE_DEFINITIONS.items())
 
+_BOM = chr(0xfeff)  # U+FEFF byte-order mark; escape avoids source-encoding ambiguity
+
+
 SYSTEM_PROMPT = f"""You extract structured hiring signals from product manager job descriptions.
 
 Return STRICT JSON only. No prose, no markdown fences. Schema:
@@ -56,8 +59,8 @@ Output ONLY the JSON object."""
 
 def _call_claude(client: anthropic.Anthropic, jd_text: str, title: str,
                  company_name: str) -> dict[str, Any]:
-    jd_text = jd_text.replace("﻿", "")
-    title = title.replace("﻿", "")
+    jd_text = jd_text.replace(_BOM, "")
+    title = title.replace(_BOM, "")
     user_msg = (
         f"Company: {company_name}\nTitle: {title}\n\nJob description:\n{jd_text[:12000]}"
     )

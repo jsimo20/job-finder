@@ -53,20 +53,21 @@ def test_ashby_normalize():
 def test_ashby_normalize_strips_utf8_bom():
     from boston_pm_tracker.adapters import ashby
 
+    bom = chr(0xfeff)
     job = {
         "id": "bom-1",
-        "title": "﻿Senior Product Manager,﻿ Payments",
+        "title": f"{bom}Senior Product Manager,{bom} Payments",
         "locationName": "Boston, MA",
         "workplaceType": "Hybrid",
-        "descriptionHtml": "﻿<p>Lead﻿ our payments roadmap.</p>﻿",
+        "descriptionHtml": f"{bom}<p>Lead{bom} our payments roadmap.</p>{bom}",
         "publishedDate": "2026-05-20",
         "isListed": True,
     }
     p = ashby.normalize(job, slug="acme")
     assert p.title == "Senior Product Manager, Payments"
-    assert "﻿" not in p.title
+    assert bom not in p.title
     assert p.level == "senior"
     assert p.jd_text is not None
-    assert "﻿" not in p.jd_text
+    assert bom not in p.jd_text
     assert "Lead our payments roadmap." in p.jd_text
     p.jd_text.encode("ascii", errors="strict")
