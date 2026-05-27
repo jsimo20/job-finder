@@ -79,7 +79,7 @@ def _call_claude(client: anthropic.Anthropic, jd_text: str, title: str,
 
 
 def run(db_path: Path = db.DEFAULT_DB_PATH, *, limit: int | None = None) -> dict:
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip().replace(_BOM, "")
     if not api_key:
         raise RuntimeError("ANTHROPIC_API_KEY not set")
     client = anthropic.Anthropic(api_key=api_key)
