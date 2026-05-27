@@ -43,5 +43,6 @@ jobs:
             echo "no changes"
           else
             git commit -m "chore(digest): pipeline run $(date -u +%Y-%m-%d) [skip ci]"
+            git pull --rebase origin main
             git push
           fi

@@ -56,6 +56,8 @@ Output ONLY the JSON object."""
 
 def _call_claude(client: anthropic.Anthropic, jd_text: str, title: str,
                  company_name: str) -> dict[str, Any]:
+    jd_text = jd_text.replace("﻿", "")
+    title = title.replace("﻿", "")
     user_msg = (
         f"Company: {company_name}\nTitle: {title}\n\nJob description:\n{jd_text[:12000]}"
     )
