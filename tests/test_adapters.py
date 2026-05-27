@@ -55,18 +55,18 @@ def test_ashby_normalize_strips_utf8_bom():
 
     job = {
         "id": "bom-1",
-        "title": "﻿Senior Product Manager, Payments",
+        "title": "﻿Senior Product Manager,﻿ Payments",
         "locationName": "Boston, MA",
         "workplaceType": "Hybrid",
-        "descriptionHtml": "﻿<p>Lead our payments roadmap.</p>",
+        "descriptionHtml": "﻿<p>Lead﻿ our payments roadmap.</p>﻿",
         "publishedDate": "2026-05-20",
         "isListed": True,
     }
     p = ashby.normalize(job, slug="acme")
     assert p.title == "Senior Product Manager, Payments"
-    assert not p.title.startswith("﻿")
+    assert "﻿" not in p.title
     assert p.level == "senior"
     assert p.jd_text is not None
-    assert not p.jd_text.startswith("﻿")
+    assert "﻿" not in p.jd_text
     assert "Lead our payments roadmap." in p.jd_text
-    assert p.jd_text.encode("ascii", errors="strict")
+    p.jd_text.encode("ascii", errors="strict")

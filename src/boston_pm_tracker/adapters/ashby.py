@@ -48,8 +48,8 @@ class NormalizedPosting:
 def _strip_html(content: str | None) -> str | None:
     if not content:
         return None
-    text = html.unescape(content).lstrip("﻿")
-    return BeautifulSoup(text, "html.parser").get_text(separator="\n").strip().lstrip("﻿")
+    text = html.unescape(content).replace("﻿", "")
+    return BeautifulSoup(text, "html.parser").get_text(separator="\n").strip()
 
 
 def _infer_workplace(job: dict[str, Any]) -> str | None:
@@ -80,7 +80,7 @@ def _infer_level(title: str) -> str | None:
 
 
 def normalize(job: dict[str, Any], slug: str) -> NormalizedPosting:
-    title = job["title"].lstrip("﻿")
+    title = job["title"].replace("﻿", "")
     jd_parts: list[str] = []
     if comp := job.get("compensationTierSummary"):
         jd_parts.append(f"Compensation: {comp}")
@@ -101,7 +101,7 @@ def normalize(job: dict[str, Any], slug: str) -> NormalizedPosting:
 
 
 _DETAIL_DELAY = 0.15  # seconds between detail requests within a single fetch()
-_MIN_INTERVAL = 0.3   # global floor between any two Ashby requests, across slugs
+_MIN_INTERVAL = 1.0   # global floor between any two Ashby requests, across slugs
 _last_request_at = 0.0
 
 
