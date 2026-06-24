@@ -71,9 +71,27 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 - **PRs are the norm**, not direct-to-main. The reviewer fires on `.py` / `.claude/**` paths. Non-Python YAML/Markdown changes (e.g., `daily.yml`) bypass the path filter — still PR them for the audit trail, expect the reviewer to no-op.
 - **Reviewer can't review changes to its own workflow file** (`claude-review.yml`) due to `anthropics/claude-code-action@v1`'s self-modification guard. Self-merge those after careful local review.
 
+## Apply workflow (slash commands)
+
+- `/job-apply [external_id | --top N]` — tailors resume + cover letter for pending roles, runs the materials fact-checker, renders the per-job folder via `job_apply.render()`, then dispatches autofill. Logic in `.claude/commands/job-apply.md`; deterministic render in `src/boston_pm_tracker/job_apply.py`.
+- `/fill-application <url> [folder]` — standalone Playwright autofill via the `application-autofiller` subagent. Stops without submitting; James reviews and submits by hand. Logic in `.claude/commands/fill-application.md`.
+- Field values come from `~/path/to/job-search/inputs/standard_answers.md`.
+- **Playwright MCP is project-scoped** (`.mcp.json`). Its `mcp__playwright__*` tools only load when the Claude session is rooted in this directory — autofill won't work from a session started in the parent `dev/` directory.
+
 ## Project-level skills
 
-- `.claude/skills/manage-seeds/SKILL.md` — add/remove/probe companies in `seeds/companies.json` from plain-English instructions, without manual JSON editing. Use this for seed-list work.
+- `.claude/skills/manage-seeds/SKILL.md` — add/remove/probe companies in `seeds/companies.json` from plain-English instructions, without manual JSON editing.
+
+## Subagents
+
+`.claude/agents/` — dispatched from slash commands or directly via the `Agent` tool. Each pins its own model and tool list. The Sonnet subagents below handle mechanical work so the main Opus-tier conversation keeps focus on voice and judgment.
+
+| Subagent | Purpose | Model |
+|---|---|---|
+| `digest-triager` | Reads latest digest, ranks pending roles against fit profile, returns ranked picks | Sonnet |
+| `materials-fact-checker` | Cross-checks drafted RESUME_DATA + cover letter against ground-truth files; severity-tagged findings | Sonnet |
+| `application-autofiller` | Drives Playwright MCP through the application form; stops before submit | Sonnet |
+| `python-code-reviewer` | PR review on `.py` / `.claude/**` changes; fires via `claude-review.yml` and `/review` | Opus |
 
 ## Reviewer rubric
 
