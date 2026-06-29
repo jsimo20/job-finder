@@ -33,3 +33,6 @@ data/jobs.db
 
 # Playwright MCP session artifacts
 .playwright-mcp/
+
+# Ephemeral session state — may contain debugging notes / PII; do not publish
+session-context.md
