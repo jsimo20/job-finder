@@ -25,6 +25,7 @@ If any is missing, report the gap and stop.
 - `~/path/to/job-search/inputs/resume_master.md` — canonical experience and metrics.
 - `~/path/to/job-search/inputs/personal_statement.md` — narrative voice + supplementary context.
 - `~/.claude/ai_skills/SESSION_CONTEXT_Jobsearch.md` — anti-overstatement rules, skill source pool, factual baselines.
+- `~/.claude/rules/writing-style.md` — canonical voice rules (chat vs. voice mode, the em-dash ban, the AI-trope ban list, the punchy-confidence-line ban, the pre-send self-check). This is the authority for the cover-letter voice checks in §5 below.
 
 ## What you check
 
@@ -69,8 +70,9 @@ For every bullet in `resume_data["experience"][*]["bullets"]`, verify:
 
 ### 5. Cover letter — voice + factual
 
-- **No em-dashes** anywhere in the body. (James does not use them. See `feedback_writing_voice.md`.)
-- **No AI tropes:** "spearheaded," "leveraged," "synergize," "delve into," "navigate the landscape," "robust ecosystem," "in today's fast-paced world," "elevate," "unlock," "unleash," etc. Flag every instance.
+- **No em-dashes** anywhere in the body. (James does not use them. See `writing-style.md` §1 — the single loudest AI tell.)
+- **No AI tropes.** `writing-style.md` §2 is the source-of-truth ban list; flag every instance. Common offenders: "spearheaded," "leveraged," "synergize," "delve into," "navigate the landscape," "robust," "comprehensive," "seamless," "uniquely positioned," "passionate about," "excited to explore," "at the intersection of."
+- **No punchy confidence / resolution lines** (`writing-style.md` §3) — standalone one-sentence flourishes engineered to hit hard ("That's the trade I want to make," "The math is simple"). Flag them.
 - **No paragraph starts with "I"** (per cover letter SKILL §0.3).
 - **Closing is "Thanks,"** — no alternatives.
 - Every factual claim is traceable to `resume_master.md` or `personal_statement.md`. Same metric verification as resume bullets.
