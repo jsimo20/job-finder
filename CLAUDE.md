@@ -75,6 +75,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 
 - `/job-apply [external_id | --top N]` — tailors resume + cover letter for pending roles, runs the materials fact-checker, renders the per-job folder via `job_apply.render()`, then dispatches autofill. Logic in `.claude/commands/job-apply.md`; deterministic render in `src/boston_pm_tracker/job_apply.py`.
 - `/fill-application <url> [folder]` — standalone Playwright autofill via the `application-autofiller` subagent. Stops without submitting; James reviews and submits by hand. Logic in `.claude/commands/fill-application.md`.
+- **Greenhouse forms: prefer the deterministic script** over the agent — `python -m boston_pm_tracker.fill_greenhouse --url <url> --folder <per-app folder> [--city <city>]`. Fills the standard section (contact, auth, EEO, uploads) with zero LLM tokens, DOM-verifies every dropdown commit, prints a fill report, holds the browser open for review, never submits. ~2k tokens vs ~63k for the agent. One-time setup: `pip install -e .[apply]` + `playwright install chromium` (local only; CI never needs it). The agent stays as the fallback for unknown ATSes and custom questions.
 - Field values come from `~/path/to/job-search/inputs/standard_answers.md`.
 - **Playwright MCP is project-scoped** (`.mcp.json`). Its `mcp__playwright__*` tools only load when the Claude session is rooted in this directory — autofill won't work from a session started in the parent `dev/` directory.
 

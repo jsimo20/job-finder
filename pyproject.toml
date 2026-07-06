@@ -26,6 +26,10 @@ dev = [
     "pytest-asyncio>=0.23",
     "ruff>=0.6",
 ]
+# local apply workflow only — CI never needs a browser
+apply = [
+    "playwright>=1.40",
+]
 
 [project.scripts]
 boston-pm-tracker = "boston_pm_tracker.cli:main"

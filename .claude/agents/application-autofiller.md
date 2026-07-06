@@ -25,6 +25,17 @@ Your tool list includes `mcp__playwright__*`. If those tools aren't available at
 
 ## Procedure
 
+### 0. ATS detection + recipe (before navigating)
+
+Identify the ATS from the URL:
+- **Greenhouse**: URL contains `job-boards.greenhouse.io` or a `gh_jid=` param → use the **batch-fill** strategy in Step 4.
+- **Ashby**: URL contains `jobs.ashbyhq.com` → use the **inline-fill** strategy in Step 4.
+
+**For all ATS types:** Read `.claude/context/ats-recipes.md` once. Keep the gotcha notes in memory (e.g., Ashby: no CL upload on most forms; Greenhouse: conditional Race field after Hispanic/Latino). This is one Read call regardless of ATS type — always worth it.
+
+**Direct Greenhouse URL rule:** if the URL contains `gh_jid=<id>` or `gh_src=`, derive the direct URL:
+`https://job-boards.greenhouse.io/<company_slug>/jobs/<gh_jid>` and navigate to that instead. Never navigate via a company careers portal — the portal click-through costs extra snapshots for no gain. The company slug is usually the lowercase company name (e.g., `starburst`, `datadoghq`).
+
 ### 1. Load the inputs
 
 Read once and keep in memory:
@@ -55,12 +66,20 @@ Step by step:
 
 ### 3. Navigate and snapshot
 
-- `browser_navigate` to `application_url`.
-- `browser_snapshot` once for the full page so you can map every form field.
+- `browser_navigate` to `application_url` (using the direct URL from step 0 if applicable).
+- `browser_snapshot` once for the full page. Use `depth: 8` to cap the tree depth and keep the payload small. Keep this snapshot in memory — map every visible field from it before making any more tool calls.
+
+**Snapshot budget:** follow the ATS recipe's target count. Default caps: Greenhouse ≤ 25 total (react-select dropdowns are unavoidable — each needs click→snapshot→click), Ashby ≤ 4 total. For Greenhouse, minimize extras: don't full-page re-snapshot after each field; use targeted snapshots scoped to the relevant section only.
+
+**Screenshots banned in normal flow.** `browser_take_screenshot` returns an image (expensive tokens) while the a11y tree already contains everything needed for form-filling. Only use it as a last resort when you are genuinely stuck and cannot determine page state from snapshots.
 
 ### 4. Fill text inputs
 
-Batch via `browser_fill_form` when several fields are visible. Use `browser_type` for single fields. Pull values from `standard_answers.md`:
+**Greenhouse (batch-fill path):** From your single full-page snapshot, plan the entire fill sequence before acting, then batch via `browser_fill_form` when several fields are visible. Greenhouse forms have ~14 fields — pre-planning amortizes snapshot cost across the whole form and is worth the overhead.
+
+**Ashby (inline-fill path):** Fill fields as you encounter them from the first snapshot. Do not pre-plan the sequence. Ashby forms are ≤11 fields total; batch-planning overhead exceeds the saving on these short forms.
+
+Both paths: use `browser_type` for single fields. Pull values from `standard_answers.md`:
 
 - Identity / contact: full name, preferred name, email, phone, LinkedIn, GitHub (use the GitHub URL for fields labeled "Website" if there's no dedicated GitHub field).
 - Location: current city/state (Boston, MA); willing to relocate (Yes); remote / hybrid / on-site (Yes to all).
@@ -70,10 +89,10 @@ Batch via `browser_fill_form` when several fields are visible. Use `browser_type
 
 Greenhouse-themed forms use react-select comboboxes with a "Toggle flyout" button. Pattern:
 1. Click the combobox.
-2. `browser_snapshot` targeted at the combobox container to reveal the listbox options.
+2. `browser_snapshot` targeted at the combobox container (using `target:` param with the combobox ref) to reveal listbox options — this scoped snapshot is much cheaper than a full-page one.
 3. Click the desired option by ref.
 
-For autocomplete-style comboboxes (long lists like Country), type to filter first, then click the matching option.
+For autocomplete-style comboboxes (long lists like Country or City), type to filter first, then take one targeted snapshot to pick the matching option.
 
 ### 6. Work authorization
 
