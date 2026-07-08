@@ -78,6 +78,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 - **Greenhouse forms: prefer the deterministic script** over the agent — `python -m boston_pm_tracker.fill_greenhouse --url <url> --folder <per-app folder> [--city <city>]`. Fills the standard section (contact, auth, EEO, uploads) with zero LLM tokens, DOM-verifies every dropdown commit, prints a fill report, holds the browser open for review, never submits. ~2k tokens vs ~63k for the agent. One-time setup: `pip install -e .[apply]` + `playwright install chromium` (local only; CI never needs it). The agent stays as the fallback for unknown ATSes and custom questions.
 - Field values come from `~/path/to/job-search/inputs/standard_answers.md`.
 - **Playwright MCP is project-scoped** (`.mcp.json`). Its `mcp__playwright__*` tools only load when the Claude session is rooted in this directory — autofill won't work from a session started in the parent `dev/` directory.
+- **Batch autofill = one Chrome instance, one tab per app** (never a separate browser per app). Dispatch a single `application-autofiller` with the full list of `(url, folder)` pairs; it opens each app in a new tab and leaves them all open, unsubmitted, for review. Rule lives in the Batch mode section of `.claude/agents/application-autofiller.md`.
 
 ## Project-level skills
 
@@ -93,6 +94,38 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 | `materials-fact-checker` | Cross-checks drafted RESUME_DATA + cover letter against ground-truth files; severity-tagged findings | Sonnet |
 | `application-autofiller` | Drives Playwright MCP through the application form; stops before submit | Sonnet |
 | `python-code-reviewer` | PR review on `.py` / `.claude/**` changes; fires via `claude-review.yml` and `/review` | Opus |
+
+## Outreach log
+
+Tracks people James contacts on LinkedIn (name + company + date + optional role/context). Separate from the pipeline and the digest on purpose: not every contact is tied to a role application (he often reaches out for an internal referral), and the DB gets wiped every run so it can't hold durable state.
+
+- **Store:** `data/outreach.jsonl` — append-only, **gitignored** (third-party names are PII; local-only, does not sync across machines). Untouched by the pipeline.
+- **Module:** `src/boston_pm_tracker/outreach.py` — `add_contact()`, `list_contacts(company=…)`, `format_contacts()`.
+- **CLI:**
+  ```sh
+  boston-pm-tracker outreach add --name "Contact-A" --company "ZoomInfo" [--role "…"] [--type connection-request|message|hm-message] [--notes "…"] [--date YYYY-MM-DD]
+  boston-pm-tracker outreach list [--company zoominfo]
+  boston-pm-tracker outreach remove --name "Contact-C" --company "Axon"   # exact name+company, case-insensitive
+  ```
+
+**Agent trigger (do this automatically):** whenever James asks you to draft a LinkedIn message or connection request for someone, log it with `outreach add` afterward. **Always get the person's name and their company from James** before logging — ask if either is missing. Default `--type` to `connection-request`, or `hm-message` for a hiring-manager message. This keeps a recall-able record of who he talked to, when, and where they work.
+
+## Applied log
+
+Durable record of roles applied to, keyed by `external_id`. Fixes the fact that `data/jobs.db` (and its `applied_at` flag) is rebuilt every run, so applied roles otherwise resurface in the next digest. Also captures **ad-hoc roles** applied to outside the pipeline (pasted URLs never in the seed set), which the DB never knew about.
+
+- **Store:** `data/applied.jsonl` — append-only, **committed** (unlike the outreach log). It must be in git so the CI-generated digest can read it to suppress already-applied roles. Contents are James's own application records (no third-party PII), fine for a private repo.
+- **Module:** `src/boston_pm_tracker/applied.py` — `record_applied()`, `list_applied()`, `is_applied(external_id=…, url=…)`, `applied_external_ids()`, `remove_applied()`. URL matching normalizes scheme/query/trailing `/apply`/`/application` so a pasted apply-form link matches the posting.
+- **Digest integration:** `digest.render()` drops any row whose `external_id` is in the log (both new and carried-forward, main and stretch queues).
+- **CLI:**
+  ```sh
+  boston-pm-tracker applied add --external-id 8030599 --company Datadog --title "Senior PM - Agent Integrations" [--url …] [--date YYYY-MM-DD] [--source …]
+  boston-pm-tracker applied list [--company datadog]
+  boston-pm-tracker applied check 8030599        # or a full posting/apply URL → "APPLIED" / "not applied"
+  ```
+  `mark-applied <external_id>` also writes to this log automatically (pulling company/title/url from the DB row). For ad-hoc roles with no DB row, use `applied add`.
+
+**Agent trigger:** when James applies to (or has you prep+fill) any role — especially ad-hoc ones pasted directly — record it with `applied add`. When he asks "have we applied to X?", answer with `applied check`.
 
 ## Reviewer rubric
 

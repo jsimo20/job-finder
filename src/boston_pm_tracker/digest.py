@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import db
+from . import applied, db
 from .taxonomy import STALE_DAYS
 
 DEFAULT_DIGEST_DIR = Path(__file__).resolve().parents[2] / "digests"
@@ -44,7 +44,7 @@ def _row_md(row) -> str:
 
 
 _BASE_COLS = """
-    p.id, p.title, p.location, p.workplace_type, p.url,
+    p.id, p.external_id, p.title, p.location, p.workplace_type, p.url,
     c.name AS company_name,
     e.yoe_required, e.comp_base_min, e.comp_base_max, e.comp_source,
     e.domain_tags, e.company_stage, e.stretch_reason,
@@ -91,11 +91,19 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
            digest_dir: Path = DEFAULT_DIGEST_DIR) -> Path:
     # first_seen_at is written as UTC, so the default target must also be UTC.
     target = target_date or datetime.now(timezone.utc).date().isoformat()
+    # Durable suppression: the DB's applied_at is wiped every rebuild, so also
+    # drop anything recorded in the committed applied-log (covers ad-hoc roles
+    # the DB never saw). Keyed by external_id.
+    applied_ids = applied.applied_external_ids()
+
+    def _drop_applied(rows):
+        return [r for r in rows if r["external_id"] not in applied_ids]
+
     with db.connect(db_path) as conn:
-        main_rows = conn.execute(_new_today_sql("main"), (target,)).fetchall()
-        main_carry = conn.execute(_carry_forward_sql("main"), (target,)).fetchall()
-        stretch_rows = conn.execute(_new_today_sql("stretch"), (target,)).fetchall()
-        stretch_carry = conn.execute(_carry_forward_sql("stretch"), (target,)).fetchall()
+        main_rows = _drop_applied(conn.execute(_new_today_sql("main"), (target,)).fetchall())
+        main_carry = _drop_applied(conn.execute(_carry_forward_sql("main"), (target,)).fetchall())
+        stretch_rows = _drop_applied(conn.execute(_new_today_sql("stretch"), (target,)).fetchall())
+        stretch_carry = _drop_applied(conn.execute(_carry_forward_sql("stretch"), (target,)).fetchall())
         closed_rows = conn.execute(
             """
             SELECT c.name AS company_name, p.title, p.url, p.last_seen_at

@@ -36,3 +36,6 @@ data/jobs.db
 
 # Ephemeral session state — may contain debugging notes / PII; do not publish
 session-context.md
+
+# Outreach log — third-party contact names (PII); local-only, do not publish
+data/outreach.jsonl

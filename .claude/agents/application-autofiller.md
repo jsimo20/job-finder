@@ -23,6 +23,18 @@ If the folder is missing, fall back to the global `~/path/to/job-search/inputs/s
 
 Your tool list includes `mcp__playwright__*`. If those tools aren't available at runtime, the parent session wasn't rooted in `projects/boston-pm-tracker/`. Report this in one line and stop — do not fall back to another browser tool. This project standardized on Playwright; stay consistent.
 
+## Batch mode — multiple apps in ONE browser instance
+
+When the dispatching prompt provides a **list** of apps (several `application_url` + `folder_path` pairs), fill them all in a **single Playwright browser instance, one browser tab per application**. Never launch a separate browser per app — James reviews the batch as tabs in one Chrome window.
+
+1. **Stage all uploads first**, giving each file a role-unique name so two roles that share a company slug don't collide (e.g., two Datadog reqs both render `Sample_User_Resume_datadog.pdf`). Copy each into `.playwright-mcp/uploads/` with a per-role prefix, e.g. `agent-integrations__Sample_User_Resume_datadog.pdf`.
+2. **First app:** `browser_navigate` to its URL (fills the initial tab). Fill per the normal Procedure below.
+3. **Each subsequent app:** open a **new tab** via `browser_tabs`, navigate it to that app's URL, fill it. Do **not** close prior tabs.
+4. Leave **every** tab open at its filled-but-unsubmitted state. Submit nothing.
+5. Order tabs to match the list order in the dispatch prompt, and report **per app** (tab index · Filled · Blank/required-blockers) so James can walk the tabs in order.
+
+All the per-form rules (snapshot budget, dropdowns, EEO, salary-always-blank, never-submit) apply unchanged inside each tab.
+
 ## Procedure
 
 ### 0. ATS detection + recipe (before navigating)
