@@ -5,9 +5,16 @@ plain Playwright — zero LLM tokens. Anything it can't confidently map is left
 blank and listed in the printed report. The browser window stays open after
 filling so James can review, fill leftovers, and submit by hand.
 
-Usage:
+Usage (single):
     python -m boston_pm_tracker.fill_greenhouse --url <application_url> \
         --folder "<per-app folder>" [--city "Boston"] [--no-hold]
+
+Usage (batch): repeat --url and --folder in matching order. All applications
+fill in ONE browser, one tab each, and every tab is left open for review.
+
+    python -m boston_pm_tracker.fill_greenhouse \
+        --url <url_a> --folder "<folder_a>" \
+        --url <url_b> --folder "<folder_b>"
 
 Never clicks Submit. Salary fields are always skipped.
 """
@@ -17,6 +24,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+import time
 from pathlib import Path
 
 from playwright.sync_api import Frame, Page, TimeoutError as PWTimeout, sync_playwright
@@ -321,94 +329,146 @@ def capture_audit(root, slug: str, phase: str, url: str, report: dict, *,
         report["audits"].append(f"{phase}: capture failed ({exc})")
 
 
+def fill_one(browser, url: str, folder: Path, city: str, *,
+             slug: str | None = None, no_audit: bool = False,
+             shot: Path | None = None) -> tuple[Page, dict]:
+    """Fill one application in its own tab. Returns the page and its report.
+
+    The page is deliberately left open; the caller decides when to hold or exit.
+    """
+    slug = slug or re.sub(r"^\d{4}-\d{2}-\d{2}_", "", folder.name)
+    answers = parse_answers(folder)
+    report: dict = {"filled": [], "skipped": [], "unmapped": [],
+                    "required_empty": [], "audits": []}
+    harvested: dict[str, list[str]] = {}
+
+    page = browser.new_page()
+    page.set_default_timeout(STEP_TIMEOUT_MS)
+    page.goto(url, wait_until="domcontentloaded")
+    page.wait_for_timeout(3000)
+
+    try:  # OneTrust cookie banner steals clicks until dismissed
+        btn = page.locator("#onetrust-accept-btn-handler")
+        if btn.count() and btn.first.is_visible():
+            btn.first.click()
+            page.wait_for_timeout(500)
+    except Exception:
+        pass
+
+    root = find_form_root(page)
+    capture_audit(root, slug, "pre", url, report, skip=no_audit)
+    fill_text_inputs(root, answers, report)
+    fill_combos(root, city, report, harvested)
+    upload_files(root, folder, report)
+    page.wait_for_timeout(1000)
+    # repair pass: React hydration can wipe values filled too early;
+    # this refills any text input that came up empty (skips filled ones)
+    fill_text_inputs(root, answers, report)
+    try:
+        audit_required(root, report)
+    except Exception as exc:  # audit is best-effort; never block the report
+        report["required_empty"] = [f"(audit failed: {exc})"]
+    capture_audit(root, slug, "post", url, report, skip=no_audit, harvested=harvested)
+    if shot:
+        page.screenshot(path=str(shot), full_page=True)
+
+    report["dom_values"] = root.evaluate(DOM_VALUES_JS)
+    return page, report
+
+
+DOM_VALUES_JS = """() => {
+    const out = [];
+    document.querySelectorAll('input[type=text], input[type=email], input[type=tel]')
+        .forEach(el => {
+            if (el.getAttribute('role') === 'combobox') return;
+            const lbl = el.id && document.querySelector(`label[for="${el.id}"]`)?.textContent;
+            if (lbl) out.push(`${lbl.trim().slice(0, 50)} = ${el.value || '(empty)'}`);
+        });
+    document.querySelectorAll('[class*="single-value"]').forEach(sv => {
+        const wrap = sv.closest('[class*="container"], div');
+        const lbl = wrap?.parentElement?.querySelector('label')?.textContent || '(select)';
+        out.push(`${lbl.trim().slice(0, 50)} = ${sv.textContent.trim()}`);
+    });
+    document.querySelectorAll('input[type=file]').forEach(f => {
+        out.push(`FILE = ${f.files.length ? f.files[0].name : '(none)'}`);
+    });
+    return out;
+}"""
+
+
+def print_report(label: str, report: dict) -> None:
+    print(f"\n{'=' * 70}\n=== {label}\n{'=' * 70}")
+    print("\n--- ACTUAL DOM VALUES ---")
+    for line in report.get("dom_values", []):
+        print(f"  {line}")
+    for section in ("filled", "skipped", "unmapped", "required_empty", "audits"):
+        print(f"\n[{section}] ({len(report[section])})")
+        for line in report[section]:
+            print(f"  - {line}")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--url", required=True)
-    ap.add_argument("--folder", required=True, type=Path)
+    ap.add_argument("--url", required=True, action="append",
+                    help="application URL; repeat for batch mode (paired with --folder)")
+    ap.add_argument("--folder", required=True, type=Path, action="append",
+                    help="per-app folder; repeat once per --url, in the same order")
     ap.add_argument("--city", default="Boston")
     ap.add_argument("--no-hold", action="store_true",
                     help="exit after filling instead of holding the browser open")
     ap.add_argument("--shot", type=Path, default=None,
                     help="save a full-page screenshot here after filling")
-    ap.add_argument("--slug", default=None,
+    ap.add_argument("--slug", default=None, action="append",
                     help="audit slug; defaults to the folder name minus its date prefix")
     ap.add_argument("--no-audit", action="store_true",
                     help="skip the before/after field-inventory capture")
     args = ap.parse_args()
 
-    slug = args.slug or re.sub(r"^\d{4}-\d{2}-\d{2}_", "", args.folder.name)
-    answers = parse_answers(args.folder)
-    report: dict = {"filled": [], "skipped": [], "unmapped": [],
-                    "required_empty": [], "audits": []}
-    harvested: dict[str, list[str]] = {}
+    if len(args.url) != len(args.folder):
+        ap.error(f"got {len(args.url)} --url and {len(args.folder)} --folder; "
+                 "pass one --folder per --url, in matching order")
+    if args.slug and len(args.slug) != len(args.url):
+        ap.error("when --slug is given it must be repeated once per --url")
+    # A screenshot path is a single file, so it only makes sense for a single app.
+    if args.shot and len(args.url) > 1:
+        ap.error("--shot takes a single path; omit it in batch mode")
+
+    jobs = list(zip(args.url, args.folder, args.slug or [None] * len(args.url)))
 
     with sync_playwright() as p:
+        # One browser, one tab per application. James reviews the batch as tabs
+        # in a single window, so never launch a browser per app.
         browser = p.chromium.launch(headless=False)
-        page = browser.new_page()
-        page.set_default_timeout(STEP_TIMEOUT_MS)
-        page.goto(args.url, wait_until="domcontentloaded")
-        page.wait_for_timeout(3000)
+        reports: list[tuple[str, dict]] = []
+        for url, folder, slug in jobs:
+            label = folder.name
+            try:
+                _, report = fill_one(browser, url, folder, args.city, slug=slug,
+                                     no_audit=args.no_audit, shot=args.shot)
+            except Exception as exc:
+                # One bad form must not cost the whole batch its filled tabs.
+                print(f"\n!!! {label} FAILED: {type(exc).__name__}: {exc}")
+                reports.append((label, {"filled": [], "skipped": [], "unmapped": [],
+                                        "required_empty": [f"(fill failed: {exc})"],
+                                        "audits": [], "dom_values": []}))
+                continue
+            reports.append((label, report))
+            print(f"[{len(reports)}/{len(jobs)}] filled {label}")
+            sys.stdout.flush()
 
-        try:  # OneTrust cookie banner steals clicks until dismissed
-            btn = page.locator("#onetrust-accept-btn-handler")
-            if btn.count() and btn.first.is_visible():
-                btn.first.click()
-                page.wait_for_timeout(500)
-        except Exception:
-            pass
+        for label, report in reports:
+            print_report(label, report)
 
-        root = find_form_root(page)
-        capture_audit(root, slug, "pre", args.url, report, skip=args.no_audit)
-        fill_text_inputs(root, answers, report)
-        fill_combos(root, args.city, report, harvested)
-        upload_files(root, args.folder, report)
-        page.wait_for_timeout(1000)
-        # repair pass: React hydration can wipe values filled too early;
-        # this refills any text input that came up empty (skips filled ones)
-        fill_text_inputs(root, answers, report)
-        try:
-            audit_required(root, report)
-        except Exception as exc:  # audit is best-effort; never block the report
-            report["required_empty"] = [f"(audit failed: {exc})"]
-        capture_audit(root, slug, "post", args.url, report,
-                      skip=args.no_audit, harvested=harvested)
-        if args.shot:
-            page.screenshot(path=str(args.shot), full_page=True)
-
-        values = root.evaluate(
-            """() => {
-                const out = [];
-                document.querySelectorAll('input[type=text], input[type=email], input[type=tel]')
-                    .forEach(el => {
-                        if (el.getAttribute('role') === 'combobox') return;
-                        const lbl = el.id && document.querySelector(`label[for="${el.id}"]`)?.textContent;
-                        if (lbl) out.push(`${lbl.trim().slice(0, 50)} = ${el.value || '(empty)'}`);
-                    });
-                document.querySelectorAll('[class*="single-value"]').forEach(sv => {
-                    const wrap = sv.closest('[class*="container"], div');
-                    const lbl = wrap?.parentElement?.querySelector('label')?.textContent || '(select)';
-                    out.push(`${lbl.trim().slice(0, 50)} = ${sv.textContent.trim()}`);
-                });
-                document.querySelectorAll('input[type=file]').forEach(f => {
-                    out.push(`FILE = ${f.files.length ? f.files[0].name : '(none)'}`);
-                });
-                return out;
-            }"""
-        )
-        print("\n=== ACTUAL DOM VALUES ===")
-        for line in values:
-            print(f"  {line}")
-
-        print("\n=== FILL REPORT ===")
-        for section in ("filled", "skipped", "unmapped", "required_empty", "audits"):
-            print(f"\n[{section}] ({len(report[section])})")
-            for line in report[section]:
-                print(f"  - {line}")
-        print("\nNOT SUBMITTED. Review in the open browser window and submit yourself.")
+        blockers = sum(len(r["required_empty"]) for _, r in reports)
+        print(f"\n{'=' * 70}")
+        print(f"{len(reports)} tab(s) filled. NOTHING SUBMITTED.")
+        print(f"{blockers} required field(s) still empty across the batch — see above.")
+        print("Review every answer in the open window and submit each yourself.")
         sys.stdout.flush()
 
         if not args.no_hold:
-            page.wait_for_event("close", timeout=0)
+            while browser.is_connected():
+                time.sleep(1)
     return 0
 
 
