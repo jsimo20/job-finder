@@ -21,6 +21,9 @@ from pathlib import Path
 
 from playwright.sync_api import Frame, Page, TimeoutError as PWTimeout, sync_playwright
 
+from boston_pm_tracker import form_inventory
+from boston_pm_tracker.form_inventory import has_selection, label_of
+
 STEP_TIMEOUT_MS = 10_000
 
 TEXT_FIELDS: list[tuple[str, str]] = [
@@ -89,32 +92,9 @@ def find_form_root(page: Page) -> Frame | Page:
     for frame in page.frames:
         if "greenhouse" in frame.url:
             return frame
-    return page
-
-
-def label_of(el) -> str:
-    try:
-        return (el.get_attribute("aria-label") or _dom_label(el) or "").strip()
-    except PWTimeout:
-        return ""
-
-
-def _dom_label(el) -> str:
-    return el.evaluate(
-        """(node) => {
-            const byFor = node.id && document.querySelector(`label[for="${node.id}"]`);
-            if (byFor) return byFor.textContent;
-            const wrap = node.closest('label');
-            if (wrap) return wrap.textContent;
-            const labelled = node.getAttribute('aria-labelledby');
-            if (labelled) {
-                return labelled.split(' ')
-                    .map(id => document.getElementById(id)?.textContent || '')
-                    .join(' ');
-            }
-            return '';
-        }"""
-    )
+    # Company careers pages wrap the board under their own domain, so neither
+    # the URL nor the iframe id gives it away — fall back to control count.
+    return form_inventory.find_form_root(page)
 
 
 def fill_text_inputs(root, answers: dict[str, str], report: dict) -> None:
@@ -145,12 +125,16 @@ def fill_text_inputs(root, answers: dict[str, str], report: dict) -> None:
             report["unmapped"].append(label)
 
 
-def fill_combo(root, combo, type_text: str) -> bool:
+def fill_combo(root, combo, type_text: str, seen_options: list[str] | None = None) -> bool:
     """React-select pattern: open, type to filter, click the matching option.
 
     Enter alone doesn't commit on Greenhouse's react-select build, so click
     the option element directly, then verify the selection actually landed.
     Returns True only when the selection is confirmed in the DOM.
+
+    react-select renders its menu only while open, so the option list is
+    unreachable from a static inventory pass. This is the one moment it is
+    visible; `seen_options` collects it for the audit manifest.
     """
     # click doesn't always open the menu (hydration races) — verify and retry
     for _ in range(3):
@@ -160,6 +144,21 @@ def fill_combo(root, combo, type_text: str) -> bool:
             break
     else:
         return False
+
+    # Harvest before typing: press_sequentially filters the menu, and a
+    # filtered list would misrepresent what the form actually offers. Async
+    # lists (city autocomplete) come up empty here and get picked up below.
+    if seen_options is not None:
+        opened = root.locator("[role='option']")
+        for _ in range(4):
+            if opened.count():
+                break
+            combo.page.wait_for_timeout(250)
+        for i in range(opened.count()):
+            raw = (opened.nth(i).text_content() or "").strip()
+            if raw and raw not in seen_options:
+                seen_options.append(raw)
+
     combo.press_sequentially(type_text, delay=20)
 
     # options can load async (city autocomplete hits an API) — poll up to 3s
@@ -174,6 +173,10 @@ def fill_combo(root, combo, type_text: str) -> bool:
         opt = options.nth(i)
         if not opt.is_visible():
             continue
+        if seen_options is not None:
+            raw = (opt.text_content() or "").strip()
+            if raw and raw not in seen_options:
+                seen_options.append(raw)
         text = (opt.text_content() or "").lower().strip()
         if text == want:            # exact beats contains ("Male" vs "Female")
             best = opt
@@ -190,20 +193,8 @@ def fill_combo(root, combo, type_text: str) -> bool:
     return has_selection(combo)
 
 
-def has_selection(el) -> bool:
-    """React-select keeps the chosen value in a sibling single-value div."""
-    return bool(
-        el.evaluate(
-            """(node) => {
-                const c = node.closest('[class*="select__control"], [class*="control"]');
-                return !!c?.querySelector(
-                    '[class*="single-value"], [class*="singleValue"], [class*="multi-value"]');
-            }"""
-        )
-    )
-
-
-def fill_combos(root, city: str, report: dict) -> None:
+def fill_combos(root, city: str, report: dict,
+                harvested: dict[str, list[str]] | None = None) -> None:
     # Multiple passes: the Race dropdown only appears after Hispanic/Latino is
     # answered, and failed commits (hydration races) get retried next pass.
     done: set[str] = set()       # committed or confirmed unmappable
@@ -233,8 +224,9 @@ def fill_combos(root, city: str, report: dict) -> None:
                     report["unmapped"].append(f"{label[:60]} (combobox)")
                     continue
             tries[label] = tries.get(label, 0) + 1
+            bucket = harvested.setdefault(label, []) if harvested is not None else None
             try:
-                ok = fill_combo(root, el, type_text)
+                ok = fill_combo(root, el, type_text, bucket)
             except PWTimeout:
                 ok = False
             if ok:
@@ -309,6 +301,26 @@ def audit_required(root, report: dict) -> None:
     report["required_empty"] = empty
 
 
+def capture_audit(root, slug: str, phase: str, url: str, report: dict, *,
+                  skip: bool = False,
+                  harvested: dict[str, list[str]] | None = None) -> None:
+    """Write one field-inventory manifest for the eval seed data.
+
+    Best-effort by design: the capture is read-only against the form, and any
+    failure is recorded in the report rather than blocking the fill.
+    """
+    if skip:
+        return
+    try:
+        inventory = form_inventory.capture(root)
+        if harvested:
+            form_inventory.merge_options(inventory, harvested)
+        path = form_inventory.write_audit(inventory, slug=slug, phase=phase, url=url)
+        report["audits"].append(f"{phase}: {len(inventory)} fields -> {path.name}")
+    except Exception as exc:
+        report["audits"].append(f"{phase}: capture failed ({exc})")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--url", required=True)
@@ -318,10 +330,17 @@ def main() -> int:
                     help="exit after filling instead of holding the browser open")
     ap.add_argument("--shot", type=Path, default=None,
                     help="save a full-page screenshot here after filling")
+    ap.add_argument("--slug", default=None,
+                    help="audit slug; defaults to the folder name minus its date prefix")
+    ap.add_argument("--no-audit", action="store_true",
+                    help="skip the before/after field-inventory capture")
     args = ap.parse_args()
 
+    slug = args.slug or re.sub(r"^\d{4}-\d{2}-\d{2}_", "", args.folder.name)
     answers = parse_answers(args.folder)
-    report: dict = {"filled": [], "skipped": [], "unmapped": [], "required_empty": []}
+    report: dict = {"filled": [], "skipped": [], "unmapped": [],
+                    "required_empty": [], "audits": []}
+    harvested: dict[str, list[str]] = {}
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
@@ -339,8 +358,9 @@ def main() -> int:
             pass
 
         root = find_form_root(page)
+        capture_audit(root, slug, "pre", args.url, report, skip=args.no_audit)
         fill_text_inputs(root, answers, report)
-        fill_combos(root, args.city, report)
+        fill_combos(root, args.city, report, harvested)
         upload_files(root, args.folder, report)
         page.wait_for_timeout(1000)
         # repair pass: React hydration can wipe values filled too early;
@@ -350,6 +370,8 @@ def main() -> int:
             audit_required(root, report)
         except Exception as exc:  # audit is best-effort; never block the report
             report["required_empty"] = [f"(audit failed: {exc})"]
+        capture_audit(root, slug, "post", args.url, report,
+                      skip=args.no_audit, harvested=harvested)
         if args.shot:
             page.screenshot(path=str(args.shot), full_page=True)
 
@@ -378,7 +400,7 @@ def main() -> int:
             print(f"  {line}")
 
         print("\n=== FILL REPORT ===")
-        for section in ("filled", "skipped", "unmapped", "required_empty"):
+        for section in ("filled", "skipped", "unmapped", "required_empty", "audits"):
             print(f"\n[{section}] ({len(report[section])})")
             for line in report[section]:
                 print(f"  - {line}")

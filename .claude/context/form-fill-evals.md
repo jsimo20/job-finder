@@ -94,20 +94,27 @@ fixture, not a live form, so it costs one agent run and never needs re-capture.
 
 ## Seed batch (2026-07-27)
 
-Ten roles, chosen to exercise both ATS paths — 7 Greenhouse, 3 Ashby:
+Eight roles, chosen to exercise both ATS paths — 5 Greenhouse, 3 Ashby:
 
 | # | Company | Role | ATS |
 |---|---|---|---|
 | 1 | Maven AGI | Senior PM, Integrations | Ashby |
 | 2 | Maven AGI | Senior PM, Voice Agent | Ashby |
 | 3 | Starburst | Senior PM, Identity & Access Mgmt | Greenhouse |
-| 4 | Acquia | Senior PM | Greenhouse |
-| 5 | Datadog | Senior PM, Fleet & Lifecycle Mgmt | Greenhouse |
-| 6 | Re:Build Manufacturing | Principal PM | Greenhouse |
-| 7 | Help Scout | Lead/Principal PM, Intelligence | Ashby |
-| 8 | Agero | Senior PM | Greenhouse |
-| 9 | Beacon Biosignals | Senior Technical PM | Greenhouse |
-| 10 | Formlabs | Senior PM, Hardware | Greenhouse |
+| 4 | Re:Build Manufacturing | Principal PM | Greenhouse |
+| 5 | Help Scout | Lead/Principal PM, Intelligence | Ashby |
+| 6 | Agero | Senior PM | Greenhouse |
+| 7 | Beacon Biosignals | Senior Technical PM | Greenhouse |
+| 8 | Formlabs | Senior PM, Hardware | Greenhouse |
+
+Started as ten. Datadog Fleet & Lifecycle was dropped by James (it would have been a
+third Datadog application in three weeks). Acquia `8053504` closed between his
+verification and the run — the Greenhouse board API returns 404 for it.
+
+Agero is a useful capture on its own: its Greenhouse URL 302s to
+`agero.com/available-jobs?gh_jid=…`, which renders a careers shell and never loads
+the embed. The posting is live in the board API. Fill against `job-boards.greenhouse.io`
+directly, never the redirect target.
 
 Plan: fill all ten as usual, James reviews and returns screenshots plus written
 feedback on what each form got wrong. That feedback defines the expected-value rules

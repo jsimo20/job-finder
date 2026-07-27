@@ -59,7 +59,11 @@ Total realistic range: 15–25 snapshots for a full Greenhouse form (many react-
 
 **Direct URL pattern:** `https://jobs.ashbyhq.com/<company>/<uuid>`
 
-URLs are already direct — no portal wrapping.
+No portal wrapping, but **that URL is the posting, not the form**. It has zero
+form controls; the application lives at `<uuid>/application`. Navigate straight
+there rather than spending a snapshot on the "Apply for this Job" button.
+(Verified 2026-07-27: Maven AGI posting URL returned 0 controls, `/application`
+returned 8.)
 
 **Known fields (fill order):**
 
@@ -68,7 +72,12 @@ URLs are already direct — no portal wrapping.
 3. Phone *(text)*
 4. LinkedIn *(text)* — label: "LinkedIn Profile", "LinkedIn URL"
 5. Location — text or dropdown; type "Boston, Massachusetts, United States" or select
-6. Resume — file upload (label: "Upload resume", "Attach resume")
+6. Resume — file upload (label: "Upload resume", "Attach resume", "Resume:")
+   **Two file inputs, only one of them real.** Ashby renders a convenience
+   "Autofill from resume" uploader *above* the actual `Resume:` field. Uploading
+   to the autofill box parses the PDF into the form and leaves the real resume
+   field empty, so the form looks filled and submits without a resume. Match on
+   the `Resume:` label, never on "first file input on the page."
 7. Cover Letter upload — **absent on most Ashby forms** (Maven AGI, Cyvl both lacked it); do not spend snapshots searching
 8. Work authorization radio (if present) — "Yes"
 9. Sponsorship radio (if present) — "No"

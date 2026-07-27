@@ -35,6 +35,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 - `src/boston_pm_tracker/filter.py` — hard filter rules (Stage 1 + Stage 3)
 - `src/boston_pm_tracker/score.py` — deterministic scoring
 - `src/boston_pm_tracker/review.py` — interactive picker for the CLI `review` subcommand
+- `src/boston_pm_tracker/form_inventory.py` — ATS-agnostic form field inventory (label/type/required/value/options per control) plus the audit-manifest writer; shared by the deterministic filler and the autofill agent
 - `seeds/companies.json` — 398-company seed across GH + Lever + Ashby
 - `.github/workflows/daily.yml` — cron `0 13 */3 * *`, runs pipeline + emails digest
 - `.github/workflows/claude-review.yml` — Claude PR reviewer, fires on `.py` / `.claude/**` / `claude-review.yml` PRs
@@ -77,6 +78,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 - `/fill-application <url> [folder]` — standalone Playwright autofill via the `application-autofiller` subagent. Stops without submitting; James reviews and submits by hand. Logic in `.claude/commands/fill-application.md`.
 - **Greenhouse forms: prefer the deterministic script** over the agent — `python -m boston_pm_tracker.fill_greenhouse --url <url> --folder <per-app folder> [--city <city>]`. Fills the standard section (contact, auth, EEO, uploads) with zero LLM tokens, DOM-verifies every dropdown commit, prints a fill report, holds the browser open for review, never submits. ~2k tokens vs ~63k for the agent. One-time setup: `pip install -e .[apply]` + `playwright install chromium` (local only; CI never needs it). The agent stays as the fallback for unknown ATSes and custom questions.
 - Field values come from `~/path/to/job-search/inputs/standard_answers.md`.
+- **Every fill captures a before/after field inventory** to `data/fill_audits/<date>_<slug>.{pre,post}.json` (gitignored — the `value` column holds contact details). Both fill paths use `form_inventory.py` so their output is comparable; the deterministic script writes them directly, the agent via `browser_evaluate`. Capture is best-effort and never blocks a fill. Redact with `form_inventory.redact()` before promoting a manifest to `tests/fixtures/`. Design: `.claude/context/form-fill-evals.md`.
 - **Playwright MCP is project-scoped** (`.mcp.json`). Its `mcp__playwright__*` tools only load when the Claude session is rooted in this directory — autofill won't work from a session started in the parent `dev/` directory.
 - **Batch autofill = one Chrome instance, one tab per app** (never a separate browser per app). Dispatch a single `application-autofiller` with the full list of `(url, folder)` pairs; it opens each app in a new tab and leaves them all open, unsubmitted, for review. Rule lives in the Batch mode section of `.claude/agents/application-autofiller.md`.
 
