@@ -30,6 +30,14 @@ CT_CITIES_RE = re.compile(
 RI_RE = re.compile(r"\b(providence|rhode island|RI|pawtucket|warwick)\b", re.IGNORECASE)
 WEST_MA_RE = re.compile(r"\b(springfield|worcester|holyoke|chicopee|amherst|northampton)\b",
                         re.IGNORECASE)
+# Southern NH and the Capital District: same ~2h drive as Boston, so they fit
+# the same tolerance. "Nashua" is unambiguous; Manchester, Concord and
+# Portsmouth all collide with other states (and Manchester with the UK), so
+# they only qualify via an explicit NH token.
+NH_RE = re.compile(r"\b(new hampshire|NH|nashua)\b", re.IGNORECASE)
+# "Albany, NY" already cleared the gate through the NY token but had no tier,
+# so it would never have produced a commute warning.
+ALBANY_RE = re.compile(r"\b(albany|schenectady)\b", re.IGNORECASE)
 
 # Drive-time tiers measured from Anytown, CT, which is where James
 # actually lives. He targets Boston deliberately and accepts the drive when the
@@ -44,7 +52,7 @@ MID_METRO_RE = re.compile(
 FAR_METRO_RE = re.compile(
     r"\b(boston|cambridge|somerville|watertown|waltham|burlington|brookline|"
     r"newton|medford|new york|nyc|manhattan|brooklyn|queens|greenwich|norwalk|"
-    r"bridgeport)\b", re.IGNORECASE)
+    r"bridgeport|albany|schenectady|nashua|new hampshire|NH)\b", re.IGNORECASE)
 
 
 def metro_tier(location: str | None) -> str | None:
@@ -190,6 +198,8 @@ def stage1(*, title: str, location: str | None, workplace_type: str | None) -> F
         or CT_CITIES_RE.search(loc_text)
         or RI_RE.search(loc_text)
         or WEST_MA_RE.search(loc_text)
+        or NH_RE.search(loc_text)
+        or ALBANY_RE.search(loc_text)
         or EAST_COAST_RE.search(loc_text)
         or is_remote
     ):

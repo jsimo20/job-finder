@@ -37,6 +37,24 @@ def test_original_scope_still_kept(loc):
     assert _keep(loc)
 
 
+@pytest.mark.parametrize("loc", ["Nashua, NH", "Manchester, NH", "Albany, NY", "Schenectady, NY"])
+def test_second_ring_metros_in_scope(loc):
+    # Same ~2h drive as Boston, so same tolerance.
+    assert _keep(loc)
+    assert f.metro_tier(loc) == "far"
+
+
+def test_manchester_ct_is_near_not_far():
+    # Manchester, CT is ten minutes away. It must not inherit the NH tier.
+    assert f.metro_tier("Manchester, CT") == "near"
+    assert f.commute_warning("Manchester, CT", 5) is None
+
+
+def test_bare_manchester_does_not_pull_in_the_uk():
+    # "Manchester" alone qualifies for nothing; only an explicit NH token does.
+    assert not _keep("Manchester, United Kingdom")
+
+
 @pytest.mark.parametrize("loc", ["Austin, TX", "San Francisco, CA", "Denver, CO", "Seattle, WA"])
 def test_out_of_region_still_discarded(loc):
     assert not _keep(loc)
