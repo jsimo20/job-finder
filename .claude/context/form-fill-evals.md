@@ -111,10 +111,16 @@ Started as ten. Datadog Fleet & Lifecycle was dropped by James (it would have be
 third Datadog application in three weeks). Acquia `8053504` closed between his
 verification and the run — the Greenhouse board API returns 404 for it.
 
-Agero is a useful capture on its own: its Greenhouse URL 302s to
-`agero.com/available-jobs?gh_jid=…`, which renders a careers shell and never loads
-the embed. The posting is live in the board API. Fill against `job-boards.greenhouse.io`
-directly, never the redirect target.
+Agero is a useful capture on its own. Its Greenhouse URL 302s to
+`agero.com/available-jobs?gh_jid=…`, whose top-level document has **zero** form
+controls, so a naive `document.querySelectorAll` on the page reports an empty form and
+`WebFetch` sees only a careers shell. The application is really there, 35 controls deep
+inside a Greenhouse iframe, and `form_inventory.find_form_root` finds it by control
+count. This is the exact case frame discovery exists for, and it is a good reminder that
+"the page has no fields" is usually a claim about the wrong frame.
+
+The direct embed (`job-boards.greenhouse.io/embed/job_app?for=<slug>&token=<id>`) reaches
+the same form without the redirect or the cookie banner, and is the cheaper target.
 
 Plan: fill all ten as usual, James reviews and returns screenshots plus written
 feedback on what each form got wrong. That feedback defines the expected-value rules

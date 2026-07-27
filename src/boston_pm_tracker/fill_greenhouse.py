@@ -44,23 +44,42 @@ TEXT_FIELDS: list[tuple[str, str]] = [
     (r"website|portfolio|github", "github"),
 ]
 
-# (label regex, text to type into the react-select filter before Enter).
-# Substrings chosen to uniquely match the standard Greenhouse option labels.
-COMBO_FIELDS: list[tuple[str, str]] = [
+# (label regex, candidate texts tried in order). Each candidate is typed into
+# the react-select filter, then matched against what the menu actually shows.
+#
+# Candidates are ordered most-specific first. Short answers like "no" are last
+# resorts because forms that phrase their options as sentences make them
+# ambiguous: Agero's sponsorship options are "I do not require sponsorship" and
+# "I require sponsorship now or in the future", and BOTH contain "no" (in "not"
+# and in "now"). A bare "no" there once selected the wrong one, which would have
+# told Agero he needs visa sponsorship.
+COMBO_FIELDS: list[tuple[str, list[str]]] = [
     # authorization first — its label contains the word "country"
-    (r"authori[sz]", "no restriction"),
-    (r"country", "United States"),
-    (r"sponsor", "No"),
-    (r"hear about", "Careers Page"),
-    (r"gender", "Male"),
-    (r"hispanic", "No"),
-    (r"race", "White"),
-    (r"veteran", "not a protected"),
-    (r"disabilit", "no, i do not have"),
-    (r"certify", "Yes"),
-    (r"privacy|acknowledg", "Yes"),
-    (r"pronoun", "He/"),
+    (r"authori[sz]", ["no restriction", "yes"]),
+    (r"country", ["United States"]),
+    (r"sponsor", ["do not require sponsorship", "will not require", "no"]),
+    (r"hear about", ["Careers Page", "Company Website"]),
+    (r"gender", ["Male"]),
+    (r"hispanic", ["No"]),
+    (r"race", ["White"]),
+    (r"veteran", ["not a protected"]),
+    (r"disabilit", ["no, i do not have"]),
+    (r"certify", ["Yes"]),
+    (r"privacy|acknowledg", ["Yes"]),
+    (r"pronoun", ["He/"]),
 ]
+
+# Labels that contain a name word but are asking about somebody who is not
+# James. "…please indicate their first and last name" once matched the last-name
+# rule and filled in "SampleUser", asserting an employee referral that never
+# happened.
+# Word-anchored on purpose: a bare "referr" also matches "P-referred First Name",
+# which would block a field that fills correctly today.
+NAME_TRAP_PATTERN = re.compile(
+    r"\brefer(r|red|ence|ral)|\bemergency\b|\bsupervisor\b|\bmanager\b|"
+    r"\bspouse\b|\bguardian\b|next of kin|who told you|\brecruiter\b",
+    re.I,
+)
 
 SKIP_PATTERN = re.compile(r"salary|compensation|desired pay|expected pay", re.I)
 
@@ -120,6 +139,9 @@ def fill_text_inputs(root, answers: dict[str, str], report: dict) -> None:
             continue
         if el.input_value():
             continue
+        if NAME_TRAP_PATTERN.search(label):
+            report["unmapped"].append(f"{label[:60]} (asks about someone else — never autofilled)")
+            continue
         if el.get_attribute("type") == "tel" or re.search(r"phone", label, re.I):
             el.fill(answers["phone"])
             report["filled"].append(f"{label}: {answers['phone']}")
@@ -133,72 +155,108 @@ def fill_text_inputs(root, answers: dict[str, str], report: dict) -> None:
             report["unmapped"].append(label)
 
 
-def fill_combo(root, combo, type_text: str, seen_options: list[str] | None = None) -> bool:
-    """React-select pattern: open, type to filter, click the matching option.
+def match_option(texts: list[str], want: str) -> int | None:
+    """Index of the ONE option matching `want`, or None if none or several do.
 
-    Enter alone doesn't commit on Greenhouse's react-select build, so click
-    the option element directly, then verify the selection actually landed.
-    Returns True only when the selection is confirmed in the DOM.
+    Tiered so a precise match always beats a loose one: exact, then whole-word,
+    then substring. Ambiguity at the winning tier returns None on purpose.
 
-    react-select renders its menu only while open, so the option list is
-    unreachable from a static inventory pass. This is the one moment it is
-    visible; `seen_options` collects it for the audit manifest.
+    Failing closed matters more than filling the field. Agero's sponsorship
+    options are "I do not require sponsorship" and "I require sponsorship now or
+    in the future"; a substring search for "no" matches both (via "not" and
+    "now"), and the old code took whichever came first in the DOM. It picked the
+    wrong one. A blank field is recoverable at review time; a submitted
+    application saying he needs visa sponsorship is not.
     """
+    w = want.lower().strip()
+    for hits in (
+        [i for i, t in enumerate(texts) if t == w],
+        [i for i, t in enumerate(texts) if re.search(rf"\b{re.escape(w)}\b", t)],
+        [i for i, t in enumerate(texts) if w in t],
+    ):
+        if len(hits) == 1:
+            return hits[0]
+        if hits:
+            return None          # several options match this precisely; do not guess
+    return None
+
+
+def _open_menu(combo) -> bool:
     # click doesn't always open the menu (hydration races) — verify and retry
     for _ in range(3):
         combo.click()
         combo.page.wait_for_timeout(300)
         if combo.get_attribute("aria-expanded") == "true":
-            break
-    else:
-        return False
+            return True
+    return False
 
-    # Harvest before typing: press_sequentially filters the menu, and a
-    # filtered list would misrepresent what the form actually offers. Async
-    # lists (city autocomplete) come up empty here and get picked up below.
-    if seen_options is not None:
-        opened = root.locator("[role='option']")
-        for _ in range(4):
-            if opened.count():
-                break
-            combo.page.wait_for_timeout(250)
-        for i in range(opened.count()):
-            raw = (opened.nth(i).text_content() or "").strip()
-            if raw and raw not in seen_options:
-                seen_options.append(raw)
 
-    combo.press_sequentially(type_text, delay=20)
-
-    # options can load async (city autocomplete hits an API) — poll up to 3s
+def _visible_option_texts(root, combo, *, poll: int = 6) -> list[str]:
     options = root.locator("[role='option']")
-    for _ in range(6):
+    for _ in range(poll):
         combo.page.wait_for_timeout(500)
         if options.count():
             break
-    want = type_text.lower().strip()
-    best = None
+    out = []
     for i in range(options.count()):
         opt = options.nth(i)
-        if not opt.is_visible():
-            continue
-        if seen_options is not None:
-            raw = (opt.text_content() or "").strip()
-            if raw and raw not in seen_options:
-                seen_options.append(raw)
-        text = (opt.text_content() or "").lower().strip()
-        if text == want:            # exact beats contains ("Male" vs "Female")
-            best = opt
-            break
-        if want in text and best is None:
-            best = opt
-    if best is not None:
-        best.click()
-    else:
-        combo.press("ArrowDown")
-        combo.press("Enter")
+        out.append((opt.text_content() or "").strip() if opt.is_visible() else "")
+    return out
 
-    combo.page.wait_for_timeout(200)
-    return has_selection(combo)
+
+def fill_combo(root, combo, candidates: list[str],
+               seen_options: list[str] | None = None) -> tuple[bool, str]:
+    """React-select pattern: open, type to filter, click the one matching option.
+
+    Tries each candidate in order and commits the first that resolves to exactly
+    one option. Enter alone doesn't commit on Greenhouse's react-select build, so
+    the option element is clicked directly and the selection is then verified in
+    the DOM. Returns (committed, reason).
+
+    react-select renders its menu only while open, so the option list is
+    unreachable from a static inventory pass. This is the one moment it is
+    visible; `seen_options` collects it for the audit manifest.
+    """
+    ambiguous_on = []
+    for attempt, want in enumerate(candidates):
+        if not _open_menu(combo):
+            return False, "menu never opened"
+
+        # Harvest before typing: press_sequentially filters the menu, and a
+        # filtered list would misrepresent what the form actually offers. Async
+        # lists (city autocomplete) come up empty here and get picked up below.
+        if seen_options is not None and attempt == 0:
+            for raw in _visible_option_texts(root, combo, poll=2):
+                if raw and raw not in seen_options:
+                    seen_options.append(raw)
+
+        combo.press_sequentially(want, delay=20)
+        texts = _visible_option_texts(root, combo)
+        if seen_options is not None:
+            for raw in texts:
+                if raw and raw not in seen_options:
+                    seen_options.append(raw)
+
+        idx = match_option([t.lower() for t in texts], want)
+        if idx is not None:
+            root.locator("[role='option']").nth(idx).click()
+            combo.page.wait_for_timeout(200)
+            if has_selection(combo):
+                return True, want
+        elif [t for t in texts if want.lower() in t.lower()]:
+            ambiguous_on.append(want)
+
+        # Clear the filter so the next candidate starts from the full list.
+        try:
+            combo.press("Escape")
+            for _ in range(len(want)):
+                combo.press("Backspace")
+        except PWTimeout:
+            pass
+
+    if ambiguous_on:
+        return False, f"ambiguous: {', '.join(ambiguous_on)} matched multiple options"
+    return False, "no option matched"
 
 
 def fill_combos(root, city: str, report: dict,
@@ -221,11 +279,11 @@ def fill_combos(root, city: str, report: dict,
                 done.add(label)
                 continue
             if CITY_PATTERN.search(label):
-                type_text = city
+                candidates = [city]
             else:
-                for pattern, candidate in COMBO_FIELDS:
+                for pattern, opts in COMBO_FIELDS:
                     if re.search(pattern, label, re.I):
-                        type_text = candidate
+                        candidates = list(opts)
                         break
                 else:
                     done.add(label)
@@ -234,15 +292,34 @@ def fill_combos(root, city: str, report: dict,
             tries[label] = tries.get(label, 0) + 1
             bucket = harvested.setdefault(label, []) if harvested is not None else None
             try:
-                ok = fill_combo(root, el, type_text, bucket)
+                ok, reason = fill_combo(root, el, candidates, bucket)
             except PWTimeout:
-                ok = False
+                ok, reason = False, "timed out"
             if ok:
                 done.add(label)
-                report["filled"].append(f"{label[:60]}: {type_text}")
-            elif tries[label] >= MAX_TRIES:
+                report["filled"].append(f"{label[:60]}: {reason}")
+            elif reason.startswith("ambiguous") or tries[label] >= MAX_TRIES:
+                # Ambiguity is final: retrying re-derives the same options and
+                # would only risk committing a guess on the next pass.
                 done.add(label)
-                report["unmapped"].append(f"{label[:60]} (selection did not commit)")
+                report["unmapped"].append(f"{label[:60]} ({reason})")
+
+
+def _try_upload(el, path: Path, what: str, report: dict, *, how: str = "") -> bool:
+    """Attach one file. A file input that will not accept it is reported, not raised.
+
+    Some Greenhouse forms render a second, non-actionable file input (a hidden
+    drag-drop target, or a cover-letter slot the company disabled). Letting that
+    timeout propagate cost three of five applications their entire fill on
+    2026-07-27, including the text and dropdown work that had already succeeded.
+    """
+    try:
+        el.set_input_files(str(path), timeout=5000)
+        report["filled"].append(f"{what} upload{how}: {path.name}")
+        return True
+    except Exception as exc:
+        report["unmapped"].append(f"{what} upload failed ({type(exc).__name__})")
+        return False
 
 
 def upload_files(root, folder: Path, report: dict) -> None:
@@ -250,30 +327,39 @@ def upload_files(root, folder: Path, report: dict) -> None:
     cover = next(folder.glob("Sample_User_CoverLetter_*.pdf"), None)
     file_inputs = root.locator("input[type='file']")
     unmatched: list[int] = []
+    placed = {"resume": False, "cover": False}
     for i in range(file_inputs.count()):
         el = file_inputs.nth(i)
-        context = el.evaluate(
-            "(node) => (node.closest('div[class], fieldset, section')?.textContent"
-            " || '') + ' ' + (node.getAttribute('aria-label') || '')"
-        )
+        try:
+            context = el.evaluate(
+                "(node) => (node.closest('div[class], fieldset, section')?.textContent"
+                " || '') + ' ' + (node.getAttribute('aria-label') || '')"
+            )
+        except Exception:
+            context = ""
         if re.search(r"cover", context, re.I):
-            if cover:
-                el.set_input_files(str(cover))
-                report["filled"].append(f"Cover letter upload: {cover.name}")
+            if cover and not placed["cover"]:
+                placed["cover"] = _try_upload(el, cover, "Cover letter", report)
         elif re.search(r"resume|cv", context, re.I):
-            if resume:
-                el.set_input_files(str(resume))
-                report["filled"].append(f"Resume upload: {resume.name}")
+            if resume and not placed["resume"]:
+                placed["resume"] = _try_upload(el, resume, "Resume", report)
         else:
             unmatched.append(i)
+
     # Greenhouse convention when labels aren't reachable: first file input is
-    # the resume, second (if present) is the cover letter.
-    if unmatched and resume:
-        file_inputs.nth(unmatched[0]).set_input_files(str(resume))
-        report["filled"].append(f"Resume upload (by position): {resume.name}")
-        if len(unmatched) > 1 and cover:
-            file_inputs.nth(unmatched[1]).set_input_files(str(cover))
-            report["filled"].append(f"Cover letter upload (by position): {cover.name}")
+    # the resume, second (if present) is the cover letter. Only fill what the
+    # labelled pass missed, so a stray extra input can't re-upload the resume.
+    for idx in unmatched:
+        if resume and not placed["resume"]:
+            placed["resume"] = _try_upload(file_inputs.nth(idx), resume, "Resume",
+                                           report, how=" (by position)")
+        elif cover and not placed["cover"]:
+            placed["cover"] = _try_upload(file_inputs.nth(idx), cover, "Cover letter",
+                                          report, how=" (by position)")
+        else:
+            break
+    if resume and not placed["resume"]:
+        report["required_empty"].append("RESUME NOT ATTACHED — no usable file input")
 
 
 def audit_required(root, report: dict) -> None:
@@ -306,7 +392,7 @@ def audit_required(root, report: dict) -> None:
             return out;
         }"""
     )
-    report["required_empty"] = empty
+    report["required_empty"].extend(empty)   # extend: upload_files may have added to this
 
 
 def capture_audit(root, slug: str, phase: str, url: str, report: dict, *,
@@ -329,20 +415,28 @@ def capture_audit(root, slug: str, phase: str, url: str, report: dict, *,
         report["audits"].append(f"{phase}: capture failed ({exc})")
 
 
-def fill_one(browser, url: str, folder: Path, city: str, *,
+def fill_one(context, url: str, folder: Path, city: str, *,
              slug: str | None = None, no_audit: bool = False,
-             shot: Path | None = None) -> tuple[Page, dict]:
-    """Fill one application in its own tab. Returns the page and its report.
+             shot: Path | None = None, report: dict | None = None) -> tuple[Page, dict]:
+    """Fill one application in a new TAB of the caller's context.
+
+    Takes a BrowserContext, never a Browser. `browser.new_page()` implicitly
+    creates a fresh context per call, and Chromium renders one window per
+    context — calling it in a loop produced five separate windows instead of
+    five tabs. Pages sharing a context are tabs in a single window.
 
     The page is deliberately left open; the caller decides when to hold or exit.
+    Pass `report` so a partially-filled application still reports what landed
+    before an exception.
     """
     slug = slug or re.sub(r"^\d{4}-\d{2}-\d{2}_", "", folder.name)
     answers = parse_answers(folder)
-    report: dict = {"filled": [], "skipped": [], "unmapped": [],
-                    "required_empty": [], "audits": []}
+    if report is None:
+        report = {"filled": [], "skipped": [], "unmapped": [],
+                  "required_empty": [], "audits": []}
     harvested: dict[str, list[str]] = {}
 
-    page = browser.new_page()
+    page = context.new_page()
     page.set_default_timeout(STEP_TIMEOUT_MS)
     page.goto(url, wait_until="domcontentloaded")
     page.wait_for_timeout(3000)
@@ -365,9 +459,9 @@ def fill_one(browser, url: str, folder: Path, city: str, *,
     # this refills any text input that came up empty (skips filled ones)
     fill_text_inputs(root, answers, report)
     try:
-        audit_required(root, report)
+        audit_required(root, report)   # appends; must not clobber earlier entries
     except Exception as exc:  # audit is best-effort; never block the report
-        report["required_empty"] = [f"(audit failed: {exc})"]
+        report["required_empty"].append(f"(audit failed: {exc})")
     capture_audit(root, slug, "post", url, report, skip=no_audit, harvested=harvested)
     if shot:
         page.screenshot(path=str(shot), full_page=True)
@@ -439,21 +533,24 @@ def main() -> int:
         # One browser, one tab per application. James reviews the batch as tabs
         # in a single window, so never launch a browser per app.
         browser = p.chromium.launch(headless=False)
+        # ONE context for the whole batch, so every application is a tab in a
+        # single window rather than a window of its own.
+        context = browser.new_context()
         reports: list[tuple[str, dict]] = []
         for url, folder, slug in jobs:
             label = folder.name
+            # Owned out here so a throw mid-fill still reports what landed.
+            report: dict = {"filled": [], "skipped": [], "unmapped": [],
+                            "required_empty": [], "audits": []}
             try:
-                _, report = fill_one(browser, url, folder, args.city, slug=slug,
-                                     no_audit=args.no_audit, shot=args.shot)
+                fill_one(context, url, folder, args.city, slug=slug,
+                         no_audit=args.no_audit, shot=args.shot, report=report)
             except Exception as exc:
                 # One bad form must not cost the whole batch its filled tabs.
                 print(f"\n!!! {label} FAILED: {type(exc).__name__}: {exc}")
-                reports.append((label, {"filled": [], "skipped": [], "unmapped": [],
-                                        "required_empty": [f"(fill failed: {exc})"],
-                                        "audits": [], "dom_values": []}))
-                continue
+                report["required_empty"].append(f"(fill aborted: {type(exc).__name__}: {exc})")
             reports.append((label, report))
-            print(f"[{len(reports)}/{len(jobs)}] filled {label}")
+            print(f"[{len(reports)}/{len(jobs)}] {len(report['filled'])} fields — {label}")
             sys.stdout.flush()
 
         for label, report in reports:
