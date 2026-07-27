@@ -342,24 +342,65 @@ def fill_combos(root, city: str, report: dict,
                     report["required_empty"].append(f"{label[:60]} — {reason}")
 
 
-def _try_upload(el, path: Path, what: str, report: dict, *, how: str = "") -> bool:
-    """Attach one file. A file input that will not accept it is reported, not raised.
-
-    Some Greenhouse forms render a second, non-actionable file input (a hidden
-    drag-drop target, or a cover-letter slot the company disabled). Letting that
-    timeout propagate cost three of five applications their entire fill on
-    2026-07-27, including the text and dropdown work that had already succeeded.
-    """
+def _attached(el) -> bool:
+    """Whether the input actually holds a file now."""
     try:
-        el.set_input_files(str(path), timeout=5000)
-        report["filled"].append(f"{what} upload{how}: {path.name}")
-        return True
-    except Exception as exc:
-        report["unmapped"].append(f"{what} upload failed ({type(exc).__name__})")
+        return bool(el.evaluate("(n) => !!(n.files && n.files.length)"))
+    except Exception:
         return False
 
 
-def upload_files(root, folder: Path, report: dict) -> None:
+def _try_upload(el, path: Path, what: str, report: dict, *, how: str = "") -> bool:
+    """Attach one file and VERIFY it stuck. Never reports an upload it can't see.
+
+    Two distinct failures, both observed on 2026-07-27:
+
+    A non-actionable file input (a hidden drag-drop target, or a cover-letter
+    slot the company disabled) raises a timeout. Letting that propagate cost
+    three of five applications their entire fill, including work that had
+    already succeeded, so it is caught.
+
+    Worse, set_input_files can return cleanly while the file does not attach --
+    Greenhouse re-renders the input and the selection is dropped. The filler
+    reported "Resume upload (by position)" on four applications that had no
+    resume attached. A report claiming an upload that did not happen is more
+    dangerous than a visible failure, because the form looks ready to submit.
+    """
+    try:
+        el.set_input_files(str(path), timeout=5000)
+    except Exception as exc:
+        report["unmapped"].append(f"{what} upload failed ({type(exc).__name__})")
+        return False
+    if not _attached(el):
+        report["unmapped"].append(f"{what} upload did not stick (input dropped the file)")
+        return False
+    report["filled"].append(f"{what} upload{how}: {path.name}")
+    return True
+
+
+def _upload_via_chooser(page, root, label_re: str, path: Path, what: str,
+                        report: dict) -> bool:
+    """Fallback: drive the visible Attach button through a real file chooser.
+
+    JS-backed uploaders ignore a programmatic set_input_files on their hidden
+    input but handle the browser's own file-chooser event, so this reaches the
+    ones the direct path cannot.
+    """
+    try:
+        btn = root.get_by_text(re.compile(label_re, re.I)).first
+        if not btn.count():
+            return False
+        with page.expect_file_chooser(timeout=5000) as fc:
+            btn.click()
+        fc.value.set_files(str(path))
+        page.wait_for_timeout(800)
+        report["filled"].append(f"{what} upload (file chooser): {path.name}")
+        return True
+    except Exception:
+        return False
+
+
+def upload_files(root, folder: Path, report: dict, page=None) -> None:
     resume = next(folder.glob("Sample_User_Resume_*.pdf"), None)
     cover = next(folder.glob("Sample_User_CoverLetter_*.pdf"), None)
     file_inputs = root.locator("input[type='file']")
@@ -395,8 +436,17 @@ def upload_files(root, folder: Path, report: dict) -> None:
                                           report, how=" (by position)")
         else:
             break
+    # Last resort: drive the visible Attach button rather than the hidden input.
+    if page is not None:
+        if resume and not placed["resume"]:
+            placed["resume"] = _upload_via_chooser(page, root, r"attach|resume|upload",
+                                                   resume, "Resume", report)
+        if cover and not placed["cover"]:
+            placed["cover"] = _upload_via_chooser(page, root, r"cover letter",
+                                                  cover, "Cover letter", report)
     if resume and not placed["resume"]:
-        report["required_empty"].append("RESUME NOT ATTACHED — no usable file input")
+        report["required_empty"].append(
+            "RESUME NOT ATTACHED — attach it by hand before submitting")
 
 
 def audit_required(root, report: dict) -> None:
@@ -500,7 +550,7 @@ def fill_one(context, url: str, folder: Path, city: str, *,
     capture_audit(root, slug, "pre", url, report, skip=no_audit)
     fill_text_inputs(root, answers, report)
     fill_combos(root, city, report, harvested)
-    upload_files(root, folder, report)
+    upload_files(root, folder, report, page)
     page.wait_for_timeout(1000)
     # repair pass: React hydration can wipe values filled too early;
     # this refills any text input that came up empty (skips filled ones)

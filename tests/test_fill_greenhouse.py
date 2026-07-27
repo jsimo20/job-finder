@@ -133,3 +133,49 @@ def test_shot_rejected_in_batch_mode(monkeypatch, capsys):
         _main(["--url", "a", "--url", "b", "--folder", "x", "--folder", "y",
                "--shot", "out.png"], monkeypatch)
     assert "omit it in batch mode" in capsys.readouterr().err
+
+
+class _FakeEl:
+    """Minimal stand-in for a Playwright file input."""
+    def __init__(self, *, accepts=True, keeps=True):
+        self.accepts, self.keeps, self.calls = accepts, keeps, 0
+
+    def set_input_files(self, path, timeout=None):
+        self.calls += 1
+        if not self.accepts:
+            raise RuntimeError("Timeout")
+
+    def evaluate(self, _js):
+        return self.keeps
+
+
+def _blank_report():
+    return {"filled": [], "skipped": [], "unmapped": [], "required_empty": [], "audits": []}
+
+
+def test_upload_reported_only_when_it_actually_attached(tmp_path):
+    pdf = tmp_path / "Sample_User_Resume_x.pdf"
+    pdf.write_bytes(b"%PDF-1.4")
+    r = _blank_report()
+    assert fg._try_upload(_FakeEl(), pdf, "Resume", r) is True
+    assert any("Resume upload" in line for line in r["filled"])
+
+
+def test_upload_that_does_not_stick_is_not_reported_as_filled(tmp_path):
+    # The 2026-07-27 failure: set_input_files returned cleanly, the file never
+    # attached, and four applications reported a resume they did not have.
+    pdf = tmp_path / "Sample_User_Resume_x.pdf"
+    pdf.write_bytes(b"%PDF-1.4")
+    r = _blank_report()
+    assert fg._try_upload(_FakeEl(keeps=False), pdf, "Resume", r) is False
+    assert r["filled"] == []
+    assert any("did not stick" in line for line in r["unmapped"])
+
+
+def test_upload_that_raises_is_caught_and_reported(tmp_path):
+    pdf = tmp_path / "Sample_User_Resume_x.pdf"
+    pdf.write_bytes(b"%PDF-1.4")
+    r = _blank_report()
+    assert fg._try_upload(_FakeEl(accepts=False), pdf, "Resume", r) is False
+    assert r["filled"] == []
+    assert any("failed" in line for line in r["unmapped"])
