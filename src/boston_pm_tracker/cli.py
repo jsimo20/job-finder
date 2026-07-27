@@ -98,6 +98,15 @@ def _cmd_applied_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_applied_remove(args: argparse.Namespace) -> int:
+    rec = applied.remove_applied(args.external_id)
+    if rec:
+        print(f"removed: {rec['company']} — {rec['title']} [{rec['external_id']}]")
+        return 0
+    print(f"no match for {args.external_id}")
+    return 1
+
+
 def _cmd_applied_check(args: argparse.Namespace) -> int:
     q = args.query.strip()
     # A URL if it looks like one; otherwise treat as an external_id.
@@ -216,6 +225,9 @@ def main(argv: list[str] | None = None) -> int:
     ac = asub.add_parser("check", help="have we applied to this? (external_id or URL)")
     ac.add_argument("query")
     ac.set_defaults(func=_cmd_applied_check)
+    ar = asub.add_parser("remove", help="drop a role from the log (e.g. one you decided not to submit)")
+    ar.add_argument("--external-id", required=True, dest="external_id")
+    ar.set_defaults(func=_cmd_applied_remove)
 
     p = sub.add_parser("dismiss")
     p.add_argument("external_id")

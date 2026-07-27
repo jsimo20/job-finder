@@ -1,7 +1,7 @@
 """Tests for the durable applied-log (applied.py)."""
 from __future__ import annotations
 
-from boston_pm_tracker import applied
+from boston_pm_tracker import applied, cli
 
 
 def test_record_and_list(tmp_path):
@@ -65,6 +65,31 @@ def test_missing_required_fields(tmp_path):
             assert False, "expected ValueError"
         except ValueError:
             pass
+
+
+def test_remove_applied(tmp_path):
+    p = tmp_path / "applied.jsonl"
+    applied.record_applied("a", company="C1", title="T1", path=p)
+    applied.record_applied("b", company="C2", title="T2", path=p)
+    removed = applied.remove_applied("a", path=p)
+    assert removed is not None and removed["external_id"] == "a"
+    assert applied.applied_external_ids(path=p) == {"b"}
+    assert applied.remove_applied("nope", path=p) is None  # no match
+    assert applied.remove_applied("b", path=p) is not None
+    assert applied.list_applied(path=p) == []  # file emptied
+
+
+def test_cli_applied_remove_is_reachable(tmp_path, monkeypatch):
+    # remove_applied() worked for 19 days; the bug was that no argparse
+    # subcommand reached it. Goes through cli.main so it fails on wiring.
+    p = tmp_path / "applied.jsonl"
+    applied.record_applied("a", company="C1", title="T1", path=p)
+    real_remove = applied.remove_applied
+    monkeypatch.setattr(cli.applied, "remove_applied",
+                        lambda external_id, path=p: real_remove(external_id, path=path))
+    assert cli.main(["applied", "remove", "--external-id", "a"]) == 0
+    assert applied.applied_external_ids(path=p) == set()
+    assert cli.main(["applied", "remove", "--external-id", "nope"]) == 1
 
 
 def test_empty_log(tmp_path):

@@ -122,6 +122,7 @@ Durable record of roles applied to, keyed by `external_id`. Fixes the fact that 
   boston-pm-tracker applied add --external-id 8030599 --company Datadog --title "Senior PM - Agent Integrations" [--url …] [--date YYYY-MM-DD] [--source …]
   boston-pm-tracker applied list [--company datadog]
   boston-pm-tracker applied check 8030599        # or a full posting/apply URL → "APPLIED" / "not applied"
+  boston-pm-tracker applied remove --external-id 8596193002   # drop a role you decided not to submit
   ```
   `mark-applied <external_id>` also writes to this log automatically (pulling company/title/url from the DB row). For ad-hoc roles with no DB row, use `applied add`.
 
