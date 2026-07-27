@@ -342,15 +342,29 @@ def fill_combos(root, city: str, report: dict,
                     report["required_empty"].append(f"{label[:60]} — {reason}")
 
 
-def _attached(el) -> bool:
-    """Whether the input actually holds a file now."""
-    try:
-        return bool(el.evaluate("(n) => !!(n.files && n.files.length)"))
-    except Exception:
-        return False
+def _upload_landed(root, path: Path, *, timeout_ms: int = 4000) -> bool:
+    """Whether the form is showing this file as attached.
+
+    Checked against the rendered filename, NOT input.files. Greenhouse consumes
+    the file on change, removes the input node, and renders a filename chip in
+    its place, so reading files.length back finds either a detached node or the
+    next empty input and reports 0 on a perfectly good upload. Verifying that
+    way briefly convinced me four working uploads had failed.
+    """
+    waited = 0
+    while waited < timeout_ms:
+        try:
+            if root.evaluate("(name) => document.body.innerText.includes(name)", path.name):
+                return True
+        except Exception:
+            return False
+        root.wait_for_timeout(400) if hasattr(root, "wait_for_timeout") else None
+        waited += 400
+    return False
 
 
-def _try_upload(el, path: Path, what: str, report: dict, *, how: str = "") -> bool:
+def _try_upload(el, path: Path, what: str, report: dict, *, how: str = "",
+                root=None) -> bool:
     """Attach one file and VERIFY it stuck. Never reports an upload it can't see.
 
     Two distinct failures, both observed on 2026-07-27:
@@ -371,8 +385,8 @@ def _try_upload(el, path: Path, what: str, report: dict, *, how: str = "") -> bo
     except Exception as exc:
         report["unmapped"].append(f"{what} upload failed ({type(exc).__name__})")
         return False
-    if not _attached(el):
-        report["unmapped"].append(f"{what} upload did not stick (input dropped the file)")
+    if root is not None and not _upload_landed(root, path):
+        report["unmapped"].append(f"{what} upload did not register on the form")
         return False
     report["filled"].append(f"{what} upload{how}: {path.name}")
     return True
@@ -417,10 +431,10 @@ def upload_files(root, folder: Path, report: dict, page=None) -> None:
             context = ""
         if re.search(r"cover", context, re.I):
             if cover and not placed["cover"]:
-                placed["cover"] = _try_upload(el, cover, "Cover letter", report)
+                placed["cover"] = _try_upload(el, cover, "Cover letter", report, root=root)
         elif re.search(r"resume|cv", context, re.I):
             if resume and not placed["resume"]:
-                placed["resume"] = _try_upload(el, resume, "Resume", report)
+                placed["resume"] = _try_upload(el, resume, "Resume", report, root=root)
         else:
             unmatched.append(i)
 
@@ -430,10 +444,10 @@ def upload_files(root, folder: Path, report: dict, page=None) -> None:
     for idx in unmatched:
         if resume and not placed["resume"]:
             placed["resume"] = _try_upload(file_inputs.nth(idx), resume, "Resume",
-                                           report, how=" (by position)")
+                                           report, how=" (by position)", root=root)
         elif cover and not placed["cover"]:
             placed["cover"] = _try_upload(file_inputs.nth(idx), cover, "Cover letter",
-                                          report, how=" (by position)")
+                                          report, how=" (by position)", root=root)
         else:
             break
     # Last resort: drive the visible Attach button rather than the hidden input.
