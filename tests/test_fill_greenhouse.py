@@ -21,6 +21,42 @@ AGERO_SPONSORSHIP = [
 ]
 
 
+# The options Agero's sponsorship dropdown ACTUALLY offers, read out of the
+# captured audit manifest. Note there is no "I do not require sponsorship"
+# option at all: the correct answer is phrased as a positive authorization
+# statement, which is why every negation candidate missed and a bare "no"
+# resolved cleanly and uniquely to the wrong option through "now".
+AGERO_REAL = [
+    "i am legally authorized to work in this country for any employer.",
+    "i require sponsorship now or in the future.",
+]
+
+
+def test_bare_no_matches_the_wrong_agero_option_uniquely():
+    # Documents WHY the ambiguity guard alone was not enough: this is a clean,
+    # unambiguous match onto the answer that must never be given.
+    assert fg.match_option(AGERO_REAL, "no") == 1
+
+
+def test_sponsorship_veto_covers_the_wrong_agero_option():
+    veto = fg.veto_for("Will you now or in the future require sponsorship for employment VISA status")
+    assert veto is not None
+    import re as _re
+    assert _re.search(veto, AGERO_REAL[1], _re.I), "must veto the requires-sponsorship option"
+    assert not _re.search(veto, AGERO_REAL[0], _re.I), "must not veto the authorized option"
+
+
+def test_sponsorship_veto_allows_a_plain_negation():
+    veto = fg.veto_for("Do you require sponsorship?")
+    import re as _re
+    assert not _re.search(veto, "i do not require sponsorship.", _re.I)
+
+
+def test_authorized_candidate_resolves_the_real_agero_options():
+    cands = next(c for pat, c in fg.COMBO_FIELDS if pat == r"sponsor")
+    assert fg.match_option(AGERO_REAL, cands[0]) == 0
+
+
 def test_bare_no_is_ambiguous_against_agero_sponsorship():
     # Must refuse rather than guess: picking wrong here is unrecoverable.
     assert fg.match_option(AGERO_SPONSORSHIP, "no") is None
@@ -32,10 +68,11 @@ def test_specific_candidate_resolves_agero_sponsorship():
 
 
 def test_sponsorship_candidates_are_ordered_specific_first():
-    # Ordering is load-bearing: "no" first would hit the ambiguous path and the
-    # field would be left blank on every sentence-phrased form.
+    # Ordering is load-bearing. "no" must stay last: on Agero's real options it
+    # matches uniquely and wrongly, so anything specific has to be tried first.
     cands = next(c for pat, c in fg.COMBO_FIELDS if pat == r"sponsor")
-    assert cands[0] == "do not require sponsorship"
+    assert cands[0] == "legally authorized to work"
+    assert "do not require sponsorship" in cands
     assert cands[-1] == "no"
 
 

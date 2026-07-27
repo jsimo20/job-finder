@@ -53,11 +53,29 @@ TEXT_FIELDS: list[tuple[str, str]] = [
 # "I require sponsorship now or in the future", and BOTH contain "no" (in "not"
 # and in "now"). A bare "no" there once selected the wrong one, which would have
 # told Agero he needs visa sponsorship.
+# Options that must never be selected for a field, whatever the match says.
+# The sponsorship veto is the important one. Agero phrases the correct answer as
+# a positive statement, not a negation:
+#     "I am legally authorized to work in this country for any employer."
+#     "I require sponsorship now or in the future."
+# so none of the negation candidates match, and a bare "no" resolves cleanly and
+# uniquely to the wrong option through the "no" in "now". No string-similarity
+# rule catches that. Naming the answer that must never be chosen does.
+VETO: dict[str, str] = {
+    r"sponsor": r"\bi\s+require\s+sponsorship\b|\bwill\s+require\s+sponsorship\b|"
+                r"\bh-?1-?b\b|\bopt\b|\bvisa\s+sponsorship\s+(is\s+)?required\b",
+    r"authori[sz]": r"\bnot\s+authorized\b|\bi\s+require\s+sponsorship\b",
+}
+
+# (label regex, candidate texts tried in order). Ordered most-specific first;
+# short answers like "no" are last resorts because sentence-phrased options make
+# them ambiguous or, worse, uniquely wrong.
 COMBO_FIELDS: list[tuple[str, list[str]]] = [
     # authorization first — its label contains the word "country"
-    (r"authori[sz]", ["no restriction", "yes"]),
+    (r"authori[sz]", ["legally authorized to work", "no restriction", "yes"]),
     (r"country", ["United States"]),
-    (r"sponsor", ["do not require sponsorship", "will not require", "no"]),
+    (r"sponsor", ["legally authorized to work", "do not require sponsorship",
+                  "will not require", "no"]),
     (r"hear about", ["Careers Page", "Company Website"]),
     (r"gender", ["Male"]),
     (r"hispanic", ["No"]),
@@ -68,6 +86,13 @@ COMBO_FIELDS: list[tuple[str, list[str]]] = [
     (r"privacy|acknowledg", ["Yes"]),
     (r"pronoun", ["He/"]),
 ]
+
+
+def veto_for(label: str) -> str | None:
+    for pattern, veto in VETO.items():
+        if re.search(pattern, label, re.I):
+            return veto
+    return None
 
 # Labels that contain a name word but are asking about somebody who is not
 # James. "…please indicate their first and last name" once matched the last-name
@@ -205,7 +230,8 @@ def _visible_option_texts(root, combo, *, poll: int = 6) -> list[str]:
 
 
 def fill_combo(root, combo, candidates: list[str],
-               seen_options: list[str] | None = None) -> tuple[bool, str]:
+               seen_options: list[str] | None = None,
+               veto: str | None = None) -> tuple[bool, str]:
     """React-select pattern: open, type to filter, click the one matching option.
 
     Tries each candidate in order and commits the first that resolves to exactly
@@ -217,7 +243,8 @@ def fill_combo(root, combo, candidates: list[str],
     unreachable from a static inventory pass. This is the one moment it is
     visible; `seen_options` collects it for the audit manifest.
     """
-    ambiguous_on = []
+    ambiguous_on: list[str] = []
+    vetoed_on: list[str] = []
     for attempt, want in enumerate(candidates):
         if not _open_menu(combo):
             return False, "menu never opened"
@@ -238,6 +265,10 @@ def fill_combo(root, combo, candidates: list[str],
                     seen_options.append(raw)
 
         idx = match_option([t.lower() for t in texts], want)
+        if idx is not None and veto and re.search(veto, texts[idx], re.I):
+            # Resolved cleanly, but to an answer that must never be given.
+            vetoed_on.append(texts[idx][:50])
+            idx = None
         if idx is not None:
             root.locator("[role='option']").nth(idx).click()
             combo.page.wait_for_timeout(200)
@@ -254,6 +285,8 @@ def fill_combo(root, combo, candidates: list[str],
         except PWTimeout:
             pass
 
+    if vetoed_on:
+        return False, f"VETOED — only match was {vetoed_on[0]!r}; answer this one yourself"
     if ambiguous_on:
         return False, f"ambiguous: {', '.join(ambiguous_on)} matched multiple options"
     return False, "no option matched"
@@ -292,17 +325,21 @@ def fill_combos(root, city: str, report: dict,
             tries[label] = tries.get(label, 0) + 1
             bucket = harvested.setdefault(label, []) if harvested is not None else None
             try:
-                ok, reason = fill_combo(root, el, candidates, bucket)
+                ok, reason = fill_combo(root, el, candidates, bucket, veto_for(label))
             except PWTimeout:
                 ok, reason = False, "timed out"
             if ok:
                 done.add(label)
                 report["filled"].append(f"{label[:60]}: {reason}")
-            elif reason.startswith("ambiguous") or tries[label] >= MAX_TRIES:
+            elif reason.startswith(("ambiguous", "VETOED")) or tries[label] >= MAX_TRIES:
                 # Ambiguity is final: retrying re-derives the same options and
                 # would only risk committing a guess on the next pass.
                 done.add(label)
                 report["unmapped"].append(f"{label[:60]} ({reason})")
+                if reason.startswith("VETOED"):
+                    # Surface next to the other submission blockers, not buried
+                    # in the unmapped list — a wrong answer here is unrecoverable.
+                    report["required_empty"].append(f"{label[:60]} — {reason}")
 
 
 def _try_upload(el, path: Path, what: str, report: dict, *, how: str = "") -> bool:
@@ -450,6 +487,16 @@ def fill_one(context, url: str, folder: Path, city: str, *,
         pass
 
     root = find_form_root(page)
+    if form_inventory.control_count(root) == 0:
+        # Company-wrapped boards can still be hydrating. Formlabs redirects to
+        # careers.formlabs.com and loads a YouTube embed and reCAPTCHA alongside
+        # the Greenhouse iframe; under a five-tab batch it lost the race and the
+        # whole application filled zero fields. Give the slow case a second look
+        # before declaring the form empty.
+        page.wait_for_timeout(5000)
+        root = form_inventory.find_form_root(page, settle_ms=20000)
+    if form_inventory.control_count(root) == 0:
+        report["required_empty"].append("FORM NEVER LOADED — no controls in any frame")
     capture_audit(root, slug, "pre", url, report, skip=no_audit)
     fill_text_inputs(root, answers, report)
     fill_combos(root, city, report, harvested)
