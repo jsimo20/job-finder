@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import applied, db
+from . import filter as filter_mod
 from .taxonomy import STALE_DAYS
 
 DEFAULT_DIGEST_DIR = Path(__file__).resolve().parents[2] / "digests"
@@ -35,12 +36,30 @@ def _row_md(row) -> str:
     extras = ""
     if row["stretch_reason"]:
         extras = f" · _stretch: {row['stretch_reason']}_"
+    # Warn, never drop: days-per-week is often negotiable and postings are not
+    # always accurate about it, so this is James's call to make.
+    commute = filter_mod.commute_warning(
+        row["location"],
+        _row_get(row, "onsite_days_per_week"),
+        remote_us_ok=bool(_row_get(row, "remote_us_ok")),
+    )
+    commute_line = f"- ⚠️ **Commute:** {commute}\n" if commute else ""
     return (
         f"### [Score {row['total_score']}] {row['company_name']} — [{row['title']}]({row['url']})\n"
         f"- {loc} ({workplace}) · YOE {yoe} · {comp}\n"
         f"- Domain: {domain} · Stage: {stage}{extras}\n"
+        f"{commute_line}"
         f"- **[Apply →]({row['url']})**\n"
     )
+
+
+def _row_get(row, key):
+    """sqlite3.Row raises on a missing key rather than returning None, and a DB
+    written before onsite_days_per_week existed will not have the column."""
+    try:
+        return row[key]
+    except (IndexError, KeyError):
+        return None
 
 
 _BASE_COLS = """
@@ -48,6 +67,7 @@ _BASE_COLS = """
     c.name AS company_name,
     e.yoe_required, e.comp_base_min, e.comp_base_max, e.comp_source,
     e.domain_tags, e.company_stage, e.stretch_reason,
+    e.remote_us_ok, e.onsite_days_per_week,
     s.total_score
 """
 

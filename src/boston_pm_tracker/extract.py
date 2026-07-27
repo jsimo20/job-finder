@@ -26,6 +26,22 @@ _STAGE_LIST = "\n".join(f"- {k}: {v}" for k, v in STAGE_DEFINITIONS.items())
 _BOM = chr(0xfeff)  # U+FEFF byte-order mark; escape avoids source-encoding ambiguity
 
 
+def _clamp_days(value) -> int | None:
+    """Coerce the model's onsite_days_per_week into 0-5, or None.
+
+    Validated at this boundary rather than trusted: the field feeds a commute
+    warning, and a hallucinated 7 or a string would either crash the digest or
+    silently mis-warn.
+    """
+    if value is None:
+        return None
+    try:
+        days = int(value)
+    except (TypeError, ValueError):
+        return None
+    return days if 0 <= days <= 5 else None
+
+
 SYSTEM_PROMPT = f"""You extract structured hiring signals from product manager job descriptions.
 
 Return STRICT JSON only. No prose, no markdown fences. Schema:
@@ -40,6 +56,7 @@ Return STRICT JSON only. No prose, no markdown fences. Schema:
   "company_stage": <one stage tag or null>,
   "people_management": <true if JD requires directly managing PMs, else false>,
   "remote_us_ok": <true if role permits US remote work, else false>,
+  "onsite_days_per_week": <int 0-5, or null if the JD does not say>,
   "stretch_reason": <short string explaining why this is a stretch role, or null>
 }}
 
@@ -52,6 +69,10 @@ Rules:
 {_STAGE_LIST}
 - If you cannot confidently determine a stage from the JD, use null.
 - people_management: true only if the JD explicitly says the role manages other PMs/people.
+- onsite_days_per_week: how many days per week the role requires being in an office.
+  Fully remote is 0. "Hybrid, 3 days in office" is 3. "In-office" / "onsite" with no
+  number stated is 5. Null ONLY when the JD says nothing about office attendance —
+  do not guess from the location field alone, since a city name is not a schedule.
 - stretch_reason: set only if YOE >= 8 or other reason the role exceeds a typical Senior/Staff PM scope.
 
 Output ONLY the JSON object."""
@@ -119,8 +140,8 @@ def run(db_path: Path = db.DEFAULT_DB_PATH, *, limit: int | None = None) -> dict
                 INSERT OR REPLACE INTO extractions
                 (posting_id, yoe_required, yoe_confidence, comp_base_min, comp_base_max,
                  comp_source, domain_tags, company_stage, people_management, remote_us_ok,
-                 stretch_reason, extracted_at, model)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 onsite_days_per_week, stretch_reason, extracted_at, model)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     row["id"],
@@ -133,6 +154,7 @@ def run(db_path: Path = db.DEFAULT_DB_PATH, *, limit: int | None = None) -> dict
                     data.get("company_stage"),
                     1 if data.get("people_management") else 0,
                     1 if data.get("remote_us_ok") else 0,
+                    _clamp_days(data.get("onsite_days_per_week")),
                     data.get("stretch_reason"),
                     db.now_iso(),
                     MODEL,

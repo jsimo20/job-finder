@@ -14,9 +14,71 @@ BOSTON_RE = re.compile(
 )
 NYC_RE = re.compile(r"\b(new york|nyc|manhattan|brooklyn|queens|NY)\b", re.IGNORECASE)
 HARTFORD_RE = re.compile(r"\b(hartford|connecticut|CT)\b", re.IGNORECASE)
-# US-region phrases that wholly contain our three target metros. "West coast"
-# is intentionally excluded — out of scope per spec.
+# US-region phrases that wholly contain our target metros. "West coast" is
+# intentionally excluded — out of scope per spec.
 EAST_COAST_RE = re.compile(r"\b(east coast|northeast(?:ern)?)\b", re.IGNORECASE)
+
+# City names that would otherwise be missed when a posting omits the state.
+# "New Haven" or "Providence" alone matched nothing before; only "CT" or "RI"
+# did. Springfield and Worcester already matched via "MA", but are listed here
+# so the metro tiers below can place them.
+CT_CITIES_RE = re.compile(
+    r"\b(anytown|new haven|stamford|greenwich|norwalk|bridgeport|"
+    r"danbury|waterbury|middletown|new london|shelton|trumbull|milford)\b",
+    re.IGNORECASE,
+)
+RI_RE = re.compile(r"\b(providence|rhode island|RI|pawtucket|warwick)\b", re.IGNORECASE)
+WEST_MA_RE = re.compile(r"\b(springfield|worcester|holyoke|chicopee|amherst|northampton)\b",
+                        re.IGNORECASE)
+
+# Drive-time tiers measured from Anytown, CT, which is where James
+# actually lives. He targets Boston deliberately and accepts the drive when the
+# schedule is hybrid; a 4-5 day onsite requirement at that distance is the thing
+# he rules out, which is why this feeds a flag rather than the location gate.
+NEAR_METRO_RE = re.compile(
+    r"\b(hartford|anytown|new haven|springfield|waterbury|middletown|"
+    r"holyoke|chicopee|amherst|northampton|connecticut|CT)\b", re.IGNORECASE)
+MID_METRO_RE = re.compile(
+    r"\b(worcester|providence|rhode island|RI|stamford|new london|"
+    r"pawtucket|warwick|danbury)\b", re.IGNORECASE)
+FAR_METRO_RE = re.compile(
+    r"\b(boston|cambridge|somerville|watertown|waltham|burlington|brookline|"
+    r"newton|medford|new york|nyc|manhattan|brooklyn|queens|greenwich|norwalk|"
+    r"bridgeport)\b", re.IGNORECASE)
+
+
+def metro_tier(location: str | None) -> str | None:
+    """near | mid | far | None, by drive time from Anytown.
+
+    Checked most-distant first: "Boston, MA" also matches the MA tokens that
+    place Springfield, and the far reading is the one that matters for commute.
+    """
+    loc = location or ""
+    if FAR_METRO_RE.search(loc):
+        return "far"
+    if MID_METRO_RE.search(loc):
+        return "mid"
+    if NEAR_METRO_RE.search(loc):
+        return "near"
+    return None
+
+
+def commute_warning(location: str | None, onsite_days: int | None,
+                    remote_us_ok: bool = False) -> str | None:
+    """Warn when a role's onsite requirement makes its distance impractical.
+
+    Deliberately a warning and not a discard: James asked to keep seeing these
+    and decide himself, since days-per-week is often negotiable and the posting
+    is not always accurate about it.
+    """
+    if remote_us_ok or onsite_days is None:
+        return None
+    tier = metro_tier(location)
+    if tier == "far" and onsite_days >= 4:
+        return f"{onsite_days} days onsite, ~2h each way from Anytown"
+    if tier == "mid" and onsite_days >= 5:
+        return f"{onsite_days} days onsite, ~1-1.5h each way from Anytown"
+    return None
 
 # Country / region tokens that mark a remote role as out-of-scope. We *don't* try
 # to detect US states by name (some collide with country names, e.g. Georgia) —
@@ -125,6 +187,9 @@ def stage1(*, title: str, location: str | None, workplace_type: str | None) -> F
         BOSTON_RE.search(loc_text)
         or NYC_RE.search(loc_text)
         or HARTFORD_RE.search(loc_text)
+        or CT_CITIES_RE.search(loc_text)
+        or RI_RE.search(loc_text)
+        or WEST_MA_RE.search(loc_text)
         or EAST_COAST_RE.search(loc_text)
         or is_remote
     ):

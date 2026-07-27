@@ -55,6 +55,15 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 # external_id = gh_jid for Greenhouse, slug for Lever, id for Ashby
 ```
 
+## Location scope and the commute warning
+
+James lives in **Anytown, CT** and targets Boston deliberately, accepting the drive when the schedule is hybrid. `standard_answers.md` states Boston as his location on purpose — that is positioning, not an error.
+
+- **In scope** (`filter.stage1`): Boston metro, NYC metro, all of CT (incl. New Haven, Stamford, Bridgeport, Danbury, Waterbury, New London), RI/Providence, western + central MA (Springfield, Worcester, Northampton), any "East Coast"/"Northeast" phrasing, and any US-remote role. City-name-only postings now match; previously "New Haven" or "Providence" with no state token fell through to `discard:wrong_location`.
+- **Metro tiers** (`filter.metro_tier`) are drive time from Anytown: `near` (Hartford, New Haven, Springfield), `mid` (Worcester, Providence, Stamford), `far` (Boston metro, NYC metro). Checked far-first, because "Boston, MA" also matches the MA tokens that place Springfield.
+- **`filter.commute_warning`** flags `far` + 4-5 days onsite, and `mid` + 5 days. It **warns, never discards** — days-per-week is often negotiable and postings misstate it. Surfaced in the digest as a `⚠️ Commute:` line.
+- Depends on `onsite_days_per_week` from extraction (0-5 or null; null means the JD said nothing, and never warns). Validated at the boundary by `extract._clamp_days`, since the field feeds a user-facing warning.
+
 ## Secrets (GitHub Actions)
 
 | Secret | Used by | Notes |
