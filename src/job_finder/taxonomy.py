@@ -20,6 +20,8 @@ STAGE_DEFINITIONS: dict[str, str] = {
 
 COMP_FLOOR_USD: int = _cfg["filters"]["comp_floor_usd"]
 
+COMP_SCORE_THRESHOLDS: list[int] = sorted(_cfg["filters"]["comp_score_thresholds"])
+
 YOE_MAIN_QUEUE_MAX: int = _cfg["filters"]["yoe_main_queue_max"]
 
 STALE_DAYS: int = _cfg["filters"]["stale_days"]

@@ -119,7 +119,7 @@ Edit **`config/pipeline.toml`**. What to edit:
   and the commute tiers/notes with drive times from where you live.
 - `[domains.*]` / `[stages.*]` — reweight to your background; definitions
   feed the extraction prompt, so keep them concrete.
-- `[filters]` — your comp floor and years-of-experience cap.
+- `[filters]` — your comp floor, comp score thresholds, and years-of-experience cap.
 
 - `[titles]` — which job titles count as target roles, adjacent tracks to
   exclude, and the seniority band. This is the industry knob: replace the

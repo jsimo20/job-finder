@@ -15,6 +15,9 @@ comp_floor_usd = 140000
 yoe_main_queue_max = 7
 # Postings open longer than this are dropped as likely evergreen reqs.
 stale_days = 30
+# Posted base-salary minimums at or above each threshold add one point to the
+# comp score. Order low to high; use [] to ignore comp in scoring.
+comp_score_thresholds = [170000, 200000]
 
 # ── Role targeting ───────────────────────────────────────────────────────────
 # Which job titles the pipeline is hunting. Edit every pattern for your own

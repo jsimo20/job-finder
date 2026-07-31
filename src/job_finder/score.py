@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import db
 from .filter import stage3
-from .taxonomy import DOMAIN_WEIGHTS, STAGE_WEIGHTS
+from .taxonomy import COMP_SCORE_THRESHOLDS, DOMAIN_WEIGHTS, STAGE_WEIGHTS
 
 
 def domain_score(domain_tags: list[str]) -> int:
@@ -24,11 +24,7 @@ def stage_score(stage: str | None) -> int:
 def comp_score(comp_base_min: int | None, comp_source: str | None) -> int:
     if comp_base_min is None or comp_source != "posted":
         return 0
-    if comp_base_min >= 200_000:
-        return 2
-    if comp_base_min >= 170_000:
-        return 1
-    return 0
+    return sum(1 for threshold in COMP_SCORE_THRESHOLDS if comp_base_min >= threshold)
 
 
 def run(db_path: Path = db.DEFAULT_DB_PATH) -> dict:
