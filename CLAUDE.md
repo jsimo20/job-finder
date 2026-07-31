@@ -88,6 +88,7 @@ The committed config encodes the owner's home base and a deliberately different 
 - **BOMs in Python source**: use `chr(0xfeff)` constants, never literal BOM characters. Source-file encoding can corrupt the literal between Windows editors and Linux runners. See `_BOM = chr(0xfeff)` patterns in `extract.py`, `ashby.py`, `lever.py`.
 - **Defensive `.strip().replace(_BOM, "")` on env-var reads** in `extract.py` — pasted secrets can carry invisible BOMs that crash SDK header construction. Already in place.
 - **Don't auto-run the pipeline locally** to test changes — it spends real Anthropic + Gmail tokens (~$$). Prefer targeted unit tests via pytest.
+- **Commit subjects and PR titles are one plain sentence stating what the change does** — imperative, lowercase start, no `type(scope):` prefixes, no "Type of change" checklists. The body (optional) explains why.
 - **PRs are the norm**, not direct-to-main. The reviewer fires on `.py` / `.claude/**` paths. Non-Python YAML/Markdown changes (e.g., `daily.yml`) bypass the path filter — still PR them for the audit trail, expect the reviewer to no-op.
 - **Reviewer can't review changes to its own workflow file** (`claude-review.yml`) due to `anthropics/claude-code-action@v1`'s self-modification guard. Self-merge those after careful local review.
 
