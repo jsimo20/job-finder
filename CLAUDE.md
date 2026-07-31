@@ -4,7 +4,7 @@ Project-level instructions for Claude Code sessions in this repo. See `session-c
 
 ## What this is
 
-Cron-driven pipeline that surfaces Senior PM roles in Boston (and adjacent metros / remote-US). Runs weekly (Mondays 13:00 UTC) on GitHub Actions, emails the resulting digest to `GMAIL_USER`.
+Local-first pipeline that surfaces target roles and emails a weekly digest. Runs as a Windows Scheduled Task (Mondays 09:00 local, `job-finder run --email`); nothing personal lives in the repo or any cloud — the repo is pure engine.
 
 ## Pipeline architecture
 
@@ -25,8 +25,8 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 ## Stack
 
 - Python 3.12. Deps: httpx, anthropic, jinja2, beautifulsoup4, python-dotenv. Install via `uv pip install --system -e .`.
-- SQLite at `data/jobs.db` — gitignored, rebuilt every pipeline run. Applied/dismissed state is local-only by design (CI rebuilds the DB, doesn't preserve state across runs).
-- Durable state that must survive the rebuild lives in committed JSONL ledgers: `data/applied.jsonl` (applied suppression) and `data/seen.jsonl` (first-seen dates driving the digest's new-vs-carried split; `seen.py`). `daily.yml` commits both alongside digests. `first_seen_at` in the DB is always "now" and must never be used to distinguish new from carried.
+- SQLite at `data/jobs.db` — gitignored, ephemeral, rebuilt every pipeline run.
+- Durable state lives in `data/state.db` (gitignored SQLite; `state.py`): tracked companies, no-auto-apply blocklist, applied ledger, seen ledger, digest archive. `first_seen_at` in jobs.db is always "now" and must never be used to distinguish new from carried — that's the seen table's job. Manage via `job-finder companies|no-auto|applied|digest-archive`; never edit the DB files directly, and never commit anything under `data/` or `digests/`.
 
 ## Key files
 
@@ -40,8 +40,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 - `src/job_finder/score.py` — deterministic scoring
 - `src/job_finder/review.py` — interactive picker for the CLI `review` subcommand
 - `src/job_finder/form_inventory.py` — ATS-agnostic form field inventory (label/type/required/value/options per control) plus the audit-manifest writer; shared by the deterministic filler and the autofill agent
-- `data/companies.json` — 406-company tracked list across GH + Lever + Ashby
-- `.github/workflows/daily.yml` — cron `0 13 * * 1` (weekly), runs pipeline + emails digest, commits digests + both JSONL ledgers
+- `data/state.db` — all durable personal state (see above); `config/companies.example.json` is the neutral starter list
 - `.github/workflows/claude-review.yml` — Claude PR reviewer, fires on `.py` / `.claude/**` / `claude-review.yml` PRs
 
 ## Commands
@@ -61,7 +60,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 
 ## Per-user configuration (two layers)
 
-- **`config/pipeline.toml`** — gitignored (template: `config/pipeline.example.toml`). Location scope, metro tiers, commute thresholds/notes, title targeting, domain + stage weights, comp floor, YoE cap, stale days. `settings.pipeline_config()` loads it, falling back to the example on a fresh clone. CI gets the real config from the `PIPELINE_CONFIG` repository variable (`daily.yml` materializes it) — after editing the local file, run `gh variable set PIPELINE_CONFIG < config/pipeline.toml` or the next digest runs on stale values.
+- **`config/pipeline.toml`** — gitignored (template: `config/pipeline.example.toml`). Location scope, metro tiers, commute thresholds/notes, title targeting, domain + stage weights, comp floor, YoE cap, stale days. `settings.pipeline_config()` loads it, falling back to the example on a fresh clone. The pipeline runs locally, so edits take effect on the next run — no sync step.
 - **`profile/`** — gitignored. Identity, EEO answers, `[paths]` to the driving docs, fit profile, QA checklist, the resume generator. `settings.load_profile()` falls back to the committed `profile.example/` so imports and tests work on a fresh clone; anything that acts on the values (form fill, PDF render) goes through `settings.require_profile()` and refuses the example.
 - Handing the repo to a new user: plain `git clone`; SETUP.md §1 resets the owner's ledgers and digests. History is scrubbed of PII and MUST stay that way — no personal data in commits, ever; the committed ledgers are the only owner-specific tracked state.
 
@@ -74,22 +73,17 @@ The committed config encodes the owner's home base and a deliberately different 
 - **`filter.commute_warning`** flags `far` + 4-5 days onsite, and `mid` + 5 days. It **warns, never discards** — days-per-week is often negotiable and postings misstate it. Surfaced in the digest as a `⚠️ Commute:` line.
 - Depends on `onsite_days_per_week` from extraction (0-5 or null; null means the JD said nothing, and never warns). Validated at the boundary by `extract._clamp_days`, since the field feeds a user-facing warning.
 
-## Secrets (GitHub Actions)
+## Credentials
 
-| Secret | Used by | Notes |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | extract.py, claude-review.yml | Paste cleanly via Notepad to avoid BOM corruption (see Gotchas) |
-| `GMAIL_USER` | Email step | Gmail address; used as both SMTP auth user and recipient |
-| `GMAIL_APP_PASSWORD` | Email step | 16-char app password from https://myaccount.google.com/apppasswords (requires 2FA) |
+Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract), `GMAIL_USER` + `GMAIL_APP_PASSWORD` (digest email via `emailer.py`; user is both sender and recipient). One GitHub Actions secret remains: `ANTHROPIC_API_KEY` for `claude-review.yml`. Paste keys via a plain-text editor to avoid BOM corruption (see Gotchas).
 
 ## Gotchas
 
-- **`data/jobs.db` is gitignored** and rebuilt every CI run. Never `git add` it in a workflow step — `git add` of a gitignored path exits 1 and fails the job.
 - **BOMs in Python source**: use `chr(0xfeff)` constants, never literal BOM characters. Source-file encoding can corrupt the literal between Windows editors and Linux runners. See `_BOM = chr(0xfeff)` patterns in `extract.py`, `ashby.py`, `lever.py`.
 - **Defensive `.strip().replace(_BOM, "")` on env-var reads** in `extract.py` — pasted secrets can carry invisible BOMs that crash SDK header construction. Already in place.
-- **Don't auto-run the pipeline locally** to test changes — it spends real Anthropic + Gmail tokens (~$$). Prefer targeted unit tests via pytest.
+- **Don't auto-run the pipeline** to test changes — it spends real Anthropic tokens (~$$). The scheduled task owns the weekly run; prefer targeted unit tests via pytest.
 - **Commit subjects and PR titles are one plain sentence stating what the change does** — imperative, lowercase start, no `type(scope):` prefixes, no "Type of change" checklists. The body (optional) explains why.
-- **PRs are the norm**, not direct-to-main. The reviewer fires on `.py` / `.claude/**` paths. Non-Python YAML/Markdown changes (e.g., `daily.yml`) bypass the path filter — still PR them for the audit trail, expect the reviewer to no-op.
+- **PRs are the norm**, not direct-to-main. The reviewer fires on `.py` / `.claude/**` paths. Non-Python YAML/Markdown changes bypass the path filter — still PR them for the audit trail, expect the reviewer to no-op.
 - **Reviewer can't review changes to its own workflow file** (`claude-review.yml`) due to `anthropics/claude-code-action@v1`'s self-modification guard. Self-merge those after careful local review.
 
 ## Apply workflow (slash commands)
@@ -137,7 +131,7 @@ Tracks people the user contacts on LinkedIn (name + company + date + optional ro
 
 Durable record of roles applied to, keyed by `external_id`. Fixes the fact that `data/jobs.db` (and its `applied_at` flag) is rebuilt every run, so applied roles otherwise resurface in the next digest. Also captures **ad-hoc roles** applied to outside the pipeline (pasted URLs never in the tracked-company list), which the DB never knew about.
 
-- **Store:** `data/applied.jsonl` — append-only, **committed** (unlike the outreach log). It must be in git so the CI-generated digest can read it to suppress already-applied roles. Contents are the owner's own application records (no third-party PII), fine for a private repo.
+- **Store:** the `applied` table in `data/state.db` (gitignored, local-only). The digest reads it to suppress already-applied roles, including reposts (company + normalized-title match).
 - **Module:** `src/job_finder/applied.py` — `record_applied()`, `list_applied()`, `is_applied(external_id=…, url=…)`, `applied_external_ids()`, `remove_applied()`. URL matching normalizes scheme/query/trailing `/apply`/`/application` so a pasted apply-form link matches the posting.
 - **Digest integration:** `digest.render()` drops any row whose `external_id` is in the log (both new and carried-forward, main and stretch queues).
 - **CLI:**

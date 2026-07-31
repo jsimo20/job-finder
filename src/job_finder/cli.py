@@ -9,7 +9,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from . import applied, collect, db, digest, extract, outreach, review, score
+from . import applied, collect, db, digest, emailer, extract, outreach, review, score, state
 
 load_dotenv(override=True)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -22,10 +22,7 @@ def _cmd_init_db(args: argparse.Namespace) -> int:
 
 
 def _cmd_collect(args: argparse.Namespace) -> int:
-    stats = collect.run(
-        companies_path=Path(args.companies) if args.companies else collect.DEFAULT_COMPANIES,
-        db_path=Path(args.db) if args.db else db.DEFAULT_DB_PATH,
-    )
+    stats = collect.run(db_path=Path(args.db) if args.db else db.DEFAULT_DB_PATH)
     print(json.dumps(stats, indent=2))
     return 0
 
@@ -176,7 +173,78 @@ def _cmd_run(args: argparse.Namespace) -> int:
     print("== score ==")
     print(json.dumps(score.run(db_path=db_path), indent=2))
     print("== digest ==")
-    print(f"wrote {digest.render(db_path=db_path)}")
+    out = digest.render(db_path=db_path)
+    print(f"wrote {out}")
+    if args.email:
+        # The digest is already written and archived; a failed send loses
+        # nothing but the notification.
+        record = state.get_digest()
+        try:
+            emailer.send_digest(record["body"], record["date"])
+            print(f"emailed digest {record['date']}")
+        except Exception as exc:
+            print(f"EMAIL FAILED: {exc}", file=sys.stderr)
+            return 1
+    return 0
+
+
+def _cmd_companies(args: argparse.Namespace) -> int:
+    cmd = args.companies_cmd
+    if cmd == "list":
+        rows = state.list_companies()
+        for r in rows:
+            print(f"{r['name']}  [{r['ats_provider']}:{r['ats_slug']}]  "
+                  f"{','.join(r['sector_tags'])}")
+        print(f"{len(rows)} companies tracked")
+    elif cmd == "add":
+        state.upsert_company({
+            "name": args.name, "ats_provider": args.provider, "ats_slug": args.slug,
+            "careers_url": args.careers_url,
+            "sector_tags": [t for t in (args.tags or "").split(",") if t],
+            "size_band": args.size_band,
+        })
+        print(f"tracked: {args.name} [{args.provider}:{args.slug}]")
+    elif cmd == "remove":
+        ok = state.remove_company(args.name)
+        print(f"removed: {args.name}" if ok else f"no match for {args.name!r}")
+        return 0 if ok else 1
+    elif cmd == "import":
+        print(f"imported {state.import_companies(Path(args.path))} companies")
+    elif cmd == "export":
+        print(f"exported {state.export_companies(Path(args.path))} companies to {args.path}")
+    return 0
+
+
+def _cmd_no_auto(args: argparse.Namespace) -> int:
+    cmd = args.no_auto_cmd
+    if cmd == "list":
+        rows = state.list_no_auto()
+        for r in rows:
+            print(f"{r['name']} — {r['reason'] or '(no reason recorded)'}")
+        if not rows:
+            print("no-auto-apply list is empty")
+    elif cmd == "add":
+        state.add_no_auto(args.name, args.reason or "")
+        print(f"blocked from auto-apply: {args.name}")
+    elif cmd == "remove":
+        ok = state.remove_no_auto(args.name)
+        print(f"unblocked: {args.name}" if ok else f"no match for {args.name!r}")
+        return 0 if ok else 1
+    return 0
+
+
+def _cmd_digest_archive(args: argparse.Namespace) -> int:
+    if args.archive_cmd == "list":
+        dates = state.list_digests()
+        for d in dates:
+            print(d)
+        print(f"{len(dates)} digests archived")
+    else:
+        record = state.get_digest(args.date)
+        if not record:
+            print("no digest found")
+            return 1
+        print(record["body"])
     return 0
 
 
@@ -188,7 +256,6 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("init-db").set_defaults(func=_cmd_init_db)
 
     p = sub.add_parser("collect")
-    p.add_argument("--companies", help="path to data/companies.json")
     p.set_defaults(func=_cmd_collect)
 
     p = sub.add_parser("extract")
@@ -201,7 +268,49 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--date", default=None, help="ISO date (default: today)")
     p.set_defaults(func=_cmd_digest)
 
-    sub.add_parser("run").set_defaults(func=_cmd_run)
+    p = sub.add_parser("run")
+    p.add_argument("--email", action="store_true",
+                   help="email the digest after the run (the scheduled task passes this)")
+    p.set_defaults(func=_cmd_run)
+
+    p = sub.add_parser("companies", help="the tracked-company list (data/state.db)")
+    csub = p.add_subparsers(dest="companies_cmd", required=True)
+    csub.add_parser("list").set_defaults(func=_cmd_companies)
+    ca = csub.add_parser("add")
+    ca.add_argument("--name", required=True)
+    ca.add_argument("--provider", required=True, choices=["greenhouse", "lever", "ashby"])
+    ca.add_argument("--slug", required=True)
+    ca.add_argument("--careers-url", default=None, dest="careers_url")
+    ca.add_argument("--tags", default="", help="comma-separated sector tags")
+    ca.add_argument("--size-band", default=None, dest="size_band")
+    ca.set_defaults(func=_cmd_companies)
+    cr = csub.add_parser("remove")
+    cr.add_argument("--name", required=True)
+    cr.set_defaults(func=_cmd_companies)
+    ci = csub.add_parser("import", help="merge companies from a JSON file")
+    ci.add_argument("path")
+    ci.set_defaults(func=_cmd_companies)
+    ce = csub.add_parser("export", help="write the list to a JSON file")
+    ce.add_argument("path")
+    ce.set_defaults(func=_cmd_companies)
+
+    p = sub.add_parser("no-auto", help="companies never auto-applied to")
+    nsub = p.add_subparsers(dest="no_auto_cmd", required=True)
+    nsub.add_parser("list").set_defaults(func=_cmd_no_auto)
+    na = nsub.add_parser("add")
+    na.add_argument("--name", required=True)
+    na.add_argument("--reason", default="")
+    na.set_defaults(func=_cmd_no_auto)
+    nr = nsub.add_parser("remove")
+    nr.add_argument("--name", required=True)
+    nr.set_defaults(func=_cmd_no_auto)
+
+    p = sub.add_parser("digest-archive", help="digests stored in data/state.db")
+    dsub = p.add_subparsers(dest="archive_cmd", required=True)
+    dsub.add_parser("list").set_defaults(func=_cmd_digest_archive)
+    ds = dsub.add_parser("show", help="print a digest (latest by default)")
+    ds.add_argument("--date", default=None)
+    ds.set_defaults(func=_cmd_digest_archive)
 
     sub.add_parser("review").set_defaults(func=_cmd_review)
 

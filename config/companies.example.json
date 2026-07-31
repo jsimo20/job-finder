@@ -1,0 +1,8 @@
+{
+  "_comment": "Starter shape for the tracked-company list. Import with `job-finder companies import config/companies.example.json`, then replace with your own market's companies — scripts/discover_companies.py probes candidates for valid boards.",
+  "companies": [
+    {"name": "GitLab", "ats_provider": "greenhouse", "ats_slug": "gitlab", "careers_url": "https://about.gitlab.com/jobs/", "sector_tags": ["developer_platform"], "size_band": "500+"},
+    {"name": "Figma", "ats_provider": "greenhouse", "ats_slug": "figma", "careers_url": "https://www.figma.com/careers/", "sector_tags": ["developer_platform"], "size_band": "500+"},
+    {"name": "Anthropic", "ats_provider": "greenhouse", "ats_slug": "anthropic", "careers_url": "https://www.anthropic.com/careers", "sector_tags": ["ai_agentic"], "size_band": "500+"}
+  ]
+}

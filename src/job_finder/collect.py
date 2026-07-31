@@ -7,21 +7,26 @@ from pathlib import Path
 
 import httpx
 
-from . import db
+from . import db, state
 from .adapters import REGISTRY
 from .filter import stage1
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_COMPANIES = Path(__file__).resolve().parents[2] / "data" / "companies.json"
+
+def load_companies(state_db: Path = state.DEFAULT_STATE_DB) -> list[dict]:
+    """Tracked companies from state.db. `job-finder companies import <json>`
+    populates it; an empty list is a setup problem, so say so loudly."""
+    companies = state.list_companies(state_db)
+    if not companies:
+        logger.warning("no tracked companies in %s — run "
+                       "`job-finder companies import <file.json>` (SETUP.md §5)",
+                       state_db)
+    return companies
 
 
-def load_companies(companies_path: Path = DEFAULT_COMPANIES) -> list[dict]:
-    return json.loads(companies_path.read_text(encoding="utf-8"))
-
-
-def run(companies_path: Path = DEFAULT_COMPANIES, db_path: Path = db.DEFAULT_DB_PATH) -> dict:
-    companies = load_companies(companies_path)
+def run(state_db: Path = state.DEFAULT_STATE_DB, db_path: Path = db.DEFAULT_DB_PATH) -> dict:
+    companies = load_companies(state_db)
     stats = {"companies": 0, "fetched": 0, "kept": 0, "discarded": 0, "errors": 0, "errors_detail": []}
 
     with db.connect(db_path) as conn, httpx.Client(timeout=30.0) as client:

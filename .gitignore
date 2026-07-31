@@ -28,16 +28,19 @@ dist/
 scratch/
 
 # Personal pipeline config — search preferences (metros, weights, titles).
-# The committed template is config/pipeline.example.toml; CI receives the
-# real config via the PIPELINE_CONFIG Actions variable.
+# The committed template is config/pipeline.example.toml.
 config/pipeline.toml
+
+# ALL local data: state.db (companies, ledgers, digest archive), the ephemeral
+# jobs.db, fill audits, outreach log. Nothing under data/ or digests/ is ever
+# committed — the pipeline runs locally and the repo carries no personal data.
+data/
+digests/
 
 # Personal profile — identity, EEO answers, driving docs. The committed
 # template lives in profile.example/. Never commit the real thing.
 profile/
 
-# Generated database (rebuilt by pipeline)
-data/jobs.db
 
 # Playwright MCP session artifacts
 .playwright-mcp/
@@ -45,9 +48,4 @@ data/jobs.db
 # Ephemeral session state — may contain debugging notes / PII; do not publish
 session-context.md
 
-# Outreach log — third-party contact names (PII); local-only, do not publish
-data/outreach.jsonl
 
-# Captured form-fill inventories — the value column holds contact details.
-# Redact via form_inventory.redact() before promoting one to tests/fixtures/.
-data/fill_audits/

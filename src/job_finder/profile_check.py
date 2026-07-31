@@ -28,8 +28,13 @@ def check() -> list[str]:
     if not settings.PIPELINE_CONFIG_PATH.exists():
         issues.append("config/pipeline.toml not found — running on the example "
                       "defaults. Copy config/pipeline.example.toml and edit it "
-                      "for your own search (SETUP.md §4), then feed it to CI: "
-                      "gh variable set PIPELINE_CONFIG < config/pipeline.toml")
+                      "for your own search (SETUP.md §4)")
+
+    from . import state
+    if not state.list_companies():
+        issues.append("no tracked companies in data/state.db — import a starter list: "
+                      "`job-finder companies import config/companies.example.json` "
+                      "then build your own (SETUP.md §5)")
 
     real = settings.PROFILE_DIR / "profile.toml"
     if not real.exists():
@@ -80,9 +85,8 @@ def main() -> int:
     if not issues:
         print("profile check: PASS — pipeline config, identity, driving docs, "
               "and generator all present.")
-        print("Reminder: after editing config/pipeline.toml, update CI with "
-              "`gh variable set PIPELINE_CONFIG < config/pipeline.toml`. "
-              "data/companies.json is separate — see SETUP.md §5.")
+        print("Reminder: the tracked-company list lives in data/state.db — "
+              "`job-finder companies list` to inspect it (SETUP.md §5).")
         return 0
     print(f"profile check: {len(issues)} issue(s)\n")
     for issue in issues:

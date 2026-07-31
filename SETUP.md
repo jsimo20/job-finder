@@ -2,9 +2,12 @@
 
 Step-by-step setup for a fresh clone. Written so you can paste it into a
 Claude Code session ("follow SETUP.md") and have it drive; every step also
-works by hand. Nothing here requires the original owner's files: all personal
-context lives in two places you create yourself — `config/pipeline.toml`
-(committed preferences) and `profile/` (gitignored identity).
+works by hand. Nothing here requires the original owner's files, and the repo
+carries no personal data at all: everything personal lives in three gitignored
+places you create yourself — `config/pipeline.toml` (search preferences),
+`profile/` (identity), and `data/state.db` (companies, ledgers, digest
+archive). The pipeline runs locally on a weekly schedule; there is no cloud
+pipeline to configure.
 
 ## 0. Prerequisites
 
@@ -14,27 +17,19 @@ context lives in two places you create yourself — `config/pipeline.toml`
 - An Anthropic API key with credit (console.anthropic.com) — the pipeline's
   extraction stage and the optional PR reviewer both bill against it
 - A Gmail account with 2FA, for the digest email
+- A Windows machine that's usually on (the weekly run is a Scheduled Task;
+  on macOS/Linux use cron/launchd with the same command)
 
 ## 1. Get a copy
 
 ```sh
 git clone <repo-url> my-job-finder && cd my-job-finder
-```
-
-Then point it at your own private GitHub repo and reset the owner's search
-state — the ledgers and digest archive are theirs, not yours:
-
-```sh
 git remote set-url origin git@github.com:<your-user>/my-job-finder.git
-: > data/applied.jsonl
-: > data/seen.jsonl
-git rm -rq digests/ && mkdir digests
-git commit -am "reset search state for new owner"
 gh repo create <your-user>/my-job-finder --private --source=. --push
 ```
 
-(`data/no_auto_apply.json` ships empty; `data/companies.json` you'll rebuild
-in §5.)
+Nothing to reset: the repo contains no one's search state. Everything
+personal is created locally in the steps below and never committed.
 
 ## 2. Install
 
@@ -45,7 +40,7 @@ pip install uv
 uv pip install -e ".[dev]"
 ```
 
-The browser-autofill workflow (optional, local-only — CI never needs it):
+The browser-autofill workflow (optional, local-only):
 
 ```sh
 uv pip install -e ".[apply]"
@@ -58,14 +53,18 @@ Sanity check — the suite must pass on a fresh clone with no profile:
 python -m pytest -q
 ```
 
-To run the pipeline locally (optional — CI normally runs it), create a
-`.env` at the repo root with one line:
+Create a `.env` at the repo root — the pipeline and the digest email read
+it (plain key=value, three lines):
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
+GMAIL_USER=you@gmail.com
+GMAIL_APP_PASSWORD=xxxxxxxxxxxxxxxx
 ```
 
-Nothing else goes in it; email credentials only exist as GitHub secrets (§6).
+`GMAIL_APP_PASSWORD` is a 16-char app password from
+myaccount.google.com/apppasswords (requires 2FA). `GMAIL_USER` is both the
+sender and the recipient of the digest.
 
 ## 3. Create your profile
 
@@ -114,15 +113,7 @@ Your search parameters are personal, so the real config is gitignored:
 cp config/pipeline.example.toml config/pipeline.toml
 ```
 
-Edit **`config/pipeline.toml`**, then hand it to CI (repeat after every
-edit — the workflow reads this repository variable, falling back to the
-example if it's unset):
-
-```sh
-gh variable set PIPELINE_CONFIG < config/pipeline.toml
-```
-
-What to edit:
+Edit **`config/pipeline.toml`**. What to edit:
 
 - `[location]` — replace the metro regexes with your own target geography,
   and the commute tiers/notes with drive times from where you live.
@@ -137,26 +128,34 @@ What to edit:
 
 ## 5. Build your company list
 
-`data/companies.json` ships with the previous owner's ~400 New England
-companies. Replace it with companies in your own market. The
-`.claude/skills/manage-companies` skill adds/removes/probes companies from
-plain-English instructions in a Claude Code session; the format is plain JSON
-if you'd rather script it.
+The tracked-company list lives in `data/state.db` (gitignored). Start from
+the tiny neutral example, then build your own market's list:
 
-## 6. GitHub Actions secrets
+```sh
+job-finder companies import config/companies.example.json
+job-finder companies list
+```
 
-In your repo: Settings → Secrets and variables → Actions →
+To expand: put candidate employer names in a text file, probe them
+(`python scripts/discover_companies.py --file candidates.txt --json hits.json`),
+verify the hits, and `job-finder companies import hits.json`. The
+`manage-companies` skill drives all of this from plain English in a Claude
+Code session.
 
-| Secret | Value |
-|---|---|
-| `ANTHROPIC_API_KEY` | from console.anthropic.com (paste via a plain-text editor — invisible BOMs from rich editors break the SDK) |
-| `GMAIL_USER` | your Gmail address (auth user AND digest recipient) |
-| `GMAIL_APP_PASSWORD` | 16-char app password from myaccount.google.com/apppasswords (requires 2FA) |
+## 6. Schedule the weekly run
 
-The digest workflow (`.github/workflows/daily.yml`) runs Mondays 13:00 UTC;
-trigger a first run manually from the Actions tab (workflow_dispatch). The PR
-reviewer (`.github/workflows/claude-review.yml`) works as-is once
-`ANTHROPIC_API_KEY` is set — delete that file if you don't want it.
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install_schedule.ps1
+```
+
+Registers a Windows Scheduled Task: `job-finder run --email` every Monday at
+09:00 local, with catch-up at next boot if the machine was off. Test it once
+by hand first (`job-finder run --email` — this spends real API tokens).
+
+For the optional PR reviewer (`.github/workflows/claude-review.yml`), set one
+GitHub Actions secret: `ANTHROPIC_API_KEY` (paste via a plain-text editor —
+invisible BOMs from rich editors break the SDK). Delete that workflow file if
+you don't want reviews.
 
 ## 7. Personalize the Claude-side prompts
 
@@ -171,11 +170,11 @@ session can do this: "rewrite these against my profile/ files"):
 
 ## 8. What never goes in git
 
-Already handled by `.gitignore`, listed so you don't fight it: `profile/`,
-`.env`, `data/jobs.db` (rebuilt every run), `data/outreach.jsonl` (third-party
-PII), `data/fill_audits/` (captured form values). `data/applied.jsonl` IS
-committed — it's your own application log and the digest needs it in CI to
-suppress roles you've already applied to.
+Everything personal, already handled by `.gitignore`: `profile/`, `.env`,
+`config/pipeline.toml`, and ALL of `data/` and `digests/` — the state
+database (companies, applied/seen ledgers, digest archive), the ephemeral
+jobs.db, fill audits, and the outreach log. The repo is pure engine; if a
+commit ever contains personal data, that's a bug.
 
 ## Day-to-day commands
 
@@ -195,5 +194,6 @@ violations like a wrong sponsorship answer) and its `no_rule` list is your
 backlog: each entry becomes a new `[[custom_combos]]` answer in
 `profile/profile.toml`, so coverage compounds batch over batch.
 
-The pipeline itself (`job-finder run`) normally only runs in CI — it
-spends real Anthropic tokens, so avoid running it casually on a laptop.
+The pipeline itself (`job-finder run`) is what the scheduled task runs
+weekly — it spends real Anthropic tokens, so avoid extra casual runs.
+`job-finder digest-archive list|show` reads the archive in state.db.

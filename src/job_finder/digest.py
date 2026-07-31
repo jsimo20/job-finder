@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import applied, db, seen
+from . import applied, db, seen, state
 from . import filter as filter_mod
 from .taxonomy import STALE_DAYS
 
@@ -111,15 +111,15 @@ def split_new_carry(rows, seen: dict[str, str], target: str):
 
 def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
            digest_dir: Path = DEFAULT_DIGEST_DIR,
-           seen_path: Path = seen.DEFAULT_SEEN_PATH) -> Path:
+           state_db: Path = state.DEFAULT_STATE_DB) -> Path:
     # first_seen_at is written as UTC, so the default target must also be UTC.
     target = target_date or datetime.now(timezone.utc).date().isoformat()
     # Durable suppression: the DB's applied_at is wiped every rebuild, so also
     # drop anything recorded in the committed applied-log (covers ad-hoc roles
     # the DB never saw). Keyed by external_id, plus company+title so a
     # reposted req (fresh external_id, same role) stays suppressed.
-    applied_ids = applied.applied_external_ids()
-    applied_pairs = applied.applied_company_titles()
+    applied_ids = applied.applied_external_ids(db_path=state_db)
+    applied_pairs = applied.applied_company_titles(db_path=state_db)
 
     def _drop_applied(rows):
         return [
@@ -129,7 +129,7 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
                  applied._norm_title(r["title"])) not in applied_pairs
         ]
 
-    seen_map = seen.load_seen(seen_path)
+    seen_map = seen.load_seen(state_db)
 
     with db.connect(db_path) as conn:
         main_pending = _drop_applied(conn.execute(_pending_sql("main"), (target,)).fetchall())
@@ -213,13 +213,11 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
     # can tell new from carried. Idempotent: already-seen ids are skipped.
     seen.record_seen(
         [r["external_id"] for r in main_pending + stretch_pending],
-        target, seen_path,
+        target, state_db,
     )
-
-    with db.connect(db_path) as conn:
-        conn.execute(
-            "INSERT OR REPLACE INTO daily_log (date, new_count, closed_count, changed_count, digest_md) VALUES (?, ?, ?, ?, ?)",
-            (target, len(main_rows) + len(stretch_rows), len(closed_rows), 0, body),
-        )
+    # The durable archive lives in state.db; the md file above is the working
+    # copy for humans and the digest-triager. daily_log in the ephemeral
+    # jobs.db used to hold a third copy — that double-storage is gone.
+    state.save_digest(target, body, state_db)
 
     return out_path

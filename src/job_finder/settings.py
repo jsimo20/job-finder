@@ -25,8 +25,7 @@ PROFILE_EXAMPLE_DIR = REPO_ROOT / "profile.example"
 @cache
 def pipeline_config(path: Path | None = None) -> dict:
     """config/pipeline.toml (gitignored, the user's real search) when present,
-    else the committed example — so a fresh clone runs out of the box. CI
-    materializes the real file from the PIPELINE_CONFIG Actions variable."""
+    else the committed example — so a fresh clone runs out of the box."""
     p = path or (PIPELINE_CONFIG_PATH if PIPELINE_CONFIG_PATH.exists()
                  else PIPELINE_EXAMPLE_PATH)
     with p.open("rb") as f:
