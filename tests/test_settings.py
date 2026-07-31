@@ -128,3 +128,10 @@ def test_parse_answers_pulls_address_and_years_from_profile(tmp_path):
     assert answers["address"] == "1 Test St"
     assert answers["start_year"] == "2014"
     assert answers["end_year"] == "2018"
+
+
+def test_education_values_accept_ordered_fallback_lists():
+    profile = {"education": {"discipline": ["Biochemistry", "Chemistry"]}}
+    combos = build_combo_fields(profile)
+    pattern, candidates = _first_matching(combos, "Discipline")
+    assert candidates == ["Biochemistry", "Chemistry"]

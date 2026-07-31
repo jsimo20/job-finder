@@ -123,8 +123,12 @@ def build_combo_fields(profile: dict) -> list[tuple[str, list[str]]]:
                          (r"discipline|field of study|major", "discipline"),
                          (r"start\s*(date\s*)?month", "start_month"),
                          (r"end\s*(date\s*)?month", "end_month")):
-        if education.get(key):
-            combos.append((pattern, [education[key]]))
+        value = education.get(key)
+        if value:
+            # A list means ordered fallbacks — e.g. discipline
+            # ["Biochemistry", "Chemistry"] for forms whose major list has no
+            # Biochemistry entry.
+            combos.append((pattern, list(value) if isinstance(value, list) else [value]))
     for pattern, key in ((r"gender", "gender"), (r"hispanic", "hispanic"),
                          (r"race", "race"), (r"veteran", "veteran"),
                          (r"disabilit", "disability")):

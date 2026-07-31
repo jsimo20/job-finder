@@ -32,10 +32,12 @@ hear_about = ["Careers Page", "Company Website"]
 # Uncomment and fill to have Education sections (School/Degree/Discipline/
 # dates) filled on forms that ask. Values are matched against each dropdown's
 # option text; years go into plain text inputs.
+# Any value may be a list of ordered fallbacks, tried until one matches the
+# form's options (useful when a major list lacks your exact discipline).
 # [education]
 # school = "Your University"
 # degree = "Bachelor's Degree"
-# discipline = "Your Major"
+# discipline = ["Your Major", "Broader Fallback Major"]
 # start_month = "September"
 # start_year = "2014"
 # end_month = "June"
