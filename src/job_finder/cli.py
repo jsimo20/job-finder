@@ -23,7 +23,7 @@ def _cmd_init_db(args: argparse.Namespace) -> int:
 
 def _cmd_collect(args: argparse.Namespace) -> int:
     stats = collect.run(
-        seeds_path=Path(args.seeds) if args.seeds else collect.DEFAULT_SEEDS,
+        companies_path=Path(args.companies) if args.companies else collect.DEFAULT_COMPANIES,
         db_path=Path(args.db) if args.db else db.DEFAULT_DB_PATH,
     )
     print(json.dumps(stats, indent=2))
@@ -188,7 +188,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("init-db").set_defaults(func=_cmd_init_db)
 
     p = sub.add_parser("collect")
-    p.add_argument("--seeds", help="path to seeds/companies.json")
+    p.add_argument("--companies", help="path to data/companies.json")
     p.set_defaults(func=_cmd_collect)
 
     p = sub.add_parser("extract")

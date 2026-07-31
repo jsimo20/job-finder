@@ -55,6 +55,15 @@ Sanity check — the suite must pass on a fresh clone with no profile:
 python -m pytest -q
 ```
 
+To run the pipeline locally (optional — CI normally runs it), create a
+`.env` at the repo root with one line:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Nothing else goes in it; email credentials only exist as GitHub secrets (§6).
+
 ## 3. Create your profile
 
 ```sh
@@ -109,11 +118,11 @@ Edit **`config/pipeline.toml`** (this one IS committed — CI reads it):
   product-management defaults with your own market's title patterns.
 - `[extraction]` — the role noun the extraction prompt speaks about.
 
-## 5. Seed your company list
+## 5. Build your company list
 
-`seeds/companies.json` ships with the previous owner's ~400 Boston-area
+`data/companies.json` ships with the previous owner's ~400 New England
 companies. Replace it with companies in your own market. The
-`.claude/skills/manage-seeds` skill adds/removes/probes companies from
+`.claude/skills/manage-companies` skill adds/removes/probes companies from
 plain-English instructions in a Claude Code session; the format is plain JSON
 if you'd rather script it.
 

@@ -73,7 +73,7 @@ def main() -> int:
     issues = check()
     if not issues:
         print("profile check: PASS — identity, driving docs, and generator all present.")
-        print("Reminder: config/pipeline.toml (metros, weights) and seeds/companies.json "
+        print("Reminder: config/pipeline.toml (metros, weights) and data/companies.json "
               "are separate — see SETUP.md §4-5.")
         return 0
     print(f"profile check: {len(issues)} issue(s)\n")

@@ -1,6 +1,6 @@
-"""Probe candidate companies for a public ATS board and emit seed rows.
+"""Probe candidate companies for a public ATS board and emit company rows.
 
-The durable answer to "how do I collect seeds for a new geography or
+The durable answer to "how do I expand the tracked-company list to a new geography or
 industry": build a candidate list of employer names (from a regional tech
 site, a VC portfolio page, a chamber-of-commerce list — anywhere), feed it
 in, and this verifies which ones expose a Greenhouse, Lever, or Ashby board
@@ -11,13 +11,13 @@ Companies on Workday/ICIMS/Taleo/SuccessFactors have no public API and will
 simply report "no board found" — that is the answer, not a bug.
 
 Usage:
-    python scripts/discover_seeds.py --names "Company A" "Company B" ...
-    python scripts/discover_seeds.py --file candidates.txt          # one name per line
-    python scripts/discover_seeds.py --file candidates.txt --json out.json
+    python scripts/discover_companies.py --names "Company A" "Company B" ...
+    python scripts/discover_companies.py --file candidates.txt          # one name per line
+    python scripts/discover_companies.py --file candidates.txt --json out.json
 
-Verify each hit's careers page before adding it to seeds/companies.json
+Verify each hit's careers page before adding it to data/companies.json
 (slug collisions exist: an acquirer's board can answer for a dead brand).
-The manage-seeds skill adds curated rows from this output.
+The manage-companies skill adds curated rows from this output.
 """
 from __future__ import annotations
 
@@ -88,7 +88,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--names", nargs="*", default=[])
     ap.add_argument("--file", help="candidate names, one per line, # comments ok")
-    ap.add_argument("--json", help="write matched seed rows to this path")
+    ap.add_argument("--json", help="write matched company rows to this path")
     args = ap.parse_args()
 
     names = list(args.names)
@@ -125,7 +125,7 @@ def main() -> int:
         with open(args.json, "w", encoding="utf-8") as f:
             json.dump(found, f, indent=2)
         print(f"wrote {args.json} — curate sector_tags/size_band and VERIFY each "
-              "careers page before merging into seeds/companies.json")
+              "careers page before merging into data/companies.json")
     return 0
 
 

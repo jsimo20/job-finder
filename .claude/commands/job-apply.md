@@ -19,7 +19,7 @@ Argument: `$ARGUMENTS`.
 
   Fallback if the digest subagent dispatch fails: query `data/jobs.db` directly for the top N pending unapplied roles (`applied_at IS NULL` and `dismissed_at IS NULL`), sorted by `total_score DESC`, using the same SQL shape as `review.py:PENDING_SQL`.
 
-- **No-auto-apply gate (runs for every chosen role, no exceptions).** After a role is picked but before drafting any materials, check its `company_name` (case-insensitive) against the `companies[].name` entries in `seeds/no_auto_apply.json`. If it matches, **do not enter the apply loop for that role** — skip steps 2a–2i entirely. Instead, tell the user: the company is on the no-auto-apply list, surface the `reason` from the file and the posting URL, and remind them to apply through their own channel. These companies stay in the digest on purpose (they want the signal); only the agent-driven apply is blocked. If the user said `all` or passed multiple ids, silently skip the blocked ones and process the rest, then note which were skipped in the batch summary.
+- **No-auto-apply gate (runs for every chosen role, no exceptions).** After a role is picked but before drafting any materials, check its `company_name` (case-insensitive) against the `companies[].name` entries in `data/no_auto_apply.json`. If it matches, **do not enter the apply loop for that role** — skip steps 2a–2i entirely. Instead, tell the user: the company is on the no-auto-apply list, surface the `reason` from the file and the posting URL, and remind them to apply through their own channel. These companies stay in the digest on purpose (they want the signal); only the agent-driven apply is blocked. If the user said `all` or passed multiple ids, silently skip the blocked ones and process the rest, then note which were skipped in the batch summary.
 
 ### 2. For each chosen role, do this loop:
 
@@ -102,7 +102,7 @@ If the user said `all` or multiple ids, process them sequentially. Between roles
 
 ## Rules
 
-- **Honor the no-auto-apply list.** `seeds/no_auto_apply.json` names companies the user handles through their own contacts. Never draft, render, or autofill an application for any role whose company is on that list — surface it for awareness and stop. This gate is non-negotiable even if they pass the role's `external_id` directly.
+- **Honor the no-auto-apply list.** `data/no_auto_apply.json` names companies the user handles through their own contacts. Never draft, render, or autofill an application for any role whose company is on that list — surface it for awareness and stop. This gate is non-negotiable even if they pass the role's `external_id` directly.
 - **Never invent facts.** Every claim must be in `resume_master.md` or `personal_statement.md` or something the user said in this conversation.
 - **Anti-overstatement.** Read `SESSION_CONTEXT_Jobsearch.md` rules and apply them. Specifically: Connection Manager is not zero-to-one; AI agent is Phase 1 / business case projection; smart home is leading indicator + addressable market (not "delivered across 8M"); exactly 4 skill categories; no skills outside the source pool. The `materials-fact-checker` subagent will also enforce these — they're belt-and-suspenders.
 - **Show before render.** Always show the user the RESUME_DATA changes and cover letter draft, then run the fact-checker, then surface findings. They get the last word on every revision before render() fires.

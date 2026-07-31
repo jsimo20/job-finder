@@ -20,7 +20,7 @@ hand it to a Claude Code session and let it drive.
 
 ## Find — the weekly digest
 
-GitHub Actions (Mondays 13:00 UTC) collects postings from each seed company's
+GitHub Actions (Mondays 13:00 UTC) collects postings from each tracked company's
 public ATS endpoint (Greenhouse, Lever, Ashby), hard-filters on title,
 seniority, and location, extracts structured signals with one Claude Haiku
 call per surviving JD (YOE, comp, domains, onsite days), scores
@@ -29,7 +29,7 @@ deterministically, and emails a ranked Markdown digest with commute warnings.
 The SQLite DB is rebuilt every run; durable state lives in committed JSONL
 ledgers instead: `data/applied.jsonl` suppresses roles you've applied to
 (including reposts, matched by company + title) and `data/seen.jsonl` drives
-the digest's new-vs-carried-forward split. The `manage-seeds` Claude skill
+the digest's new-vs-carried-forward split. The `manage-companies` Claude skill
 edits the company universe from plain English.
 
 ## Apply — materials and autofill (local-only)

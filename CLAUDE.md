@@ -9,7 +9,7 @@ Cron-driven pipeline that surfaces Senior PM roles in Boston (and adjacent metro
 ## Pipeline architecture
 
 ```
-seeds/companies.json
+data/companies.json
     ↓
 collect (adapters/{greenhouse,lever,ashby}.py)  →  postings table
     ↓
@@ -40,7 +40,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 - `src/job_finder/score.py` — deterministic scoring
 - `src/job_finder/review.py` — interactive picker for the CLI `review` subcommand
 - `src/job_finder/form_inventory.py` — ATS-agnostic form field inventory (label/type/required/value/options per control) plus the audit-manifest writer; shared by the deterministic filler and the autofill agent
-- `seeds/companies.json` — 398-company seed across GH + Lever + Ashby
+- `data/companies.json` — 406-company tracked list across GH + Lever + Ashby
 - `.github/workflows/daily.yml` — cron `0 13 * * 1` (weekly), runs pipeline + emails digest, commits digests + both JSONL ledgers
 - `.github/workflows/claude-review.yml` — Claude PR reviewer, fires on `.py` / `.claude/**` / `claude-review.yml` PRs
 
@@ -104,7 +104,7 @@ James lives in **Anytown, CT** and targets Boston deliberately, accepting the dr
 
 ## Project-level skills
 
-- `.claude/skills/manage-seeds/SKILL.md` — add/remove/probe companies in `seeds/companies.json` from plain-English instructions, without manual JSON editing.
+- `.claude/skills/manage-companies/SKILL.md` — add/remove/probe companies in `data/companies.json` from plain-English instructions, without manual JSON editing.
 
 ## Subagents
 
@@ -134,7 +134,7 @@ Tracks people James contacts on LinkedIn (name + company + date + optional role/
 
 ## Applied log
 
-Durable record of roles applied to, keyed by `external_id`. Fixes the fact that `data/jobs.db` (and its `applied_at` flag) is rebuilt every run, so applied roles otherwise resurface in the next digest. Also captures **ad-hoc roles** applied to outside the pipeline (pasted URLs never in the seed set), which the DB never knew about.
+Durable record of roles applied to, keyed by `external_id`. Fixes the fact that `data/jobs.db` (and its `applied_at` flag) is rebuilt every run, so applied roles otherwise resurface in the next digest. Also captures **ad-hoc roles** applied to outside the pipeline (pasted URLs never in the tracked-company list), which the DB never knew about.
 
 - **Store:** `data/applied.jsonl` — append-only, **committed** (unlike the outreach log). It must be in git so the CI-generated digest can read it to suppress already-applied roles. Contents are James's own application records (no third-party PII), fine for a private repo.
 - **Module:** `src/job_finder/applied.py` — `record_applied()`, `list_applied()`, `is_applied(external_id=…, url=…)`, `applied_external_ids()`, `remove_applied()`. URL matching normalizes scheme/query/trailing `/apply`/`/application` so a pasted apply-form link matches the posting.

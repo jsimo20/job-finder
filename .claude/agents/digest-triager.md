@@ -27,7 +27,7 @@ Read that file. Parse the main queue and stretch queue sections. Each role has: 
 
 If no digest exists, report the absence and stop.
 
-Also read `seeds/no_auto_apply.json` if it exists. Any role whose company matches a `companies[].name` entry (case-insensitive) still gets ranked and surfaced — the user wants the signal — but tag it `[MANUAL-ONLY]` in the output line and note the `reason` in its Fit sentence. The downstream apply command hard-blocks these; your job is to make the flag visible so the user isn't surprised.
+Also read `data/no_auto_apply.json` if it exists. Any role whose company matches a `companies[].name` entry (case-insensitive) still gets ranked and surfaced — the user wants the signal — but tag it `[MANUAL-ONLY]` in the output line and note the `reason` in its Fit sentence. The downstream apply command hard-blocks these; your job is to make the flag visible so the user isn't surprised.
 
 ### 2. Score each pending role against the user's fit profile
 

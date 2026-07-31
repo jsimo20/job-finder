@@ -6,7 +6,7 @@ git history contains the owner's applied log and generated digests.
 
 What gets left behind:
 - data/applied.jsonl, data/seen.jsonl — the owner's application/seen history
-- seeds/no_auto_apply.json  — names the owner's inside contacts
+- data/no_auto_apply.json  — names the owner's inside contacts
 - digests/                  — digests generated for the owner's profile
 - data/*.json               — one-off seed-research artifacts for the owner's metro
 - scripts/probe_*.py, scripts/_add_*.py, scripts/_check_dupes.py — ditto
@@ -29,7 +29,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 EXCLUDE_EXACT = {
     "data/applied.jsonl",
     "data/seen.jsonl",
-    "seeds/no_auto_apply.json",
+    "data/no_auto_apply.json",
 }
 EXCLUDE_PREFIXES = ("digests/", "profile/")
 
@@ -67,8 +67,7 @@ def main() -> int:
     (target / "data" / "applied.jsonl").write_text("", encoding="utf-8")
     (target / "data" / "seen.jsonl").write_text("", encoding="utf-8")
     (target / "digests").mkdir(exist_ok=True)
-    (target / "seeds").mkdir(exist_ok=True)
-    (target / "seeds" / "no_auto_apply.json").write_text(
+    (target / "data" / "no_auto_apply.json").write_text(
         json.dumps({
             "_comment": ("Companies that stay in the digest but must never be "
                          "auto-applied to (e.g. where you have an inside contact)."),
