@@ -153,3 +153,12 @@ def test_stage3_wide_range_spans_floor_kept():
 def test_stage3_null_comp_kept():
     r = stage3(yoe_required=None, comp_base_min=None, comp_base_max=None, comp_source=None)
     assert r.keep and r.queue == "main"
+
+
+def test_dash_separated_non_us_remote_is_discarded():
+    """Regression: Cardata's "Canada - Remote" passed the location gate because
+    the country-then-remote pattern only allowed comma/space separators."""
+    from job_finder.filter import stage1
+    for loc in ("Canada - Remote", "Remote - Canada", "Canada, Remote"):
+        r = stage1(title="Senior Product Manager", location=loc, workplace_type="remote")
+        assert r.reason == "discard:non_us_remote", loc

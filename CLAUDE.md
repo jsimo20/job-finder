@@ -4,7 +4,7 @@ Project-level instructions for Claude Code sessions in this repo. See `session-c
 
 ## What this is
 
-Cron-driven pipeline that surfaces Senior PM roles in Boston (and adjacent metros / remote-US). Runs every 3 days on GitHub Actions, emails the resulting digest to `GMAIL_USER`.
+Cron-driven pipeline that surfaces Senior PM roles in Boston (and adjacent metros / remote-US). Runs weekly (Mondays 13:00 UTC) on GitHub Actions, emails the resulting digest to `GMAIL_USER`.
 
 ## Pipeline architecture
 
@@ -41,13 +41,13 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 - `src/job_finder/review.py` — interactive picker for the CLI `review` subcommand
 - `src/job_finder/form_inventory.py` — ATS-agnostic form field inventory (label/type/required/value/options per control) plus the audit-manifest writer; shared by the deterministic filler and the autofill agent
 - `seeds/companies.json` — 398-company seed across GH + Lever + Ashby
-- `.github/workflows/daily.yml` — cron `0 13 */3 * *`, runs pipeline + emails digest
+- `.github/workflows/daily.yml` — cron `0 13 * * 1` (weekly), runs pipeline + emails digest, commits digests + both JSONL ledgers
 - `.github/workflows/claude-review.yml` — Claude PR reviewer, fires on `.py` / `.claude/**` / `claude-review.yml` PRs
 
 ## Commands
 
 ```sh
-# Run tests (47 tests, should all pass)
+# Run tests (should all pass; ~180 and growing)
 .venv/Scripts/python.exe -m pytest -q
 
 # Run pipeline locally — MAKES REAL CLAUDE API CALLS, don't run casually
