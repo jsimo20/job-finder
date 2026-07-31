@@ -51,6 +51,9 @@ LEGAL_PATTERN = re.compile(
     r"non-?compete|restrictive covenant|agreement with (your|a|any) (current|prior|former)?\s*employer|"
     r"impacts your ability to do business", re.I)
 
+# Signature and data-protection acknowledgments: consent, so always manual.
+CONSENT_PATTERN = re.compile(r"electronic signature|data protection act", re.I)
+
 GRADE_BANDS = [(0.95, "A"), (0.85, "B"), (0.70, "C"), (0.0, "D")]
 
 
@@ -90,6 +93,8 @@ def classify(field: dict[str, Any], combos, text_keys) -> tuple[str, str]:
         return "deliberate_blank", "asks about someone else — never autofilled"
     if label and LEGAL_PATTERN.search(label):
         return "deliberate_blank", "legal question — always manual"
+    if label and CONSENT_PATTERN.search(label):
+        return "deliberate_blank", "consent/signature — always manual"
     if ftype == "checkbox":
         return "deliberate_blank", "checkbox — consent stays manual"
 
@@ -123,10 +128,11 @@ def grade_manifest(path: Path, profile: dict) -> dict[str, Any]:
     combos = build_combo_fields(profile)
     text_keys = _text_keys_answerable(profile)
 
-    buckets: dict[str, list[tuple[str, str]]] = {}
+    buckets: dict[str, list[tuple[str, str, list[str]]]] = {}
     for field in fields:
         bucket, detail = classify(field, combos, text_keys)
-        buckets.setdefault(bucket, []).append(((field.get("label") or "?")[:60], detail))
+        buckets.setdefault(bucket, []).append(
+            ((field.get("label") or "?")[:60], detail, field.get("options") or []))
 
     n = {k: len(v) for k, v in buckets.items()}
     filled, missed = n.get("filled", 0), n.get("missed", 0)
@@ -140,7 +146,8 @@ def grade_manifest(path: Path, profile: dict) -> dict[str, Any]:
             "counts": n, "buckets": buckets, "field_count": len(fields)}
 
 
-def print_report(result: dict[str, Any], *, verbose: bool = True) -> None:
+def print_report(result: dict[str, Any], *, verbose: bool = True,
+                 suggest: bool = False) -> None:
     c = result["counts"]
     print(f"\n{'=' * 70}\n{result['slug']}  -  grade {result['grade']} "
           f"({result['pct']:.0%} of ruled fields filled, {result['field_count']} fields)")
@@ -150,8 +157,12 @@ def print_report(result: dict[str, Any], *, verbose: bool = True) -> None:
     if not verbose:
         return
     for bucket in ("critical", "missed", "env_failure", "no_rule"):
-        for label, detail in result["buckets"].get(bucket, []):
+        for label, detail, options in result["buckets"].get(bucket, []):
             print(f"  [{bucket}] {label} - {detail}")
+            if suggest and bucket in ("missed", "no_rule") and options:
+                shown = ", ".join(o[:45] for o in options[:6])
+                more = f" (+{len(options) - 6} more)" if len(options) > 6 else ""
+                print(f"      options: {shown}{more}")
 
 
 def main() -> int:
@@ -160,6 +171,9 @@ def main() -> int:
                     help="post.json audit manifests to grade")
     ap.add_argument("--date", help="grade every post manifest from this date (YYYY-MM-DD)")
     ap.add_argument("--quiet", action="store_true", help="summary lines only")
+    ap.add_argument("--suggest", action="store_true",
+                    help="show each missed/unruled field's actual options, ready "
+                         "to turn into [[custom_combos]] answers")
     args = ap.parse_args()
 
     paths = list(args.manifests)
@@ -171,7 +185,7 @@ def main() -> int:
     profile = settings.load_profile()
     results = [grade_manifest(p, profile) for p in paths]
     for r in results:
-        print_report(r, verbose=not args.quiet)
+        print_report(r, verbose=not args.quiet, suggest=args.suggest)
 
     if len(results) > 1:
         total_filled = sum(r["counts"].get("filled", 0) for r in results)

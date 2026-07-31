@@ -96,3 +96,13 @@ def test_bare_list_manifest_shape(tmp_path):
     ]), encoding="utf-8")
     r = fill_grader.grade_manifest(p, PROFILE)
     assert r["counts"]["filled"] == 1
+
+
+def test_signature_and_data_protection_are_deliberate_blanks(tmp_path):
+    fields = [
+        {"label": "Electronic Signature*", "type": "text", "required": True,
+         "value": "", "options": None},
+        {"label": "Data Protection Act*", "type": "react-select", "required": True,
+         "value": "", "options": ["I acknowledge"]},
+    ]
+    assert _grade(fields, tmp_path)["counts"]["deliberate_blank"] == 2

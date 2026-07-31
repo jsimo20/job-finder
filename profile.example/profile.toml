@@ -52,6 +52,11 @@ hear_about = ["Careers Page", "Company Website"]
 # label = 'export.control'
 # candidates = ["US Passport or US birth certificate"]
 
+# Same idea for plain text inputs: label regex -> literal value typed in.
+# [[custom_text]]
+# label = 'zip.{0,10}code|postal code'
+# value = "02101"
+
 [eeo]
 # Voluntary self-identification defaults. Each value is matched against the
 # option text on the form (exact, then whole-word, then substring — ambiguous

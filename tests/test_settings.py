@@ -163,3 +163,13 @@ def test_veteran_fallback_list_covers_both_phrasings():
     assert match_option(greenhouse, candidates[0]) == 0
     assert match_option(smartsheet, candidates[0]) is None
     assert match_option(smartsheet, candidates[1]) == 1
+
+
+def test_custom_text_rules_parse_and_filter():
+    from boston_pm_tracker.fill_greenhouse import build_custom_text
+    profile = {"custom_text": [
+        {"label": r"zip.{0,10}code", "value": "06119"},
+        {"label": "", "value": "orphan"},
+        {"label": "no-value"},
+    ]}
+    assert build_custom_text(profile) == [(r"zip.{0,10}code", "06119")]

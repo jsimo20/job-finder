@@ -223,7 +223,15 @@ def find_form_root(page: Page) -> Frame | Page:
     return form_inventory.find_form_root(page)
 
 
-def fill_text_inputs(root, answers: dict[str, str], report: dict) -> None:
+def build_custom_text(profile: dict) -> list[tuple[str, str]]:
+    """User-defined [[custom_text]] rules: label regex -> literal value.
+    The text-field counterpart of [[custom_combos]]."""
+    return [(c["label"], c["value"]) for c in profile.get("custom_text", [])
+            if c.get("label") and c.get("value")]
+
+
+def fill_text_inputs(root, answers: dict[str, str], report: dict,
+                     custom_text: list[tuple[str, str]] | None = None) -> None:
     inputs = root.locator("input[type='text'], input[type='email'], input[type='tel']")
     for i in range(inputs.count()):
         el = inputs.nth(i)
@@ -255,7 +263,13 @@ def fill_text_inputs(root, answers: dict[str, str], report: dict) -> None:
                     report["unmapped"].append(f"{label[:60]} (no value in answers)")
                 break
         else:
-            report["unmapped"].append(label)
+            for pattern, value in (custom_text or []):
+                if re.search(pattern, label, re.I):
+                    el.fill(value)
+                    report["filled"].append(f"{label}: {value}")
+                    break
+            else:
+                report["unmapped"].append(label)
 
 
 def match_option(texts: list[str], want: str) -> int | None:
@@ -627,6 +641,7 @@ def fill_one(context, url: str, folder: Path, city: str, *,
         report = {"filled": [], "skipped": [], "unmapped": [],
                   "required_empty": [], "audits": []}
     harvested: dict[str, list[str]] = {}
+    custom_text = build_custom_text(profile or {})
 
     page = context.new_page()
     page.set_default_timeout(STEP_TIMEOUT_MS)
@@ -653,13 +668,13 @@ def fill_one(context, url: str, folder: Path, city: str, *,
     if form_inventory.control_count(root) == 0:
         report["required_empty"].append("FORM NEVER LOADED — no controls in any frame")
     capture_audit(root, slug, "pre", url, report, skip=no_audit)
-    fill_text_inputs(root, answers, report)
+    fill_text_inputs(root, answers, report, custom_text)
     fill_combos(root, city, report, harvested)
     upload_files(root, folder, report, page)
     page.wait_for_timeout(1000)
     # repair pass: React hydration can wipe values filled too early;
     # this refills any text input that came up empty (skips filled ones)
-    fill_text_inputs(root, answers, report)
+    fill_text_inputs(root, answers, report, custom_text)
     try:
         audit_required(root, report)   # appends; must not clobber earlier entries
     except Exception as exc:  # audit is best-effort; never block the report
@@ -776,6 +791,23 @@ def main() -> int:
         print(f"{len(reports)} tab(s) filled. NOTHING SUBMITTED.")
         print(f"{blockers} required field(s) still empty across the batch — see above.")
         print("Review every answer in the open window and submit each yourself.")
+
+        if not args.no_audit:
+            # Close the loop: grade the manifests this batch just wrote, so
+            # every run ends with its own scorecard and improvement backlog.
+            # Lazy import — fill_grader imports this module.
+            from . import fill_grader
+            manifests = sorted(fill_grader.AUDITS_DIR.glob("*.post.json"),
+                               key=lambda p: p.stat().st_mtime)[-len(jobs):]
+            try:
+                for m in manifests:
+                    fill_grader.print_report(
+                        fill_grader.grade_manifest(m, profile), suggest=True)
+                print("\nTurn [no_rule] entries into [[custom_combos]] answers in "
+                      "profile/profile.toml, or run /fill-review to do it "
+                      "conversationally.")
+            except Exception as exc:   # grading must never cost a filled batch
+                print(f"(grading skipped: {exc})")
         sys.stdout.flush()
 
         if not args.no_hold:
