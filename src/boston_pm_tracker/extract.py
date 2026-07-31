@@ -14,7 +14,12 @@ from typing import Any
 import anthropic
 
 from . import db
+from .settings import pipeline_config
 from .taxonomy import DOMAIN_DEFINITIONS, STAGE_DEFINITIONS
+
+_EXTRACTION = pipeline_config().get("extraction", {})
+_ROLE_NOUN = _EXTRACTION.get("role_noun", "product manager")
+_SENIOR_SCOPE = _EXTRACTION.get("senior_scope", "a typical senior scope for this role")
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +47,7 @@ def _clamp_days(value) -> int | None:
     return days if 0 <= days <= 5 else None
 
 
-SYSTEM_PROMPT = f"""You extract structured hiring signals from product manager job descriptions.
+SYSTEM_PROMPT = f"""You extract structured hiring signals from {_ROLE_NOUN} job descriptions.
 
 Return STRICT JSON only. No prose, no markdown fences. Schema:
 
@@ -73,7 +78,7 @@ Rules:
   Fully remote is 0. "Hybrid, 3 days in office" is 3. "In-office" / "onsite" with no
   number stated is 5. Null ONLY when the JD says nothing about office attendance —
   do not guess from the location field alone, since a city name is not a schedule.
-- stretch_reason: set only if YOE >= 8 or other reason the role exceeds a typical Senior/Staff PM scope.
+- stretch_reason: set only if YOE >= 8 or other reason the role exceeds {_SENIOR_SCOPE}.
 
 Output ONLY the JSON object."""
 

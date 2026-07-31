@@ -5,7 +5,8 @@ fresh git repo in the target. A plain clone or fork is NOT safe to hand over:
 git history contains the owner's applied log and generated digests.
 
 What gets left behind:
-- data/applied.jsonl        — the owner's application history
+- data/applied.jsonl, data/seen.jsonl — the owner's application/seen history
+- seeds/no_auto_apply.json  — names the owner's inside contacts
 - digests/                  — digests generated for the owner's profile
 - data/*.json               — one-off seed-research artifacts for the owner's metro
 - scripts/probe_*.py, scripts/_add_*.py, scripts/_check_dupes.py — ditto
@@ -17,6 +18,7 @@ Usage:
 """
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 import sys
@@ -26,6 +28,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 EXCLUDE_EXACT = {
     "data/applied.jsonl",
+    "data/seen.jsonl",
+    "seeds/no_auto_apply.json",
     "data/ats_discovered.json",
     "data/ats_gap_analysis.json",
     "data/regional-site_companies_raw.json",
@@ -70,10 +74,19 @@ def main() -> int:
         shutil.copy2(src, dst)
         copied += 1
 
-    # Fresh, empty applied log so the digest integration works from day one.
+    # Fresh, empty ledgers so the digest integration works from day one.
     (target / "data").mkdir(exist_ok=True)
     (target / "data" / "applied.jsonl").write_text("", encoding="utf-8")
+    (target / "data" / "seen.jsonl").write_text("", encoding="utf-8")
     (target / "digests").mkdir(exist_ok=True)
+    (target / "seeds").mkdir(exist_ok=True)
+    (target / "seeds" / "no_auto_apply.json").write_text(
+        json.dumps({
+            "_comment": ("Companies that stay in the digest but must never be "
+                         "auto-applied to (e.g. where you have an inside contact)."),
+            "companies": [],
+        }, indent=2) + "\n",
+        encoding="utf-8")
 
     subprocess.run(["git", "init", "-b", "main"], cwd=target, check=True,
                    capture_output=True)

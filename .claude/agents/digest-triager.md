@@ -12,7 +12,7 @@ You are a focused triager. You read the latest digest in `digests/`, evaluate ev
 The dispatching prompt will pass:
 
 - `top_n` — how many roles to surface (default 5).
-- Optional `filters` — Boston-only, remote-only, comp floor, etc.
+- Optional `filters` — single-metro-only, remote-only, comp floor, etc.
 - Optional `exclude_external_ids` — list of roles already applied to or dismissed.
 
 ## What you do
@@ -49,7 +49,7 @@ Return a numbered list (1 to N), tightest format possible:
 
 ```
 1. [Score X | digest:Y] Company — Role Title
-   gh_jid: 7947683 | NYC | $192–240K | AI Platforms
+   gh_jid: 7947683 | <metro> | $192–240K | <domain>
    Fit: <one sentence — why this is a top pick for the user>
 
 2. [Score X | digest:Y] Company — Role Title
@@ -61,7 +61,7 @@ Plus, at the end:
 ```
 Roles considered: N pending main + N pending stretch
 Excluded: <count> applied/dismissed
-Top picks favor: <one phrase capturing the pattern — e.g., "AI-platform & developer-tooling roles in NYC/Boston">
+Top picks favor: <one phrase capturing the pattern — e.g., "platform roles in the user's primary metro">
 ```
 
 ## Hard rules

@@ -15,6 +15,28 @@ yoe_main_queue_max = 7
 # Postings open longer than this are dropped as likely evergreen reqs.
 stale_days = 30
 
+# ── Role targeting ───────────────────────────────────────────────────────────
+# Which job titles the pipeline is hunting. Edit every pattern for your own
+# market; the defaults target senior product management roles.
+
+[titles]
+# A title must match one of these to count as a target role at all.
+role_patterns = ['\b(product manager|product management|head of product|product lead)\b']
+# Adjacent tracks that share vocabulary but are out of scope.
+exclude_track = '\b(product marketing|PMM|project manager|program manager|TPM|technical program|product owner|scrum master|product designer|UX designer|UI designer)\b'
+# Titles containing target words that are really a different job.
+exclude_role = '\b(engineer|engineering|developer|scientist|analyst|architect|researcher|data engineer|software engineer|security engineer|full[- ]?stack)\b'
+# Seniority band: must match keep, must not match reject; above-band titles
+# are discarded separately.
+seniority_keep = '\b(senior|sr\.?|staff|principal|lead|group|head of product)\b'
+seniority_reject = '\b(associate product manager|associate pm|APM|junior|jr\.?|intern|product manager (i|ii)\b|PM I+\b)\b'
+above_band = '\b(director|VP|vice president|chief|SVP|EVP|head of (?!product\b))'
+
+[extraction]
+# How the extraction prompt describes the roles it reads. Keep short.
+role_noun = "product manager"
+senior_scope = "a typical Senior/Staff PM scope"
+
 # ── Location scope ───────────────────────────────────────────────────────────
 # in_scope_patterns: a posting passes the location gate when its location
 # string matches ANY pattern (case-insensitive), or the role is US-remote.

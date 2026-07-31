@@ -89,36 +89,18 @@ NON_US_REMOTE_RE = re.compile(
     re.IGNORECASE,
 )
 
-PM_TITLE_RE = re.compile(
-    r"\b(product manager|product management|head of product|product lead)\b",
-    re.IGNORECASE,
-)
+# Title targeting is per-user market preference and lives in
+# config/pipeline.toml [titles]; this module only compiles it.
+_TITLES = pipeline_config()["titles"]
 
-EXCLUDE_TRACK_RE = re.compile(
-    r"\b(product marketing|PMM|project manager|program manager|TPM|technical program|product owner|scrum master|product designer|UX designer|UI designer)\b",
-    re.IGNORECASE,
-)
-
-# Engineering / IC titles that contain "product" but aren't PM roles.
-EXCLUDE_ROLE_RE = re.compile(
-    r"\b(engineer|engineering|developer|scientist|analyst|architect|researcher|data engineer|software engineer|security engineer|full[- ]?stack)\b",
-    re.IGNORECASE,
-)
-
-SENIORITY_KEEP_RE = re.compile(
-    r"\b(senior|sr\.?|staff|principal|lead|group|head of product)\b",
-    re.IGNORECASE,
-)
-
-SENIORITY_REJECT_RE = re.compile(
-    r"\b(associate product manager|associate pm|APM|junior|jr\.?|intern|product manager (i|ii)\b|PM I+\b)\b",
-    re.IGNORECASE,
-)
-
-DIRECTOR_PLUS_RE = re.compile(
-    r"\b(director|VP|vice president|chief|SVP|EVP|head of (?!product\b))",
-    re.IGNORECASE,
-)
+ROLE_TITLE_RE = re.compile(
+    "|".join(f"(?:{p})" for p in _TITLES["role_patterns"]), re.IGNORECASE)
+EXCLUDE_TRACK_RE = re.compile(_TITLES["exclude_track"], re.IGNORECASE)
+# Titles that contain target words but are really a different job.
+EXCLUDE_ROLE_RE = re.compile(_TITLES["exclude_role"], re.IGNORECASE)
+SENIORITY_KEEP_RE = re.compile(_TITLES["seniority_keep"], re.IGNORECASE)
+SENIORITY_REJECT_RE = re.compile(_TITLES["seniority_reject"], re.IGNORECASE)
+DIRECTOR_PLUS_RE = re.compile(_TITLES["above_band"], re.IGNORECASE)
 
 
 @dataclass
@@ -146,7 +128,7 @@ def stage1(*, title: str, location: str | None, workplace_type: str | None) -> F
     # over the engineering-role exclusion, since the engineering keywords often
     # appear as the *product area* (e.g. "Lead PM, Developer Experience") rather
     # than the role itself.
-    if not PM_TITLE_RE.search(title):
+    if not ROLE_TITLE_RE.search(title):
         if EXCLUDE_ROLE_RE.search(title):
             return FilterResult(False, "discard:engineering_or_ic_role")
         return FilterResult(False, "discard:not_pm_title")

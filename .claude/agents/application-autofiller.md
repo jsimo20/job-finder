@@ -118,7 +118,7 @@ the user's contact details. Report only the field count and the path written.
 Both paths: use `browser_type` for single fields. Pull values from `standard_answers.md`:
 
 - Identity / contact: full name, preferred name, email, phone, LinkedIn, GitHub (use the GitHub URL for fields labeled "Website" if there's no dedicated GitHub field).
-- Location: current city/state (Boston, MA); willing to relocate (Yes); remote / hybrid / on-site (Yes to all).
+- Location: current city/state, relocation, and remote/hybrid/on-site stance — all verbatim from `standard_answers.md`.
 - "How did you hear about us" / source: match the closest option to standard_answers' default ("Direct application via company careers page" or the company-careers-page option in the dropdown).
 
 ### 5. Handle dropdowns / comboboxes (react-select pattern is common)

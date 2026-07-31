@@ -104,9 +104,10 @@ Edit **`config/pipeline.toml`** (this one IS committed — CI reads it):
   feed the extraction prompt, so keep them concrete.
 - `[filters]` — your comp floor and years-of-experience cap.
 
-Title and seniority filters (which titles count as PM roles, senior-and-above
-banding) live in `src/boston_pm_tracker/filter.py` — edit the regexes there
-if your target level differs.
+- `[titles]` — which job titles count as target roles, adjacent tracks to
+  exclude, and the seniority band. This is the industry knob: replace the
+  product-management defaults with your own market's title patterns.
+- `[extraction]` — the role noun the extraction prompt speaks about.
 
 ## 5. Seed your company list
 
