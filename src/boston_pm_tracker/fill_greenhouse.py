@@ -38,13 +38,17 @@ from boston_pm_tracker.form_inventory import has_selection, label_of
 STEP_TIMEOUT_MS = 10_000
 
 TEXT_FIELDS: list[tuple[str, str]] = [
-    # (label regex, answers key) — order matters: "preferred first" before "first"
+    # (label regex, answers key) — order matters: "preferred first" before
+    # "first", and "e-mail" before the bare "address" ("Email Address").
     (r"preferred\s*(first\s*)?name", "preferred_name"),
     (r"first\s*name", "first_name"),
     (r"last\s*name", "last_name"),
     (r"e-?mail", "email"),
     (r"linked\s*in", "linkedin"),
     (r"website|portfolio|github", "github"),
+    (r"start\s*(date\s*)?year", "start_year"),
+    (r"end\s*(date\s*)?year", "end_year"),
+    (r"address", "address"),
 ]
 
 # (label regex, candidate texts tried in order). Each candidate is typed into
@@ -65,8 +69,13 @@ TEXT_FIELDS: list[tuple[str, str]] = [
 # uniquely to the wrong option through the "no" in "now". No string-similarity
 # rule catches that. Naming the answer that must never be chosen does.
 VETO: dict[str, str] = {
+    # ^yes$ is vetoed on sponsorship questions: "Do you require sponsorship?
+    # Yes/No" makes a bare Yes the needs-sponsorship answer. A longer option
+    # that merely contains "yes" ("Yes, I am authorized and do not require
+    # sponsorship") stays selectable.
     r"sponsor": r"\bi\s+require\s+sponsorship\b|\bwill\s+require\s+sponsorship\b|"
-                r"\bh-?1-?b\b|\bopt\b|\bvisa\s+sponsorship\s+(is\s+)?required\b",
+                r"\bh-?1-?b\b|\bopt\b|\bvisa\s+sponsorship\s+(is\s+)?required\b|"
+                r"^\s*yes\s*[.!]?\s*$",
     r"authori[sz]": r"\bnot\s+authorized\b|\bi\s+require\s+sponsorship\b",
 }
 
@@ -85,17 +94,37 @@ def build_combo_fields(profile: dict) -> list[tuple[str, list[str]]]:
     """
     answers = profile.get("answers", {})
     eeo = profile.get("eeo", {})
+    education = profile.get("education", {})
     combos: list[tuple[str, list[str]]] = []
+    # User-defined [[custom_combos]] go first so they can override any
+    # built-in mapping for the same label.
+    for custom in profile.get("custom_combos", []):
+        if custom.get("label") and custom.get("candidates"):
+            combos.append((custom["label"], list(custom["candidates"])))
     authorized_no_sponsor = (answers.get("work_authorized")
                              and not answers.get("requires_sponsorship", True))
     if authorized_no_sponsor:
-        # authorization first — its label contains the word "country"
-        combos.append((r"authori[sz]", ["legally authorized to work", "no restriction", "yes"]))
-    combos.append((r"country", [answers.get("country", "United States")]))
-    if authorized_no_sponsor:
+        # Order is load-bearing. sponsor BEFORE authorization: Smartsheet's
+        # "Do you ... require immigration sponsorship for work authorization?"
+        # contains both words, and matching the authorization row first
+        # committed its "yes" candidate — the one answer that must never land
+        # on a sponsorship question (caught in the 2026-07-30 post-fill
+        # audit). A sponsorship label that mentions authorization is still a
+        # sponsorship question; a plain authorization question never says
+        # "sponsor". Then authorization before country, whose label contains
+        # the word "country".
         combos.append((r"sponsor", ["legally authorized to work", "do not require sponsorship",
                                     "will not require", "no"]))
-    combos.append((r"hear about", ["Careers Page", "Company Website"]))
+        combos.append((r"authori[sz]", ["legally authorized to work", "no restriction", "yes"]))
+    combos.append((r"country", [answers.get("country", "United States")]))
+    combos.append((r"hear about", list(answers.get("hear_about",
+                                                   ["Careers Page", "Company Website"]))))
+    for pattern, key in ((r"school", "school"), (r"degree", "degree"),
+                         (r"discipline|field of study|major", "discipline"),
+                         (r"start\s*(date\s*)?month", "start_month"),
+                         (r"end\s*(date\s*)?month", "end_month")):
+        if education.get(key):
+            combos.append((pattern, [education[key]]))
     for pattern, key in ((r"gender", "gender"), (r"hispanic", "hispanic"),
                          (r"race", "race"), (r"veteran", "veteran"),
                          (r"disabilit", "disability")):
@@ -150,6 +179,7 @@ def parse_answers(folder: Path, profile: dict | None = None) -> dict[str, str]:
         return m.group(1).strip() if m else ""
 
     ident = (profile or {}).get("identity", {})
+    education = (profile or {}).get("education", {})
     full_name = grab("Full name") or ident.get("name", "")
     first, _, last = full_name.partition(" ")
     return {
@@ -160,6 +190,9 @@ def parse_answers(folder: Path, profile: dict | None = None) -> dict[str, str]:
         "phone": grab("Phone") or ident.get("phone", ""),
         "linkedin": grab("LinkedIn") or ident.get("linkedin", ""),
         "github": grab("GitHub") or ident.get("github", ""),
+        "address": grab("Address") or ident.get("address", ""),
+        "start_year": str(education.get("start_year", "") or ""),
+        "end_year": str(education.get("end_year", "") or ""),
     }
 
 
@@ -204,8 +237,12 @@ def fill_text_inputs(root, answers: dict[str, str], report: dict) -> None:
             continue
         for pattern, key in TEXT_FIELDS:
             if re.search(pattern, label, re.I):
-                el.fill(answers[key])
-                report["filled"].append(f"{label}: {answers[key]}")
+                value = answers.get(key, "")
+                if value:
+                    el.fill(value)
+                    report["filled"].append(f"{label}: {value}")
+                else:
+                    report["unmapped"].append(f"{label[:60]} (no value in answers)")
                 break
         else:
             report["unmapped"].append(label)
@@ -423,26 +460,34 @@ def _try_upload(el, path: Path, what: str, report: dict, *, how: str = "",
     return True
 
 
-def _upload_via_chooser(page, root, label_re: str, path: Path, what: str,
+def _upload_via_chooser(page, root, label_res: list[str], path: Path, what: str,
                         report: dict) -> bool:
     """Fallback: drive the visible Attach button through a real file chooser.
 
     JS-backed uploaders ignore a programmatic set_input_files on their hidden
     input but handle the browser's own file-chooser event, so this reaches the
     ones the direct path cannot.
+
+    Tries each label pattern in order — Smartsheet's cover-letter widget has
+    no element whose text says "cover letter" (that's a section header); the
+    clickable button just says "Attach". Success is only reported when the
+    filename renders on the form, same as every other upload path.
     """
-    try:
-        btn = root.get_by_text(re.compile(label_re, re.I)).first
-        if not btn.count():
-            return False
-        with page.expect_file_chooser(timeout=5000) as fc:
-            btn.click()
-        fc.value.set_files(str(path))
-        page.wait_for_timeout(800)
-        report["filled"].append(f"{what} upload (file chooser): {path.name}")
-        return True
-    except Exception:
-        return False
+    for label_re in label_res:
+        try:
+            btn = root.get_by_text(re.compile(label_re, re.I)).first
+            if not btn.count():
+                continue
+            with page.expect_file_chooser(timeout=5000) as fc:
+                btn.click()
+            fc.value.set_files(str(path))
+            page.wait_for_timeout(800)
+            if _upload_landed(root, path):
+                report["filled"].append(f"{what} upload (file chooser): {path.name}")
+                return True
+        except Exception:
+            continue
+    return False
 
 
 def upload_files(root, folder: Path, report: dict, page=None) -> None:
@@ -484,10 +529,14 @@ def upload_files(root, folder: Path, report: dict, page=None) -> None:
     # Last resort: drive the visible Attach button rather than the hidden input.
     if page is not None:
         if resume and not placed["resume"]:
-            placed["resume"] = _upload_via_chooser(page, root, r"attach|resume|upload",
+            placed["resume"] = _upload_via_chooser(page, root, [r"attach|resume|upload"],
                                                    resume, "Resume", report)
         if cover and not placed["cover"]:
-            placed["cover"] = _upload_via_chooser(page, root, r"cover letter",
+            # The bare "Attach" button is only safe once the resume is placed;
+            # before that, the first Attach on the page is usually the
+            # resume's, and clicking it would put the cover letter there.
+            cover_labels = [r"cover letter"] + ([r"^attach$"] if placed["resume"] else [])
+            placed["cover"] = _upload_via_chooser(page, root, cover_labels,
                                                   cover, "Cover letter", report)
     if resume and not placed["resume"]:
         report["required_empty"].append(

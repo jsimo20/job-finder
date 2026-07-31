@@ -14,6 +14,7 @@ exact shape (any value here overrides `profile.toml [identity]`).
 - **LinkedIn:** https://www.linkedin.com/in/your-handle/
 - **GitHub:** https://github.com/your-handle
 - **Location:** Boston, MA
+- **Address:** 123 Example St, Boston MA 02101
 
 ## Work authorization
 

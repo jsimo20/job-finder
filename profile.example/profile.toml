@@ -15,6 +15,9 @@ linkedin = "https://www.linkedin.com/in/your-handle/"
 github = "https://github.com/your-handle"
 # What autofill types into "which cities are you available to work in" fields.
 city = "Boston"
+# Street address for forms that demand a full mailing address. Leave "" to
+# fill those by hand.
+address = ""
 
 [answers]
 # Only when BOTH are true does autofill answer authorization/sponsorship
@@ -23,6 +26,29 @@ city = "Boston"
 work_authorized = true
 requires_sponsorship = false
 country = "United States"
+# Candidates tried in order against "how did you hear about us" dropdowns.
+hear_about = ["Careers Page", "Company Website"]
+
+# Uncomment and fill to have Education sections (School/Degree/Discipline/
+# dates) filled on forms that ask. Values are matched against each dropdown's
+# option text; years go into plain text inputs.
+# [education]
+# school = "Your University"
+# degree = "Bachelor's Degree"
+# discipline = "Your Major"
+# start_month = "September"
+# start_year = "2014"
+# end_month = "June"
+# end_year = "2018"
+
+# Recurring screening dropdowns you want answered automatically. `label` is a
+# regex matched against the question text; `candidates` are tried in order
+# against the option texts (exact, then whole-word, then substring — an
+# ambiguous match is refused and the field is left for you). These run before
+# the built-in mappings, so they can override them.
+# [[custom_combos]]
+# label = 'export.control'
+# candidates = ["US Passport or US birth certificate"]
 
 [eeo]
 # Voluntary self-identification defaults. Each value is matched against the
