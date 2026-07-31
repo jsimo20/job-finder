@@ -30,18 +30,6 @@ EXCLUDE_EXACT = {
     "data/applied.jsonl",
     "data/seen.jsonl",
     "seeds/no_auto_apply.json",
-    "data/ats_discovered.json",
-    "data/ats_gap_analysis.json",
-    "data/regional-site_companies_raw.json",
-    "data/regional-site_companies_with_slugs.json",
-    "data/regional-site_universe_diff.json",
-    "data/full_gap_probe.json",
-    "scripts/_add_ashby_finds.py",
-    "scripts/_add_gap_finds.py",
-    "scripts/_check_dupes.py",
-    "scripts/probe_ats.py",
-    "scripts/probe_ats_gap.py",
-    "scripts/probe_full_gap.py",
 }
 EXCLUDE_PREFIXES = ("digests/", "profile/")
 
