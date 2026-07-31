@@ -129,11 +129,17 @@ def build_combo_fields(profile: dict) -> list[tuple[str, list[str]]]:
             # ["Biochemistry", "Chemistry"] for forms whose major list has no
             # Biochemistry entry.
             combos.append((pattern, list(value) if isinstance(value, list) else [value]))
-    for pattern, key in ((r"gender", "gender"), (r"hispanic", "hispanic"),
+    # transgender before gender: "I identify as transgender" contains the
+    # substring "gender", and the gender row once tried "Male" against its
+    # Yes/No options (Smartsheet 2026-07-30 — fail-closed left it blank, but
+    # only by luck of the option texts).
+    for pattern, key in ((r"transgender", "transgender"),
+                         (r"(?<!trans)gender", "gender"), (r"hispanic", "hispanic"),
                          (r"race", "race"), (r"veteran", "veteran"),
                          (r"disabilit", "disability")):
-        if eeo.get(key):
-            combos.append((pattern, [eeo[key]]))
+        value = eeo.get(key)
+        if value:
+            combos.append((pattern, list(value) if isinstance(value, list) else [value]))
     combos.append((r"certify", ["Yes"]))
     combos.append((r"privacy|acknowledg", ["Yes"]))
     if eeo.get("pronouns"):

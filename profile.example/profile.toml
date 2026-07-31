@@ -56,15 +56,18 @@ hear_about = ["Careers Page", "Company Website"]
 # Voluntary self-identification defaults. Each value is matched against the
 # option text on the form (exact, then whole-word, then substring — ambiguous
 # matches are refused). Leave a value "" and autofill will skip that question
-# entirely so you can answer it by hand.
+# entirely so you can answer it by hand. Any value may also be a list of
+# ordered fallbacks, for questions whose phrasing varies between ATSes.
 # Typical option phrasings on Greenhouse forms:
-#   gender     = "Male" / "Female" / "Decline To Self Identify"
-#   hispanic   = "Yes" / "No"
-#   race       = one of the form's race/ethnicity options
-#   veteran    = "I am not a protected veteran" (a fragment like "not a protected" works)
-#   disability = "No, I do not have a disability" (fragment: "no, i do not have")
-#   pronouns   = "He/Him" / "She/Her" / "They/Them" (fragment like "He/" works)
+#   gender      = "Male" / "Female" / "Decline To Self Identify"
+#   transgender = "Yes" / "No" (some vendors ask it as its own question)
+#   hispanic    = "Yes" / "No"
+#   race        = one of the form's race/ethnicity options
+#   veteran     = ["not a protected", "not a veteran"] (covers both common phrasings)
+#   disability  = "No, I do not have a disability" (fragment: "no, i do not have")
+#   pronouns    = "He/Him" / "She/Her" / "They/Them" (fragment like "He/" works)
 gender = ""
+transgender = ""
 hispanic = ""
 race = ""
 veteran = ""

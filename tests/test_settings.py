@@ -39,7 +39,7 @@ def test_combo_fields_include_eeo_rows_only_when_set():
         "eeo": {"gender": "Male", "hispanic": "", "veteran": "not a protected"},
     }
     patterns = [p for p, _ in build_combo_fields(profile)]
-    assert r"gender" in patterns
+    assert r"(?<!trans)gender" in patterns
     assert r"veteran" in patterns
     assert r"hispanic" not in patterns
 
@@ -135,3 +135,31 @@ def test_education_values_accept_ordered_fallback_lists():
     combos = build_combo_fields(profile)
     pattern, candidates = _first_matching(combos, "Discipline")
     assert candidates == ["Biochemistry", "Chemistry"]
+
+
+def test_transgender_question_never_routes_to_the_gender_row():
+    """Regression: Smartsheet 2026-07-30. 'I identify as transgender:' contains
+    the substring 'gender' and used to hit the gender row's 'Male' candidate."""
+    profile = {"eeo": {"gender": "Male", "transgender": "No"}}
+    combos = build_combo_fields(profile)
+    pattern, candidates = _first_matching(combos, "I identify as transgender:")
+    assert candidates == ["No"]
+    pattern, candidates = _first_matching(combos, "I identify my gender as:")
+    assert candidates == ["Male"]
+
+
+def test_gender_row_ignores_transgender_even_without_a_transgender_answer():
+    combos = build_combo_fields({"eeo": {"gender": "Male"}})
+    pattern, candidates = _first_matching(combos, "I identify as transgender:")
+    assert candidates is None
+
+
+def test_veteran_fallback_list_covers_both_phrasings():
+    from boston_pm_tracker.fill_greenhouse import match_option
+    profile = {"eeo": {"veteran": ["not a protected", "not a veteran"]}}
+    _, candidates = _first_matching(build_combo_fields(profile), "My veteran status is:")
+    greenhouse = ["i am not a protected veteran", "i identify as one or more", "i don't wish to answer"]
+    smartsheet = ["yes, i am a veteran", "no, i am not a veteran", "i don't wish to answer"]
+    assert match_option(greenhouse, candidates[0]) == 0
+    assert match_option(smartsheet, candidates[0]) is None
+    assert match_option(smartsheet, candidates[1]) == 1
