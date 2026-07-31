@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import applied, db
+from . import applied, db, seen
 from . import filter as filter_mod
 from .taxonomy import STALE_DAYS
 
@@ -71,6 +71,8 @@ _BASE_COLS = """
     s.total_score
 """
 
+# Staleness is measured against the digest's TARGET date (the ? param), not
+# render time — julianday('now') made a back-dated re-render return nothing.
 _BASE_JOIN_WHERE = f"""
     FROM scores s
     JOIN postings p ON p.id = s.posting_id
@@ -79,36 +81,37 @@ _BASE_JOIN_WHERE = f"""
     WHERE p.closed_at IS NULL
       AND p.applied_at IS NULL
       AND p.dismissed_at IS NULL
-      AND (julianday('now') - julianday(COALESCE(p.posted_at, p.first_seen_at))) <= {STALE_DAYS}
+      AND (julianday(?) - julianday(COALESCE(p.posted_at, p.first_seen_at))) <= {STALE_DAYS}
 """
 
 
-def _new_today_sql(queue: str) -> str:
-    # New = first seen on the digest's target date.
+def _pending_sql(queue: str) -> str:
+    # One query per queue; the new-vs-carried split happens in Python against
+    # the committed seen-ledger. The DB is rebuilt every run, so
+    # first_seen_at is always "now" and cannot make that distinction — every
+    # digest between 2026-07-07 and 2026-07-28 labeled all rows "new" and
+    # carried forward zero because of it.
     return f"""
         SELECT {_BASE_COLS}
         {_BASE_JOIN_WHERE}
           AND s.queue = '{queue}'
-          AND date(p.first_seen_at) = ?
         ORDER BY s.total_score DESC
     """
 
 
-def _carry_forward_sql(queue: str) -> str:
-    # Carry forward = seen earlier, still open, in-scope, not stale, neither
-    # applied nor dismissed. Capped to keep the digest readable.
-    return f"""
-        SELECT {_BASE_COLS}
-        {_BASE_JOIN_WHERE}
-          AND s.queue = '{queue}'
-          AND date(p.first_seen_at) < ?
-        ORDER BY s.total_score DESC, p.first_seen_at DESC
-        LIMIT {CARRY_FORWARD_CAP}
-    """
+def split_new_carry(rows, seen: dict[str, str], target: str):
+    """(new, carried) by the seen-ledger. A row first seen on the target date
+    itself counts as new, so re-rendering the same day is stable."""
+    new_rows = [r for r in rows
+                if seen.get(r["external_id"], target) == target]
+    carry_rows = [r for r in rows
+                  if seen.get(r["external_id"], target) != target][:CARRY_FORWARD_CAP]
+    return new_rows, carry_rows
 
 
 def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
-           digest_dir: Path = DEFAULT_DIGEST_DIR) -> Path:
+           digest_dir: Path = DEFAULT_DIGEST_DIR,
+           seen_path: Path = seen.DEFAULT_SEEN_PATH) -> Path:
     # first_seen_at is written as UTC, so the default target must also be UTC.
     target = target_date or datetime.now(timezone.utc).date().isoformat()
     # Durable suppression: the DB's applied_at is wiped every rebuild, so also
@@ -126,11 +129,13 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
                  applied._norm_title(r["title"])) not in applied_pairs
         ]
 
+    seen_map = seen.load_seen(seen_path)
+
     with db.connect(db_path) as conn:
-        main_rows = _drop_applied(conn.execute(_new_today_sql("main"), (target,)).fetchall())
-        main_carry = _drop_applied(conn.execute(_carry_forward_sql("main"), (target,)).fetchall())
-        stretch_rows = _drop_applied(conn.execute(_new_today_sql("stretch"), (target,)).fetchall())
-        stretch_carry = _drop_applied(conn.execute(_carry_forward_sql("stretch"), (target,)).fetchall())
+        main_pending = _drop_applied(conn.execute(_pending_sql("main"), (target,)).fetchall())
+        stretch_pending = _drop_applied(conn.execute(_pending_sql("stretch"), (target,)).fetchall())
+        main_rows, main_carry = split_new_carry(main_pending, seen_map, target)
+        stretch_rows, stretch_carry = split_new_carry(stretch_pending, seen_map, target)
         closed_rows = conn.execute(
             """
             SELECT c.name AS company_name, p.title, p.url, p.last_seen_at
@@ -203,6 +208,13 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
     digest_dir.mkdir(parents=True, exist_ok=True)
     out_path = digest_dir / f"{target}.md"
     out_path.write_text(body, encoding="utf-8")
+
+    # Every pending row this digest showed enters the ledger, so the next run
+    # can tell new from carried. Idempotent: already-seen ids are skipped.
+    seen.record_seen(
+        [r["external_id"] for r in main_pending + stretch_pending],
+        target, seen_path,
+    )
 
     with db.connect(db_path) as conn:
         conn.execute(

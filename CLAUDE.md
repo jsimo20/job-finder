@@ -26,6 +26,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 
 - Python 3.12. Deps: httpx, anthropic, jinja2, beautifulsoup4, python-dotenv. Install via `uv pip install --system -e .`.
 - SQLite at `data/jobs.db` — gitignored, rebuilt every pipeline run. Applied/dismissed state is local-only by design (CI rebuilds the DB, doesn't preserve state across runs).
+- Durable state that must survive the rebuild lives in committed JSONL ledgers: `data/applied.jsonl` (applied suppression) and `data/seen.jsonl` (first-seen dates driving the digest's new-vs-carried split; `seen.py`). `daily.yml` commits both alongside digests. `first_seen_at` in the DB is always "now" and must never be used to distinguish new from carried.
 
 ## Key files
 
