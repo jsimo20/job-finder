@@ -1,12 +1,13 @@
-# Pipeline configuration — committed on purpose.
+# EXAMPLE pipeline configuration — a working demonstration, not anyone's
+# real search. Copy it and replace every value with your own:
 #
-# Everything here is a preference, not a secret: which metros are in scope,
-# how domains and company stages are weighted, and the numeric filter knobs.
-# CI reads this file on every digest run, so it must be in git. Contact
-# details and EEO answers never belong here — those live in the gitignored
-# profile/ directory.
+#     cp config/pipeline.example.toml config/pipeline.toml
 #
-# A new user edits this file for their own search and commits it.
+# config/pipeline.toml is gitignored (search preferences are personal). The
+# pipeline falls back to this example when no real config exists, so a fresh
+# clone runs out of the box. CI receives the real config through the
+# PIPELINE_CONFIG GitHub Actions variable (SETUP.md §4). Contact details and
+# EEO answers never belong in either file — those live in profile/.
 
 [filters]
 comp_floor_usd = 140000
@@ -67,8 +68,8 @@ far = '\b(boston|cambridge|somerville|watertown|waltham|burlington|brookline|new
 # Warn (never discard) when a role's onsite days meet the tier's threshold.
 far_min_days = 4
 mid_min_days = 5
-far_note = "~2h each way from Anytown"
-mid_note = "~1-1.5h each way from Anytown"
+far_note = "~2h each way from home"
+mid_note = "~1-1.5h each way from home"
 
 # ── Domain taxonomy ──────────────────────────────────────────────────────────
 # The extraction model tags each role with these domains; the scorer sums the

@@ -108,7 +108,21 @@ git check-ignore profile/ && git status --short
 
 ## 4. Configure the pipeline
 
-Edit **`config/pipeline.toml`** (this one IS committed — CI reads it):
+Your search parameters are personal, so the real config is gitignored:
+
+```sh
+cp config/pipeline.example.toml config/pipeline.toml
+```
+
+Edit **`config/pipeline.toml`**, then hand it to CI (repeat after every
+edit — the workflow reads this repository variable, falling back to the
+example if it's unset):
+
+```sh
+gh variable set PIPELINE_CONFIG < config/pipeline.toml
+```
+
+What to edit:
 
 - `[location]` — replace the metro regexes with your own target geography,
   and the commute tiers/notes with drive times from where you live.

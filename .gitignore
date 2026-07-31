@@ -27,6 +27,11 @@ dist/
 *.local.*
 scratch/
 
+# Personal pipeline config — search preferences (metros, weights, titles).
+# The committed template is config/pipeline.example.toml; CI receives the
+# real config via the PIPELINE_CONFIG Actions variable.
+config/pipeline.toml
+
 # Personal profile — identity, EEO answers, driving docs. The committed
 # template lives in profile.example/. Never commit the real thing.
 profile/

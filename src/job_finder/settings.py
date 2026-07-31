@@ -17,13 +17,18 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_CONFIG_PATH = REPO_ROOT / "config" / "pipeline.toml"
+PIPELINE_EXAMPLE_PATH = REPO_ROOT / "config" / "pipeline.example.toml"
 PROFILE_DIR = REPO_ROOT / "profile"
 PROFILE_EXAMPLE_DIR = REPO_ROOT / "profile.example"
 
 
 @cache
 def pipeline_config(path: Path | None = None) -> dict:
-    p = path or PIPELINE_CONFIG_PATH
+    """config/pipeline.toml (gitignored, the user's real search) when present,
+    else the committed example — so a fresh clone runs out of the box. CI
+    materializes the real file from the PIPELINE_CONFIG Actions variable."""
+    p = path or (PIPELINE_CONFIG_PATH if PIPELINE_CONFIG_PATH.exists()
+                 else PIPELINE_EXAMPLE_PATH)
     with p.open("rb") as f:
         return tomllib.load(f)
 

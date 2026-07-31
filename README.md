@@ -6,10 +6,11 @@ A job-search system in three parts: it **finds** roles worth applying to,
 that defines "your search" — titles, industry, metros, identity — is
 configuration, not code:
 
-- **`config/pipeline.toml`** (committed) — target job titles and seniority
-  band, metros, commute tiers, domain/stage weights, comp floor. Shipped
-  defaults target senior product management roles in New England; edit every
-  section for your own market.
+- **`config/pipeline.toml`** (gitignored; template in
+  `config/pipeline.example.toml`) — target job titles and seniority band,
+  metros, commute tiers, domain/stage weights, comp floor. CI reads it from
+  the `PIPELINE_CONFIG` Actions variable; a fresh clone falls back to the
+  example so nothing breaks before you configure.
 - **`profile/`** (gitignored) — who you are: identity, EEO answers, stock
   screening answers, master resume, writing voice. Copied from
   `profile.example/`; `python -m job_finder.profile_check` verifies it's

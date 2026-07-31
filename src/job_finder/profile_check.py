@@ -25,6 +25,12 @@ PLACEHOLDERS = {
 def check() -> list[str]:
     issues: list[str] = []
 
+    if not settings.PIPELINE_CONFIG_PATH.exists():
+        issues.append("config/pipeline.toml not found — running on the example "
+                      "defaults. Copy config/pipeline.example.toml and edit it "
+                      "for your own search (SETUP.md §4), then feed it to CI: "
+                      "gh variable set PIPELINE_CONFIG < config/pipeline.toml")
+
     real = settings.PROFILE_DIR / "profile.toml"
     if not real.exists():
         return ["profile/profile.toml does not exist — run `cp -r profile.example profile` "
@@ -72,9 +78,11 @@ def check() -> list[str]:
 def main() -> int:
     issues = check()
     if not issues:
-        print("profile check: PASS — identity, driving docs, and generator all present.")
-        print("Reminder: config/pipeline.toml (metros, weights) and data/companies.json "
-              "are separate — see SETUP.md §4-5.")
+        print("profile check: PASS — pipeline config, identity, driving docs, "
+              "and generator all present.")
+        print("Reminder: after editing config/pipeline.toml, update CI with "
+              "`gh variable set PIPELINE_CONFIG < config/pipeline.toml`. "
+              "data/companies.json is separate — see SETUP.md §5.")
         return 0
     print(f"profile check: {len(issues)} issue(s)\n")
     for issue in issues:

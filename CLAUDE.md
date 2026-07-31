@@ -61,7 +61,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 
 ## Per-user configuration (two layers)
 
-- **`config/pipeline.toml`** — committed. Location scope, metro tiers, commute thresholds/notes, domain + stage weights, comp floor, YoE cap, stale days. `settings.pipeline_config()` loads it; `taxonomy.py` and `filter.py` are thin views over it. CI reads it, so per-user pipeline preferences MUST go here, never in a gitignored file.
+- **`config/pipeline.toml`** — gitignored (template: `config/pipeline.example.toml`). Location scope, metro tiers, commute thresholds/notes, title targeting, domain + stage weights, comp floor, YoE cap, stale days. `settings.pipeline_config()` loads it, falling back to the example on a fresh clone. CI gets the real config from the `PIPELINE_CONFIG` repository variable (`daily.yml` materializes it) — after editing the local file, run `gh variable set PIPELINE_CONFIG < config/pipeline.toml` or the next digest runs on stale values.
 - **`profile/`** — gitignored. Identity, EEO answers, `[paths]` to the driving docs, fit profile, QA checklist, the resume generator. `settings.load_profile()` falls back to the committed `profile.example/` so imports and tests work on a fresh clone; anything that acts on the values (form fill, PDF render) goes through `settings.require_profile()` and refuses the example.
 - Handing the repo to a new user: plain `git clone`; SETUP.md §1 resets the owner's ledgers and digests. History is scrubbed of PII and MUST stay that way — no personal data in commits, ever; the committed ledgers are the only owner-specific tracked state.
 

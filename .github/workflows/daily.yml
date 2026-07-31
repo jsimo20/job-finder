@@ -29,6 +29,15 @@ jobs:
       - name: Install dependencies
         run: uv pip install --system -e .
 
+      # config/pipeline.toml is gitignored (personal search preferences).
+      # CI receives it via the PIPELINE_CONFIG repository variable; without
+      # one, the pipeline falls back to config/pipeline.example.toml.
+      - name: Materialize pipeline config
+        if: vars.PIPELINE_CONFIG != ''
+        env:
+          PIPELINE_CONFIG: ${{ vars.PIPELINE_CONFIG }}
+        run: printf '%s' "$PIPELINE_CONFIG" > config/pipeline.toml
+
       - name: Compute digest date
         run: echo "DIGEST_DATE=$(date -u +%Y-%m-%d)" >> $GITHUB_ENV
 
