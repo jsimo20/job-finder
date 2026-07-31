@@ -63,7 +63,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 
 - **`config/pipeline.toml`** — committed. Location scope, metro tiers, commute thresholds/notes, domain + stage weights, comp floor, YoE cap, stale days. `settings.pipeline_config()` loads it; `taxonomy.py` and `filter.py` are thin views over it. CI reads it, so per-user pipeline preferences MUST go here, never in a gitignored file.
 - **`profile/`** — gitignored. Identity, EEO answers, `[paths]` to the driving docs, fit profile, QA checklist, the resume generator. `settings.load_profile()` falls back to the committed `profile.example/` so imports and tests work on a fresh clone; anything that acts on the values (form fill, PDF render) goes through `settings.require_profile()` and refuses the example.
-- Handing the repo to a new user: `python scripts/export_clean_copy.py <dir>` (never fork — history carries the applied log), then they follow `SETUP.md`.
+- Handing the repo to a new user: plain `git clone`; SETUP.md §1 resets the owner's ledgers and digests. History is scrubbed of PII and MUST stay that way — no personal data in commits, ever; the committed ledgers are the only owner-specific tracked state.
 
 ## Location scope and the commute warning
 

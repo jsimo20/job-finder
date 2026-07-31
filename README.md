@@ -74,12 +74,7 @@ Secrets (GitHub Actions): `ANTHROPIC_API_KEY`, `GMAIL_USER`,
 
 ## Handing this repo to someone else
 
-Never fork or plain-clone for a new user — git history carries the owner's
-application log. Instead:
-
-```bash
-python scripts/export_clean_copy.py <target_dir>
-```
-
-which copies tracked files minus personal data and inits a fresh repo. The
-recipient follows SETUP.md.
+`git clone`, then follow SETUP.md — step 1 resets the owner's search state
+(ledgers, digest archive) and re-homes the remote. History is kept clean of
+personal data on purpose; the only owner-specific tracked files are the
+search-state ledgers that step removes.

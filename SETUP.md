@@ -15,23 +15,26 @@ context lives in two places you create yourself — `config/pipeline.toml`
   extraction stage and the optional PR reviewer both bill against it
 - A Gmail account with 2FA, for the digest email
 
-## 1. Get a clean copy
-
-Do not fork the original repo — its git history contains the previous owner's
-application records. Have the owner run:
+## 1. Get a copy
 
 ```sh
-python scripts/export_clean_copy.py <target_dir>
+git clone <repo-url> my-job-finder && cd my-job-finder
 ```
 
-and hand you the result (it arrives as a fresh git repo with no history).
-Then create your own private GitHub repo from it:
+Then point it at your own private GitHub repo and reset the owner's search
+state — the ledgers and digest archive are theirs, not yours:
 
 ```sh
-git add -A
-git commit -m "initial import"
-gh repo create <your-user>/pm-tracker --private --source=. --remote=origin --push
+git remote set-url origin git@github.com:<your-user>/my-job-finder.git
+: > data/applied.jsonl
+: > data/seen.jsonl
+git rm -rq digests/ && mkdir digests
+git commit -am "reset search state for new owner"
+gh repo create <your-user>/my-job-finder --private --source=. --push
 ```
+
+(`data/no_auto_apply.json` ships empty; `data/companies.json` you'll rebuild
+in §5.)
 
 ## 2. Install
 
