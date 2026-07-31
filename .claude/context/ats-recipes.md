@@ -20,7 +20,7 @@ Always use the direct Greenhouse URL. Never navigate via a company careers porta
 3. Email *(text)*
 4. Phone — country code dropdown (select "United States +1") then phone number text field
 5. LinkedIn Profile *(text)* — label varies: "LinkedIn Profile", "LinkedIn URL", "LinkedIn"
-6. Website *(text)* — use GitHub URL (`https://github.com/jsimo20`)
+6. Website *(text)* — use the GitHub URL from `standard_answers.md`
 7. Resume/CV — file upload button (label: "Attach", "Resume/CV", "Upload resume")
 8. Cover Letter — separate file upload (label: "Attach", "Cover Letter") — present on most Greenhouse forms; absent on some minimal ones
 9. "How did you hear about this opportunity" — react-select dropdown; pick the careers-page option
@@ -71,7 +71,7 @@ returned 8.)
 2. Email *(text)*
 3. Phone *(text)*
 4. LinkedIn *(text)* — label: "LinkedIn Profile", "LinkedIn URL"
-5. Location — text or dropdown; type "Boston, Massachusetts, United States" or select
+5. Location — text or dropdown; type your city from `profile/profile.toml` (`[identity].city`, fully qualified, e.g. "City, State, United States") or select
 6. Resume — file upload (label: "Upload resume", "Attach resume", "Resume:")
    **Two file inputs, only one of them real.** Ashby renders a convenience
    "Autofill from resume" uploader *above* the actual `Resume:` field. Uploading

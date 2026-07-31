@@ -18,7 +18,7 @@ from boston_pm_tracker import job_apply
 def fixture_resume_data() -> dict:
     """Minimal but real RESUME_DATA matching the schema in generate_resume.py."""
     return {
-        "name": "Sample User",
+        "name": "Test Person",
         "title": "Principal Product Manager  |  Test Subtitle",
         "contact": "555-555-0100",
         "experience": [
@@ -74,6 +74,19 @@ def fixture_posting_row() -> dict:
 
 
 @pytest.fixture
+def fixture_profile() -> dict:
+    return {
+        "identity": {
+            "name": "Test Person",
+            "title_subtitle": "Senior PM | Test Positioning",
+            "email": "test.person@example.com",
+            "phone": "555-555-0100",
+            "linkedin": "https://www.linkedin.com/in/test-person/",
+        },
+    }
+
+
+@pytest.fixture
 def isolated_config(tmp_path: Path) -> job_apply.Config:
     inputs = tmp_path / "inputs"
     inputs.mkdir()
@@ -85,12 +98,12 @@ def isolated_config(tmp_path: Path) -> job_apply.Config:
     session_ctx = tmp_path / "session_ctx.md"
     session_ctx.write_text("# anti-overstatement rules\n", encoding="utf-8")
 
+    # The vendored template ships with the repo, so render tests never skip.
     return job_apply.Config(
         inputs_dir=inputs,
         applications_dir=apps,
         session_context_path=session_ctx,
-        resume_skill=job_apply.DEFAULT_RESUME_SKILL,
-        cover_skill=job_apply.DEFAULT_COVER_SKILL,
+        resume_skill=job_apply.REPO_ROOT / "profile.example" / "generate_resume.py",
     )
 
 
@@ -116,43 +129,46 @@ def test_outdir_for_format(fixture_posting_row, tmp_path):
     assert parts[2] == "senior-product-manager-platform"
 
 
-def test_load_config_falls_back_to_defaults_when_no_pyproject(tmp_path):
-    cfg = job_apply.load_config(pyproject_path=tmp_path / "nonexistent.toml")
-    assert cfg.inputs_dir == job_apply.DEFAULT_INPUTS
-    assert cfg.applications_dir == job_apply.DEFAULT_APPLICATIONS
+def test_load_config_defaults_into_profile_dir():
+    """Without a [paths] table every path resolves inside the profile dir."""
+    from boston_pm_tracker import settings
+
+    cfg = job_apply.load_config(profile={})
+    base = settings.profile_dir()
+    assert cfg.inputs_dir == base
+    assert cfg.applications_dir == base / "applications"
+    assert cfg.resume_skill == base / "generate_resume.py"
 
 
-def test_load_config_reads_pyproject(tmp_path):
-    pyproject = tmp_path / "pyproject.toml"
-    pyproject.write_text(
-        '[tool.job_apply]\n'
-        f'inputs_dir = "{tmp_path.as_posix()}/custom_inputs"\n'
-        f'applications_dir = "{tmp_path.as_posix()}/custom_apps"\n',
-        encoding="utf-8",
-    )
-    cfg = job_apply.load_config(pyproject_path=pyproject)
+def test_load_config_reads_profile_paths(tmp_path):
+    profile = {
+        "paths": {
+            "inputs_dir": f"{tmp_path.as_posix()}/custom_inputs",
+            "applications_dir": f"{tmp_path.as_posix()}/custom_apps",
+        }
+    }
+    cfg = job_apply.load_config(profile=profile)
     assert cfg.inputs_dir == Path(f"{tmp_path.as_posix()}/custom_inputs")
     assert cfg.applications_dir == Path(f"{tmp_path.as_posix()}/custom_apps")
 
 
 def test_render_creates_per_job_folder_with_expected_files(
-    fixture_posting_row, fixture_resume_data, fixture_cover_letter, isolated_config
+    fixture_posting_row, fixture_resume_data, fixture_cover_letter,
+    isolated_config, fixture_profile
 ):
-    if not isolated_config.resume_skill.exists():
-        pytest.skip("resume_generator skill not installed locally")
-
     outdir = job_apply.render(
         posting_row=fixture_posting_row,
         resume_data=fixture_resume_data,
         cover_letter=fixture_cover_letter,
         why_this_matches=["Bullet one", "Bullet two", "Bullet three"],
         config=isolated_config,
+        profile=fixture_profile,
         open_browser=False,
     )
 
     assert outdir.exists()
-    assert (outdir / "Sample_User_Resume_test-corp.pdf").exists()
-    assert (outdir / "Sample_User_CoverLetter_test-corp.pdf").exists()
+    assert (outdir / "Test_Person_Resume_test-corp.pdf").exists()
+    assert (outdir / "Test_Person_CoverLetter_test-corp.pdf").exists()
     assert (outdir / "standard_answers.md").exists()
     assert (outdir / "apply.md").exists()
 
@@ -164,17 +180,16 @@ def test_render_creates_per_job_folder_with_expected_files(
 
 
 def test_render_is_idempotent(
-    fixture_posting_row, fixture_resume_data, fixture_cover_letter, isolated_config
+    fixture_posting_row, fixture_resume_data, fixture_cover_letter,
+    isolated_config, fixture_profile
 ):
-    if not isolated_config.resume_skill.exists():
-        pytest.skip("resume_generator skill not installed locally")
-
     out1 = job_apply.render(
         posting_row=fixture_posting_row,
         resume_data=fixture_resume_data,
         cover_letter=fixture_cover_letter,
         why_this_matches=["a"],
         config=isolated_config,
+        profile=fixture_profile,
         open_browser=False,
     )
     out2 = job_apply.render(
@@ -183,6 +198,7 @@ def test_render_is_idempotent(
         cover_letter=fixture_cover_letter,
         why_this_matches=["b"],
         config=isolated_config,
+        profile=fixture_profile,
         open_browser=False,
     )
     assert out1 == out2
@@ -191,13 +207,10 @@ def test_render_is_idempotent(
 
 
 def test_render_handles_invalid_resume_data(
-    fixture_posting_row, fixture_cover_letter, isolated_config
+    fixture_posting_row, fixture_cover_letter, isolated_config, fixture_profile
 ):
     """Malformed RESUME_DATA should preserve the dump for debugging."""
-    if not isolated_config.resume_skill.exists():
-        pytest.skip("resume_generator skill not installed locally")
-
-    broken = {"name": "James"}  # missing required keys
+    broken = {"name": "Test Person"}  # missing required keys
     with pytest.raises(RuntimeError, match="Resume render failed"):
         job_apply.render(
             posting_row=fixture_posting_row,
@@ -205,6 +218,7 @@ def test_render_handles_invalid_resume_data(
             cover_letter=fixture_cover_letter,
             why_this_matches=[],
             config=isolated_config,
+            profile=fixture_profile,
             open_browser=False,
         )
 

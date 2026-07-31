@@ -6,57 +6,30 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from .settings import pipeline_config
 from .taxonomy import COMP_FLOOR_USD, YOE_MAIN_QUEUE_MAX
 
-BOSTON_RE = re.compile(
-    r"\b(boston|cambridge|somerville|watertown|waltham|burlington|brookline|newton|medford|massachusetts|MA)\b",
+# Location scope lives in config/pipeline.toml, not here — it is a per-user
+# preference. This module only compiles what the config declares.
+_LOCATION = pipeline_config()["location"]
+
+IN_SCOPE_RE = re.compile(
+    "|".join(f"(?:{p})" for p in _LOCATION["in_scope_patterns"]),
     re.IGNORECASE,
 )
-NYC_RE = re.compile(r"\b(new york|nyc|manhattan|brooklyn|queens|NY)\b", re.IGNORECASE)
-HARTFORD_RE = re.compile(r"\b(hartford|connecticut|CT)\b", re.IGNORECASE)
-# US-region phrases that wholly contain our target metros. "West coast" is
-# intentionally excluded — out of scope per spec.
-EAST_COAST_RE = re.compile(r"\b(east coast|northeast(?:ern)?)\b", re.IGNORECASE)
 
-# City names that would otherwise be missed when a posting omits the state.
-# "New Haven" or "Providence" alone matched nothing before; only "CT" or "RI"
-# did. Springfield and Worcester already matched via "MA", but are listed here
-# so the metro tiers below can place them.
-CT_CITIES_RE = re.compile(
-    r"\b(anytown|new haven|stamford|greenwich|norwalk|bridgeport|"
-    r"danbury|waterbury|middletown|new london|shelton|trumbull|milford)\b",
-    re.IGNORECASE,
-)
-RI_RE = re.compile(r"\b(providence|rhode island|RI|pawtucket|warwick)\b", re.IGNORECASE)
-WEST_MA_RE = re.compile(r"\b(springfield|worcester|holyoke|chicopee|amherst|northampton)\b",
-                        re.IGNORECASE)
-# Southern NH and the Capital District: same ~2h drive as Boston, so they fit
-# the same tolerance. "Nashua" is unambiguous; Manchester, Concord and
-# Portsmouth all collide with other states (and Manchester with the UK), so
-# they only qualify via an explicit NH token.
-NH_RE = re.compile(r"\b(new hampshire|NH|nashua)\b", re.IGNORECASE)
-# "Albany, NY" already cleared the gate through the NY token but had no tier,
-# so it would never have produced a commute warning.
-ALBANY_RE = re.compile(r"\b(albany|schenectady)\b", re.IGNORECASE)
+# Drive-time tiers measured from the user's home base. Distance alone never
+# discards a role; a heavy onsite requirement at distance produces a flag,
+# because days-per-week is often negotiable and postings misstate it.
+NEAR_METRO_RE = re.compile(_LOCATION["tiers"]["near"], re.IGNORECASE)
+MID_METRO_RE = re.compile(_LOCATION["tiers"]["mid"], re.IGNORECASE)
+FAR_METRO_RE = re.compile(_LOCATION["tiers"]["far"], re.IGNORECASE)
 
-# Drive-time tiers measured from Anytown, CT, which is where James
-# actually lives. He targets Boston deliberately and accepts the drive when the
-# schedule is hybrid; a 4-5 day onsite requirement at that distance is the thing
-# he rules out, which is why this feeds a flag rather than the location gate.
-NEAR_METRO_RE = re.compile(
-    r"\b(hartford|anytown|new haven|springfield|waterbury|middletown|"
-    r"holyoke|chicopee|amherst|northampton|connecticut|CT)\b", re.IGNORECASE)
-MID_METRO_RE = re.compile(
-    r"\b(worcester|providence|rhode island|RI|stamford|new london|"
-    r"pawtucket|warwick|danbury)\b", re.IGNORECASE)
-FAR_METRO_RE = re.compile(
-    r"\b(boston|cambridge|somerville|watertown|waltham|burlington|brookline|"
-    r"newton|medford|new york|nyc|manhattan|brooklyn|queens|greenwich|norwalk|"
-    r"bridgeport|albany|schenectady|nashua|new hampshire|NH)\b", re.IGNORECASE)
+_COMMUTE = _LOCATION["commute"]
 
 
 def metro_tier(location: str | None) -> str | None:
-    """near | mid | far | None, by drive time from Anytown.
+    """near | mid | far | None, by drive time from the configured home base.
 
     Checked most-distant first: "Boston, MA" also matches the MA tokens that
     place Springfield, and the far reading is the one that matters for commute.
@@ -75,17 +48,17 @@ def commute_warning(location: str | None, onsite_days: int | None,
                     remote_us_ok: bool = False) -> str | None:
     """Warn when a role's onsite requirement makes its distance impractical.
 
-    Deliberately a warning and not a discard: James asked to keep seeing these
-    and decide himself, since days-per-week is often negotiable and the posting
-    is not always accurate about it.
+    Deliberately a warning and not a discard: the user decides, since
+    days-per-week is often negotiable and the posting is not always accurate
+    about it.
     """
     if remote_us_ok or onsite_days is None:
         return None
     tier = metro_tier(location)
-    if tier == "far" and onsite_days >= 4:
-        return f"{onsite_days} days onsite, ~2h each way from Anytown"
-    if tier == "mid" and onsite_days >= 5:
-        return f"{onsite_days} days onsite, ~1-1.5h each way from Anytown"
+    if tier == "far" and onsite_days >= _COMMUTE["far_min_days"]:
+        return f"{onsite_days} days onsite, {_COMMUTE['far_note']}"
+    if tier == "mid" and onsite_days >= _COMMUTE["mid_min_days"]:
+        return f"{onsite_days} days onsite, {_COMMUTE['mid_note']}"
     return None
 
 # Country / region tokens that mark a remote role as out-of-scope. We *don't* try
@@ -191,18 +164,7 @@ def stage1(*, title: str, location: str | None, workplace_type: str | None) -> F
     )
     if is_remote and NON_US_REMOTE_RE.search(loc_text):
         return FilterResult(False, "discard:non_us_remote")
-    if not (
-        BOSTON_RE.search(loc_text)
-        or NYC_RE.search(loc_text)
-        or HARTFORD_RE.search(loc_text)
-        or CT_CITIES_RE.search(loc_text)
-        or RI_RE.search(loc_text)
-        or WEST_MA_RE.search(loc_text)
-        or NH_RE.search(loc_text)
-        or ALBANY_RE.search(loc_text)
-        or EAST_COAST_RE.search(loc_text)
-        or is_remote
-    ):
+    if not (IN_SCOPE_RE.search(loc_text) or is_remote):
         return FilterResult(False, "discard:wrong_location")
 
     return FilterResult(True, "keep")

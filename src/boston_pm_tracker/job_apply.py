@@ -14,7 +14,6 @@ import json
 import re
 import shutil
 import sys
-import tomllib
 import webbrowser
 from datetime import date
 from pathlib import Path
@@ -25,12 +24,9 @@ try:
 except ImportError:  # pragma: no cover - optional for render()
     Anthropic = None  # type: ignore[assignment]
 
+from . import settings
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_RESUME_SKILL = Path.home() / ".claude" / "ai_skills" / "resume_generator" / "generate_resume.py"
-DEFAULT_COVER_SKILL = Path.home() / ".claude" / "ai_skills" / "cover_letter_skill" / "generate_cover_letter.py"
-DEFAULT_SESSION_CONTEXT = Path.home() / ".claude" / "ai_skills" / "SESSION_CONTEXT_Jobsearch.md"
-DEFAULT_INPUTS = Path.home() / "OneDrive" / "Documents" / "Job Search" / "2026" / "inputs"
-DEFAULT_APPLICATIONS = Path.home() / "OneDrive" / "Documents" / "Job Search" / "2026" / "applications"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -38,15 +34,14 @@ DEFAULT_APPLICATIONS = Path.home() / "OneDrive" / "Documents" / "Job Search" / "
 # ─────────────────────────────────────────────────────────────────────────────
 
 class Config:
-    """Resolved paths for apply-prep, read from pyproject.toml's [tool.job_apply]."""
+    """Resolved paths for apply-prep, read from profile/profile.toml [paths]."""
 
     def __init__(self, *, inputs_dir: Path, applications_dir: Path,
-                 session_context_path: Path, resume_skill: Path, cover_skill: Path) -> None:
+                 session_context_path: Path, resume_skill: Path) -> None:
         self.inputs_dir = inputs_dir
         self.applications_dir = applications_dir
         self.session_context_path = session_context_path
         self.resume_skill = resume_skill
-        self.cover_skill = cover_skill
 
     @property
     def resume_master_md(self) -> Path:
@@ -60,24 +55,30 @@ class Config:
     def standard_answers_md(self) -> Path:
         return self.inputs_dir / "standard_answers.md"
 
+    @property
+    def qa_checklist_md(self) -> Path:
+        return self.inputs_dir / "qa_checklist.md"
 
-def load_config(pyproject_path: Path | None = None) -> Config:
-    pyproject_path = pyproject_path or (REPO_ROOT / "pyproject.toml")
-    cfg: dict = {}
-    if pyproject_path.exists():
-        with pyproject_path.open("rb") as f:
-            cfg = tomllib.load(f).get("tool", {}).get("job_apply", {})
+
+def load_config(profile: Mapping[str, Any] | None = None) -> Config:
+    """Resolve apply-prep paths from the profile's [paths] table.
+
+    Every path defaults into the gitignored profile/ directory, so a new user
+    who drops their driving docs there needs no [paths] section at all.
+    """
+    profile = profile if profile is not None else settings.load_profile()
+    paths = profile.get("paths", {})
+    base = settings.profile_dir()
 
     def _resolve(key: str, default: Path) -> Path:
-        raw = cfg.get(key)
+        raw = paths.get(key)
         return Path(raw).expanduser() if raw else default
 
     return Config(
-        inputs_dir=_resolve("inputs_dir", DEFAULT_INPUTS),
-        applications_dir=_resolve("applications_dir", DEFAULT_APPLICATIONS),
-        session_context_path=_resolve("session_context_path", DEFAULT_SESSION_CONTEXT),
-        resume_skill=_resolve("resume_skill_path", DEFAULT_RESUME_SKILL),
-        cover_skill=_resolve("cover_skill_path", DEFAULT_COVER_SKILL),
+        inputs_dir=_resolve("inputs_dir", base),
+        applications_dir=_resolve("applications_dir", base / "applications"),
+        session_context_path=_resolve("session_context_path", base / "session_context.md"),
+        resume_skill=_resolve("resume_skill_path", base / "generate_resume.py"),
     )
 
 
@@ -161,8 +162,12 @@ def _render_resume(skill_path: Path, resume_data: dict, output_pdf: Path) -> Non
 # Cover letter rendering
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _render_cover_letter(skill_path: Path, cover_letter: dict, output_pdf: Path) -> None:
-    """Build a single-page cover letter PDF using the skill's design system.
+def _render_cover_letter(identity: Mapping[str, str], cover_letter: dict,
+                         output_pdf: Path) -> None:
+    """Build a single-page cover letter PDF. Layout is self-contained here.
+
+    identity comes from profile.toml [identity]: name, email, phone, and
+    optionally linkedin and title_subtitle.
 
     cover_letter dict shape:
       {
@@ -171,15 +176,9 @@ def _render_cover_letter(skill_path: Path, cover_letter: dict, output_pdf: Path)
         "salutation": "To the Hiring Team,",
         "paragraphs": ["First para...", "Second para...", ...],
         "closing": "Looking forward to talking,",
-        "title_subtitle": "Principal Product Manager | AI, Platforms & Consumer Products",
+        "title_subtitle": "Senior Product Manager | Positioning Line",
       }
     """
-    if not skill_path.exists():
-        raise FileNotFoundError(f"cover_letter skill script not found: {skill_path}")
-
-    # We don't reuse the skill's hardcoded BODY; we re-implement the layout
-    # inline using the same constants. This keeps Claude-driven content
-    # generation decoupled from the file.
     from reportlab.lib.pagesizes import letter
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import inch
@@ -217,25 +216,33 @@ def _render_cover_letter(skill_path: Path, cover_letter: dict, output_pdf: Path)
                                       textColor=CHARCOAL, alignment=TA_LEFT, leading=11),
     }
 
+    name = identity["name"]
+    email = identity["email"]
+    phone = identity["phone"]
+    linkedin = identity.get("linkedin", "")
+
     doc = SimpleDocTemplate(
         str(output_pdf), pagesize=letter,
         leftMargin=0.65 * inch, rightMargin=0.65 * inch,
         topMargin=0.55 * inch, bottomMargin=0.55 * inch,
-        title="Sample User — Cover Letter",
-        author="Sample User",
-        subject="Product Management Cover Letter",
-        creator="Sample User",
+        title=f"{name} — Cover Letter",
+        author=name,
+        subject="Cover Letter",
+        creator=name,
     )
 
     story = []
-    title_subtitle = cover_letter.get("title_subtitle", "Principal Product Manager | AI, Platforms & Consumer Products")
-    story.append(Paragraph("Sample User", s["name_header"]))
-    story.append(Paragraph(title_subtitle.replace("&", "&amp;"), s["title_header"]))
-    story.append(Paragraph(
-        '555-555-0100  &middot;  <a href="mailto:owner@example.com" color="#2C5F8A">owner@example.com</a>'
-        '  &middot;  <a href="https://www.linkedin.com/in/your-handle/" color="#2C5F8A">LinkedIn</a>',
-        s["contact_header"]
-    ))
+    title_subtitle = cover_letter.get("title_subtitle") or identity.get("title_subtitle", "")
+    story.append(Paragraph(name, s["name_header"]))
+    if title_subtitle:
+        story.append(Paragraph(title_subtitle.replace("&", "&amp;"), s["title_header"]))
+    contact_bits = [
+        phone,
+        f'<a href="mailto:{email}" color="#2C5F8A">{email}</a>',
+    ]
+    if linkedin:
+        contact_bits.append(f'<a href="{linkedin}" color="#2C5F8A">LinkedIn</a>')
+    story.append(Paragraph("  &middot;  ".join(contact_bits), s["contact_header"]))
     story.append(HRFlowable(width="100%", thickness=0.5, color=LIGHT, spaceBefore=3, spaceAfter=8))
 
     story.append(Paragraph(cover_letter["date"], s["date"]))
@@ -250,9 +257,9 @@ def _render_cover_letter(skill_path: Path, cover_letter: dict, output_pdf: Path)
 
     story.append(Spacer(1, 4))
     story.append(Paragraph(cover_letter.get("closing", "Looking forward,"), s["closing"]))
-    story.append(Paragraph("Sample User", s["sig_name"]))
+    story.append(Paragraph(name, s["sig_name"]))
     story.append(Paragraph(
-        '<a href="mailto:owner@example.com" color="#2C5F8A">owner@example.com</a>  ·  555-555-0100',
+        f'<a href="mailto:{email}" color="#2C5F8A">{email}</a>  ·  {phone}',
         s["sig_contact"]
     ))
 
@@ -273,20 +280,27 @@ APPLY_MD_TEMPLATE = """# Apply notes — {company} / {title}
 ## Why this matches
 {why_bullets}
 
-## QA checklist (from resume_generator/SKILL.md)
-- [ ] Single page?
+## QA checklist
+{qa_checklist}
+"""
+
+# Fallback when the profile has no qa_checklist.md. Users add their own
+# fact-specific checks (metric baselines, framings to avoid) in that file.
+DEFAULT_QA_CHECKLIST = """- [ ] Single page?
 - [ ] All bullet dots at same x?
 - [ ] No "orphan" wrapped word you can eliminate by tightening?
-- [ ] LinkedIn + email hyperlinks render in ACCENT blue?
-- [ ] Patent count = 6 filed, 2 granted?
-- [ ] Connection Manager NOT claimed as 0→1?
-- [ ] AI agent framed as Phase 1 development / business case projection?
-- [ ] Smart home framed with leading indicator + addressable market (not delivered across 8M)?
-- [ ] Exactly 4 skill categories?
-- [ ] No skills outside the source pool?
-- [ ] PDF metadata set (title, author, subject, creator)?
-- [ ] Fun bullet present, fourth clause rotated for this application?
-"""
+- [ ] Hyperlinks render in accent blue?
+- [ ] Every metric traceable to your master resume?
+- [ ] PDF metadata set (title, author, subject, creator)?"""
+
+
+def _qa_checklist(config: Config) -> str:
+    # profile/ first, then inputs_dir — they're the same directory unless the
+    # user pointed [paths].inputs_dir somewhere else.
+    for candidate in (settings.profile_dir() / "qa_checklist.md", config.qa_checklist_md):
+        if candidate.exists():
+            return candidate.read_text(encoding="utf-8").strip()
+    return DEFAULT_QA_CHECKLIST
 
 
 def render(
@@ -296,19 +310,23 @@ def render(
     cover_letter: dict,
     why_this_matches: list[str],
     config: Config | None = None,
+    profile: Mapping[str, Any] | None = None,
     open_browser: bool = True,
 ) -> Path:
     """Write the per-job folder. Returns the folder path.
 
     Idempotent: re-running on the same role overwrites in place.
     """
-    config = config or load_config()
+    profile = profile if profile is not None else settings.require_profile()
+    identity = profile["identity"]
+    config = config or load_config(profile)
     outdir = outdir_for(posting_row, config.applications_dir)
     outdir.mkdir(parents=True, exist_ok=True)
 
+    name_token = re.sub(r"[^A-Za-z0-9]+", "_", identity["name"]).strip("_")
     company_slug = slugify(str(posting_row["company_name"]))
-    resume_pdf = outdir / f"Sample_User_Resume_{company_slug}.pdf"
-    cover_pdf = outdir / f"Sample_User_CoverLetter_{company_slug}.pdf"
+    resume_pdf = outdir / f"{name_token}_Resume_{company_slug}.pdf"
+    cover_pdf = outdir / f"{name_token}_CoverLetter_{company_slug}.pdf"
 
     try:
         _render_resume(config.resume_skill, resume_data, resume_pdf)
@@ -317,7 +335,7 @@ def render(
         raw.write_text(json.dumps(resume_data, indent=2, ensure_ascii=False), encoding="utf-8")
         raise RuntimeError(f"Resume render failed; RESUME_DATA dumped to {raw}") from exc
 
-    _render_cover_letter(config.cover_skill, cover_letter, cover_pdf)
+    _render_cover_letter(identity, cover_letter, cover_pdf)
 
     if config.standard_answers_md.exists():
         shutil.copy2(config.standard_answers_md, outdir / "standard_answers.md")
@@ -338,6 +356,7 @@ def render(
             location=posting_row.get("location", "?"),
             url=posting_row["url"],
             why_bullets=why_bullets,
+            qa_checklist=_qa_checklist(config),
         ),
         encoding="utf-8",
     )
@@ -356,9 +375,9 @@ def render(
 # /job-apply slash command does this work itself so it can show diffs.
 # ─────────────────────────────────────────────────────────────────────────────
 
-TAILOR_SYSTEM = """You are Sample User's resume + cover letter tailoring assistant.
+TAILOR_SYSTEM = """You are {name}'s resume + cover letter tailoring assistant.
 
-You will be given a job description, James's master resume (markdown), his personal statement, and the anti-overstatement rules from SESSION_CONTEXT_Jobsearch.md.
+You will be given a job description, {name}'s master resume (markdown), their personal statement, and their anti-overstatement rules (session context).
 
 Your job: produce a JSON object with three keys:
 
@@ -377,6 +396,7 @@ Return ONLY valid JSON. No commentary."""
 
 
 def tailor(posting_row: Mapping[str, Any], *, config: Config | None = None,
+           profile: Mapping[str, Any] | None = None,
            model: str = "claude-opus-4-7") -> dict:
     """Run a single Claude call to propose resume_data + cover_letter + why_this_matches.
 
@@ -385,7 +405,8 @@ def tailor(posting_row: Mapping[str, Any], *, config: Config | None = None,
     """
     if Anthropic is None:
         raise RuntimeError("anthropic package not installed")
-    config = config or load_config()
+    profile = profile if profile is not None else settings.require_profile()
+    config = config or load_config(profile)
 
     resume_master = config.resume_master_md.read_text(encoding="utf-8")
     personal_statement = config.personal_statement_md.read_text(encoding="utf-8")
@@ -405,10 +426,12 @@ def tailor(posting_row: Mapping[str, Any], *, config: Config | None = None,
     )
 
     client = Anthropic()
+    # .replace, not .format — the prompt body contains literal JSON braces.
+    system_text = TAILOR_SYSTEM.replace("{name}", profile["identity"]["name"])
     msg = client.messages.create(
         model=model,
         max_tokens=8000,
-        system=[{"type": "text", "text": TAILOR_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+        system=[{"type": "text", "text": system_text, "cache_control": {"type": "ephemeral"}}],
         messages=[{"role": "user", "content": user_prompt}],
     )
     text = msg.content[0].text.strip()

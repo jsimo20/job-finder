@@ -12,7 +12,7 @@ know about, each of which this should have caught:
 
 - Race dropdown left blank because it only appears after Hispanic/Latino is answered
   (Datadog, 2026-06-24).
-- Two Datadog reqs both rendering `Sample_User_Resume_datadog.pdf`, so one role's
+- Two Datadog reqs both rendering `<Name>_Resume_datadog.pdf`, so one role's
   upload could overwrite the other's.
 - Plausible-but-wrong mappings: GitHub URL landing in a "LinkedIn" field, or vice
   versa, when a form has only one of the two.

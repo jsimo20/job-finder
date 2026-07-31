@@ -1,6 +1,6 @@
 ---
 name: materials-fact-checker
-description: Cross-checks drafted RESUME_DATA and cover letter dicts against ground-truth source files (resume_master.md, personal_statement.md, SESSION_CONTEXT_Jobsearch.md). Flags overstatement, invented metrics, voice slips, and skill-source-pool violations before render. Dispatched by `/job-apply` after Opus drafts materials, before James approves render.
+description: Cross-checks drafted RESUME_DATA and cover letter dicts against ground-truth source files (resume_master.md, personal_statement.md, SESSION_CONTEXT_Jobsearch.md). Flags overstatement, invented metrics, voice slips, and skill-source-pool violations before render. Dispatched by `/job-apply` after Opus drafts materials, before the user approves render.
 tools: Read, Glob
 model: sonnet
 ---
@@ -22,12 +22,20 @@ If any is missing, report the gap and stop.
 
 ## Ground truth (read once)
 
-- `~/path/to/job-search/inputs/resume_master.md` — canonical experience and metrics.
-- `~/path/to/job-search/inputs/personal_statement.md` — narrative voice + supplementary context.
-- `~/.claude/ai_skills/SESSION_CONTEXT_Jobsearch.md` — anti-overstatement rules, skill source pool, factual baselines.
+Paths come from `profile/profile.toml` `[paths]`: `inputs_dir` holds the first
+two files; `session_context_path` names the third. Without a `[paths]` table
+everything lives in `profile/` directly.
+
+- `<inputs_dir>/resume_master.md` — canonical experience and metrics.
+- `<inputs_dir>/personal_statement.md` — narrative voice + supplementary context.
+- `<session_context_path>` — anti-overstatement rules, skill source pool, factual baselines.
 - `~/.claude/rules/writing-style.md` — canonical voice rules (chat vs. voice mode, the em-dash ban, the AI-trope ban list, the punchy-confidence-line ban, the pre-send self-check). This is the authority for the cover-letter voice checks in §5 below.
 
 ## What you check
+
+> The specific metric baselines and banned framings in this section are
+> per-user rules sourced from the session-context file above. If you are not
+> James, regenerate §§1-4 from your own ground-truth files (see SETUP.md).
 
 ### 1. Resume bullet claims
 
@@ -70,7 +78,7 @@ For every bullet in `resume_data["experience"][*]["bullets"]`, verify:
 
 ### 5. Cover letter — voice + factual
 
-- **No em-dashes** anywhere in the body. (James does not use them. See `writing-style.md` §1 — the single loudest AI tell.)
+- **No em-dashes** anywhere in the body. (The user does not use them. See `writing-style.md` §1 — the single loudest AI tell.)
 - **No AI tropes.** `writing-style.md` §2 is the source-of-truth ban list; flag every instance. Common offenders: "spearheaded," "leveraged," "synergize," "delve into," "navigate the landscape," "robust," "comprehensive," "seamless," "uniquely positioned," "passionate about," "excited to explore," "at the intersection of."
 - **No punchy confidence / resolution lines** (`writing-style.md` §3) — standalone one-sentence flourishes engineered to hit hard ("That's the trade I want to make," "The math is simple"). Flag them.
 - **No paragraph starts with "I"** (per cover letter SKILL §0.3).
@@ -118,9 +126,9 @@ If nothing's wrong, say "CLEAN — no findings" in one line. Do not pad with pra
 ## Hard rules
 
 - **Never edit the draft.** Your job is detection, not correction. Suggest fixes in one sentence; the Opus conversation applies them.
-- **Never approve a render.** Approval is James's call.
+- **Never approve a render.** Approval is the user's call.
 - **Don't flag stylistic preferences as CRITICAL.** Save CRITICAL for actual factual / anti-overstatement violations.
-- **Quote the source.** When you say "personal_statement.md says X," include the relevant phrase so James can verify quickly.
+- **Quote the source.** When you say "personal_statement.md says X," include the relevant phrase so the user can verify quickly.
 
 ## Why this exists
 

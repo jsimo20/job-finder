@@ -1,7 +1,7 @@
 [project]
 name = "boston-pm-tracker"
 version = "0.1.0"
-description = "Daily tracker for Senior+ PM roles at Boston/NYC/Hartford/remote-US companies."
+description = "Cron-driven tracker for senior PM roles, filtered and scored against a configurable profile."
 requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.27",
@@ -12,13 +12,6 @@ dependencies = [
     "python-dotenv>=1.0",
     "reportlab>=4.0",
 ]
-
-[tool.job_apply]
-inputs_dir = "~/path/to/job-search/inputs"
-applications_dir = "~/path/to/job-search/applications"
-session_context_path = "~/.claude/ai_skills/SESSION_CONTEXT_Jobsearch.md"
-resume_skill_path = "~/.claude/ai_skills/resume_generator/generate_resume.py"
-cover_skill_path = "~/.claude/ai_skills/cover_letter_skill/generate_cover_letter.py"
 
 [project.optional-dependencies]
 dev = [

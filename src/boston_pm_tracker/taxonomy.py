@@ -1,49 +1,25 @@
-"""Domain and company-stage taxonomy. Single source of truth for extract.py and score.py."""
+"""Domain and company-stage taxonomy, loaded from config/pipeline.toml.
+Single source of truth for extract.py and score.py."""
+from .settings import pipeline_config
+
+_cfg = pipeline_config()
 
 DOMAIN_WEIGHTS: dict[str, int] = {
-    "ai_agentic": 5,
-    "developer_platform": 4,
-    "consumer_at_scale": 4,
-    "iot_edge": 3,
-    "connectivity_telecom": 3,
-    "silicon": 3,
-    "space": 3,
-    "quantum": 3,
-    "health_bio": 2,
+    name: spec["weight"] for name, spec in _cfg["domains"].items()
 }
-
 DOMAIN_DEFINITIONS: dict[str, str] = {
-    "ai_agentic": "AI/agentic/LLM platforms, foundation models, agent infra",
-    "developer_platform": "Developer platforms, partner ecosystems, public APIs, SDKs",
-    "consumer_at_scale": "Consumer products with 1M+ active users",
-    "iot_edge": "IoT, edge computing, smart home, embedded systems",
-    "connectivity_telecom": "Telecom, networking, 5G, ISPs, connectivity infra, CDN/edge networks",
-    "silicon": "Chips, semiconductors, photonics, hardware acceleration",
-    "space": "Space tech, satellites, launch, earth observation, in-orbit services",
-    "quantum": "Quantum computing hardware, software, cloud services",
-    "health_bio": "Clinical AI, diagnostics, life-sciences tooling, bio platforms",
+    name: spec["definition"] for name, spec in _cfg["domains"].items()
 }
 
 STAGE_WEIGHTS: dict[str, int] = {
-    "series_b_d_ai_native": 4,
-    "public_new_ai_line": 3,
-    "late_stage_pre_ipo": 3,
-    "mega_corp_10k": 2,
-    "seed_series_a": 1,
+    name: spec["weight"] for name, spec in _cfg["stages"].items()
 }
-
 STAGE_DEFINITIONS: dict[str, str] = {
-    "series_b_d_ai_native": "Series B-D, AI-native or platform-native company",
-    "public_new_ai_line": "Public company launching a new AI/platform product line",
-    "late_stage_pre_ipo": "Late-stage private with strong product culture, pre-IPO",
-    "mega_corp_10k": "Public/private mega-corp with 10K+ employees, slower but stable",
-    "seed_series_a": "Seed or Series A, usually founder-led PM",
+    name: spec["definition"] for name, spec in _cfg["stages"].items()
 }
 
-COMP_FLOOR_USD = 140_000
+COMP_FLOOR_USD: int = _cfg["filters"]["comp_floor_usd"]
 
-YOE_MAIN_QUEUE_MAX = 7
+YOE_MAIN_QUEUE_MAX: int = _cfg["filters"]["yoe_main_queue_max"]
 
-# Roles open longer than this are excluded from the digest as likely
-# resume-fishing posts (always-on reqs, evergreen JDs).
-STALE_DAYS = 30
+STALE_DAYS: int = _cfg["filters"]["stale_days"]

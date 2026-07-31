@@ -162,7 +162,7 @@ def _blank_report():
 
 
 def _pdf(tmp_path):
-    p = tmp_path / "Sample_User_Resume_x.pdf"
+    p = tmp_path / "Test_Person_Resume_x.pdf"
     p.write_bytes(b"%PDF-1.4")
     return p
 

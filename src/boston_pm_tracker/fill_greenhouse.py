@@ -3,7 +3,10 @@
 Fills the standard Greenhouse section (contact, work auth, EEO, uploads) with
 plain Playwright — zero LLM tokens. Anything it can't confidently map is left
 blank and listed in the printed report. The browser window stays open after
-filling so James can review, fill leftovers, and submit by hand.
+filling so the user can review, fill leftovers, and submit by hand.
+
+Answers come from profile/profile.toml (identity, EEO, work authorization)
+and the per-app folder's standard_answers.md.
 
 Usage (single):
     python -m boston_pm_tracker.fill_greenhouse --url <application_url> \
@@ -29,7 +32,7 @@ from pathlib import Path
 
 from playwright.sync_api import Frame, Page, TimeoutError as PWTimeout, sync_playwright
 
-from boston_pm_tracker import form_inventory
+from boston_pm_tracker import form_inventory, settings
 from boston_pm_tracker.form_inventory import has_selection, label_of
 
 STEP_TIMEOUT_MS = 10_000
@@ -67,25 +70,49 @@ VETO: dict[str, str] = {
     r"authori[sz]": r"\bnot\s+authorized\b|\bi\s+require\s+sponsorship\b",
 }
 
-# (label regex, candidate texts tried in order). Ordered most-specific first;
-# short answers like "no" are last resorts because sentence-phrased options make
-# them ambiguous or, worse, uniquely wrong.
-COMBO_FIELDS: list[tuple[str, list[str]]] = [
-    # authorization first — its label contains the word "country"
-    (r"authori[sz]", ["legally authorized to work", "no restriction", "yes"]),
-    (r"country", ["United States"]),
-    (r"sponsor", ["legally authorized to work", "do not require sponsorship",
-                  "will not require", "no"]),
-    (r"hear about", ["Careers Page", "Company Website"]),
-    (r"gender", ["Male"]),
-    (r"hispanic", ["No"]),
-    (r"race", ["White"]),
-    (r"veteran", ["not a protected"]),
-    (r"disabilit", ["no, i do not have"]),
-    (r"certify", ["Yes"]),
-    (r"privacy|acknowledg", ["Yes"]),
-    (r"pronoun", ["He/"]),
-]
+def build_combo_fields(profile: dict) -> list[tuple[str, list[str]]]:
+    """(label regex, candidate texts tried in order), from the user's profile.
+
+    Ordered most-specific first; short answers like "no" are last resorts
+    because sentence-phrased options make them ambiguous or, worse, uniquely
+    wrong.
+
+    Authorization and sponsorship candidates are only emitted when the profile
+    says the user is authorized and needs no sponsorship — any other situation
+    is left blank for the user to answer, because a wrong answer either way is
+    unrecoverable after submit. EEO rows are emitted only for values the
+    profile actually sets; an empty value means "leave it for me."
+    """
+    answers = profile.get("answers", {})
+    eeo = profile.get("eeo", {})
+    combos: list[tuple[str, list[str]]] = []
+    authorized_no_sponsor = (answers.get("work_authorized")
+                             and not answers.get("requires_sponsorship", True))
+    if authorized_no_sponsor:
+        # authorization first — its label contains the word "country"
+        combos.append((r"authori[sz]", ["legally authorized to work", "no restriction", "yes"]))
+    combos.append((r"country", [answers.get("country", "United States")]))
+    if authorized_no_sponsor:
+        combos.append((r"sponsor", ["legally authorized to work", "do not require sponsorship",
+                                    "will not require", "no"]))
+    combos.append((r"hear about", ["Careers Page", "Company Website"]))
+    for pattern, key in ((r"gender", "gender"), (r"hispanic", "hispanic"),
+                         (r"race", "race"), (r"veteran", "veteran"),
+                         (r"disabilit", "disability")):
+        if eeo.get(key):
+            combos.append((pattern, [eeo[key]]))
+    combos.append((r"certify", ["Yes"]))
+    combos.append((r"privacy|acknowledg", ["Yes"]))
+    if eeo.get("pronouns"):
+        combos.append((r"pronoun", [eeo["pronouns"]]))
+    return combos
+
+
+# Module-level default for tests and callers that pass no combos explicitly.
+# Falls back to profile.example/ on a fresh clone, whose [answers] defaults
+# keep the structure intact while its empty [eeo] emits no EEO rows. main()
+# rebuilds this from the user's real profile before touching a form.
+COMBO_FIELDS: list[tuple[str, list[str]]] = build_combo_fields(settings.load_profile())
 
 
 def veto_for(label: str) -> str | None:
@@ -95,9 +122,9 @@ def veto_for(label: str) -> str | None:
     return None
 
 # Labels that contain a name word but are asking about somebody who is not
-# James. "…please indicate their first and last name" once matched the last-name
-# rule and filled in "SampleUser", asserting an employee referral that never
-# happened.
+# the applicant. "…please indicate their first and last name" once matched the
+# last-name rule and filled in the applicant's own surname, asserting an
+# employee referral that never happened.
 # Word-anchored on purpose: a bare "referr" also matches "P-referred First Name",
 # which would block a field that fills correctly today.
 NAME_TRAP_PATTERN = re.compile(
@@ -111,24 +138,28 @@ SKIP_PATTERN = re.compile(r"salary|compensation|desired pay|expected pay", re.I)
 CITY_PATTERN = re.compile(r"cities.*available|available.*cities", re.I)
 
 
-def parse_answers(folder: Path) -> dict[str, str]:
-    """Pull contact values out of the per-app standard_answers.md."""
-    text = (folder / "standard_answers.md").read_text(encoding="utf-8")
+def parse_answers(folder: Path, profile: dict | None = None) -> dict[str, str]:
+    """Contact values from the per-app standard_answers.md, with profile.toml
+    [identity] filling any key the markdown lacks. The markdown wins when both
+    have a value, since it can carry per-application overrides."""
+    sa_path = folder / "standard_answers.md"
+    text = sa_path.read_text(encoding="utf-8") if sa_path.exists() else ""
 
     def grab(key: str) -> str:
         m = re.search(rf"\*\*{key}:\*\*\s*\(?([^)\n]+)\)?", text, re.I)
         return m.group(1).strip() if m else ""
 
-    full_name = grab("Full name")
+    ident = (profile or {}).get("identity", {})
+    full_name = grab("Full name") or ident.get("name", "")
     first, _, last = full_name.partition(" ")
     return {
         "first_name": first,
         "last_name": last,
         "preferred_name": grab("Preferred name") or first,
-        "email": grab("Email"),
-        "phone": grab("Phone"),
-        "linkedin": grab("LinkedIn"),
-        "github": grab("GitHub"),
+        "email": grab("Email") or ident.get("email", ""),
+        "phone": grab("Phone") or ident.get("phone", ""),
+        "linkedin": grab("LinkedIn") or ident.get("linkedin", ""),
+        "github": grab("GitHub") or ident.get("github", ""),
     }
 
 
@@ -191,7 +222,7 @@ def match_option(texts: list[str], want: str) -> int | None:
     in the future"; a substring search for "no" matches both (via "not" and
     "now"), and the old code took whichever came first in the DOM. It picked the
     wrong one. A blank field is recoverable at review time; a submitted
-    application saying he needs visa sponsorship is not.
+    application claiming the applicant needs visa sponsorship is not.
     """
     w = want.lower().strip()
     for hits in (
@@ -415,8 +446,8 @@ def _upload_via_chooser(page, root, label_re: str, path: Path, what: str,
 
 
 def upload_files(root, folder: Path, report: dict, page=None) -> None:
-    resume = next(folder.glob("Sample_User_Resume_*.pdf"), None)
-    cover = next(folder.glob("Sample_User_CoverLetter_*.pdf"), None)
+    resume = next(folder.glob("*_Resume_*.pdf"), None)
+    cover = next(folder.glob("*_CoverLetter_*.pdf"), None)
     file_inputs = root.locator("input[type='file']")
     unmatched: list[int] = []
     placed = {"resume": False, "cover": False}
@@ -518,7 +549,8 @@ def capture_audit(root, slug: str, phase: str, url: str, report: dict, *,
 
 def fill_one(context, url: str, folder: Path, city: str, *,
              slug: str | None = None, no_audit: bool = False,
-             shot: Path | None = None, report: dict | None = None) -> tuple[Page, dict]:
+             shot: Path | None = None, report: dict | None = None,
+             profile: dict | None = None) -> tuple[Page, dict]:
     """Fill one application in a new TAB of the caller's context.
 
     Takes a BrowserContext, never a Browser. `browser.new_page()` implicitly
@@ -531,7 +563,7 @@ def fill_one(context, url: str, folder: Path, city: str, *,
     before an exception.
     """
     slug = slug or re.sub(r"^\d{4}-\d{2}-\d{2}_", "", folder.name)
-    answers = parse_answers(folder)
+    answers = parse_answers(folder, profile)
     if report is None:
         report = {"filled": [], "skipped": [], "unmapped": [],
                   "required_empty": [], "audits": []}
@@ -618,7 +650,9 @@ def main() -> int:
                     help="application URL; repeat for batch mode (paired with --folder)")
     ap.add_argument("--folder", required=True, type=Path, action="append",
                     help="per-app folder; repeat once per --url, in the same order")
-    ap.add_argument("--city", default="Boston")
+    ap.add_argument("--city", default=None,
+                    help="what to type into location fields; defaults to "
+                         "[identity].city in profile/profile.toml")
     ap.add_argument("--no-hold", action="store_true",
                     help="exit after filling instead of holding the browser open")
     ap.add_argument("--shot", type=Path, default=None,
@@ -640,9 +674,19 @@ def main() -> int:
 
     jobs = list(zip(args.url, args.folder, args.slug or [None] * len(args.url)))
 
+    # A real profile is required before touching a form: it carries the EEO
+    # answers and the authorization/sponsorship stance. The example profile's
+    # placeholders must never land on an actual application.
+    profile = settings.require_profile()
+    global COMBO_FIELDS
+    COMBO_FIELDS = build_combo_fields(profile)
+    city = args.city or profile.get("identity", {}).get("city", "")
+    if not city:
+        ap.error("no city: pass --city or set [identity].city in profile/profile.toml")
+
     with sync_playwright() as p:
-        # One browser, one tab per application. James reviews the batch as tabs
-        # in a single window, so never launch a browser per app.
+        # One browser, one tab per application. The user reviews the batch as
+        # tabs in a single window, so never launch a browser per app.
         browser = p.chromium.launch(headless=False)
         # ONE context for the whole batch, so every application is a tab in a
         # single window rather than a window of its own.
@@ -654,8 +698,9 @@ def main() -> int:
             report: dict = {"filled": [], "skipped": [], "unmapped": [],
                             "required_empty": [], "audits": []}
             try:
-                fill_one(context, url, folder, args.city, slug=slug,
-                         no_audit=args.no_audit, shot=args.shot, report=report)
+                fill_one(context, url, folder, city, slug=slug,
+                         no_audit=args.no_audit, shot=args.shot, report=report,
+                         profile=profile)
             except Exception as exc:
                 # One bad form must not cost the whole batch its filled tabs.
                 print(f"\n!!! {label} FAILED: {type(exc).__name__}: {exc}")

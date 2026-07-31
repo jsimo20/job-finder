@@ -28,6 +28,10 @@ dist/
 *.local.*
 scratch/
 
+# Personal profile — identity, EEO answers, driving docs. The committed
+# template lives in profile.example/. Never commit the real thing.
+profile/
+
 # Generated database (rebuilt by pipeline)
 data/jobs.db
 

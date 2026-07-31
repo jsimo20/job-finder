@@ -1,0 +1,53 @@
+# Copy the whole profile.example/ directory to profile/ (which is gitignored)
+# and edit every value. profile/ is where all of YOUR context lives: the
+# pipeline never reads it, CI never sees it, and it never lands in git.
+#
+# The apply tooling refuses to fill a real form until profile/profile.toml
+# exists, so placeholders below can never reach an application.
+
+[identity]
+name = "Alex Sample"
+# One-line positioning shown under your name on the cover letter header.
+title_subtitle = "Senior Product Manager | Your Positioning Line"
+email = "alex.sample@example.com"
+phone = "555-555-0100"
+linkedin = "https://www.linkedin.com/in/your-handle/"
+github = "https://github.com/your-handle"
+# What autofill types into "which cities are you available to work in" fields.
+city = "Boston"
+
+[answers]
+# Only when BOTH are true does autofill answer authorization/sponsorship
+# questions (as "authorized, no sponsorship needed"). Any other combination
+# leaves those questions blank for you — a wrong answer is unrecoverable.
+work_authorized = true
+requires_sponsorship = false
+country = "United States"
+
+[eeo]
+# Voluntary self-identification defaults. Each value is matched against the
+# option text on the form (exact, then whole-word, then substring — ambiguous
+# matches are refused). Leave a value "" and autofill will skip that question
+# entirely so you can answer it by hand.
+# Typical option phrasings on Greenhouse forms:
+#   gender     = "Male" / "Female" / "Decline To Self Identify"
+#   hispanic   = "Yes" / "No"
+#   race       = one of the form's race/ethnicity options
+#   veteran    = "I am not a protected veteran" (a fragment like "not a protected" works)
+#   disability = "No, I do not have a disability" (fragment: "no, i do not have")
+#   pronouns   = "He/Him" / "She/Her" / "They/Them" (fragment like "He/" works)
+gender = ""
+hispanic = ""
+race = ""
+veteran = ""
+disability = ""
+pronouns = ""
+
+[paths]
+# All optional. Without overrides, every driving doc is expected inside
+# profile/ itself and rendered applications land in profile/applications/.
+# Uncomment to keep any of them elsewhere (cloud-synced folders work fine).
+# inputs_dir = "~/Documents/job-search/inputs"
+# applications_dir = "~/Documents/job-search/applications"
+# resume_skill_path = "~/Documents/job-search/generate_resume.py"
+# session_context_path = "~/Documents/job-search/anti_overstatement_rules.md"

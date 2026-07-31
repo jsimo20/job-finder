@@ -1,0 +1,152 @@
+# Setup — new user
+
+Step-by-step setup for a fresh clone. Written so you can paste it into a
+Claude Code session ("follow SETUP.md") and have it drive; every step also
+works by hand. Nothing here requires the original owner's files: all personal
+context lives in two places you create yourself — `config/pipeline.toml`
+(committed preferences) and `profile/` (gitignored identity).
+
+## 0. Prerequisites
+
+- Python 3.12+
+- `git`, and the `gh` CLI logged into your GitHub account
+- `uv` (`pip install uv`) — or plain pip, adjusting the commands below
+- An Anthropic API key with credit (console.anthropic.com) — the pipeline's
+  extraction stage and the optional PR reviewer both bill against it
+- A Gmail account with 2FA, for the digest email
+
+## 1. Get a clean copy
+
+Do not fork the original repo — its git history contains the previous owner's
+application records. Have the owner run:
+
+```sh
+python scripts/export_clean_copy.py <target_dir>
+```
+
+and hand you the result (it arrives as a fresh git repo with no history).
+Then create your own private GitHub repo from it:
+
+```sh
+git add -A
+git commit -m "initial import"
+gh repo create <your-user>/pm-tracker --private --source=. --remote=origin --push
+```
+
+## 2. Install
+
+```sh
+python -m venv .venv
+.venv/Scripts/activate        # Windows; use .venv/bin/activate elsewhere
+pip install uv
+uv pip install -e ".[dev]"
+```
+
+The browser-autofill workflow (optional, local-only — CI never needs it):
+
+```sh
+uv pip install -e ".[apply]"
+playwright install chromium
+```
+
+Sanity check — the suite must pass on a fresh clone with no profile:
+
+```sh
+python -m pytest -q
+```
+
+## 3. Create your profile
+
+```sh
+cp -r profile.example profile
+```
+
+Then edit, in this order:
+
+1. **`profile/profile.toml`** — your name, email, phone, links, city;
+   work-authorization stance; EEO defaults (leave `""` for any question you
+   want to answer by hand on every form). Optionally point `[paths]` at
+   folders outside the repo.
+2. **`profile/resume_master.md`** — your real history. This is ground truth:
+   the fact-checker flags anything in a draft that doesn't trace to it.
+3. **`profile/personal_statement.md`** — a page in your own voice.
+4. **`profile/standard_answers.md`** — contact block + stock screening answers.
+5. **`profile/fit_profile.md`** — what a great role looks like for you.
+6. **`profile/generate_resume.py`** — edit only the RESUME_DATA block.
+7. **`profile/qa_checklist.md`** and **`profile/session_context.md`** — grow
+   these over time; the defaults work on day one.
+
+`profile/` is gitignored. Verify before your first push:
+
+```sh
+git check-ignore profile/ && git status --short
+```
+
+## 4. Configure the pipeline
+
+Edit **`config/pipeline.toml`** (this one IS committed — CI reads it):
+
+- `[location]` — replace the metro regexes with your own target geography,
+  and the commute tiers/notes with drive times from where you live.
+- `[domains.*]` / `[stages.*]` — reweight to your background; definitions
+  feed the extraction prompt, so keep them concrete.
+- `[filters]` — your comp floor and years-of-experience cap.
+
+Title and seniority filters (which titles count as PM roles, senior-and-above
+banding) live in `src/boston_pm_tracker/filter.py` — edit the regexes there
+if your target level differs.
+
+## 5. Seed your company list
+
+`seeds/companies.json` ships with the previous owner's ~400 Boston-area
+companies. Replace it with companies in your own market. The
+`.claude/skills/manage-seeds` skill adds/removes/probes companies from
+plain-English instructions in a Claude Code session; the format is plain JSON
+if you'd rather script it.
+
+## 6. GitHub Actions secrets
+
+In your repo: Settings → Secrets and variables → Actions →
+
+| Secret | Value |
+|---|---|
+| `ANTHROPIC_API_KEY` | from console.anthropic.com (paste via a plain-text editor — invisible BOMs from rich editors break the SDK) |
+| `GMAIL_USER` | your Gmail address (auth user AND digest recipient) |
+| `GMAIL_APP_PASSWORD` | 16-char app password from myaccount.google.com/apppasswords (requires 2FA) |
+
+The digest workflow (`.github/workflows/daily.yml`) runs Mondays 13:00 UTC;
+trigger a first run manually from the Actions tab (workflow_dispatch). The PR
+reviewer (`.github/workflows/claude-review.yml`) works as-is once
+`ANTHROPIC_API_KEY` is set — delete that file if you don't want it.
+
+## 7. Personalize the Claude-side prompts
+
+If you use the Claude Code workflows, three files still describe the previous
+owner's rules and should be regenerated from YOUR profile docs (a Claude
+session can do this: "rewrite these against my profile/ files"):
+
+- `.claude/agents/materials-fact-checker.md` §§1–4 — metric baselines and
+  banned framings specific to the owner's resume
+- `.claude/commands/job-apply.md` — workflow is generic, skim for fit
+- `CLAUDE.md` — rewrite the project instructions for your own setup
+
+## 8. What never goes in git
+
+Already handled by `.gitignore`, listed so you don't fight it: `profile/`,
+`.env`, `data/jobs.db` (rebuilt every run), `data/outreach.jsonl` (third-party
+PII), `data/fill_audits/` (captured form values). `data/applied.jsonl` IS
+committed — it's your own application log and the digest needs it in CI to
+suppress roles you've already applied to.
+
+## Day-to-day commands
+
+```sh
+python -m pytest -q                              # tests
+boston-pm-tracker review                          # interactive digest review
+boston-pm-tracker applied add --external-id ...   # record an application
+python -m boston_pm_tracker.fill_greenhouse \
+    --url <apply url> --folder <per-app folder>   # deterministic form fill
+```
+
+The pipeline itself (`boston-pm-tracker run`) normally only runs in CI — it
+spends real Anthropic tokens, so avoid running it casually on a laptop.

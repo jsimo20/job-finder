@@ -3,7 +3,7 @@ description: Tailor resume + cover letter for pending roles and prep apply packa
 argument-hint: [external_id or --top N]
 ---
 
-You are driving the apply-prep loop for James. The pipeline that picks the roles is `boston-pm-tracker`; the tailoring rules live in `~/.claude/ai_skills/resume_generator/SKILL.md`, `~/.claude/ai_skills/cover_letter_skill/SKILL.md`, and `~/.claude/ai_skills/SESSION_CONTEXT_Jobsearch.md`. The deterministic render lives in `src/boston_pm_tracker/job_apply.py`.
+You are driving the apply-prep loop for the user. The pipeline that picks the roles is `boston-pm-tracker`; the tailoring ground truth lives in the profile driving docs (`resume_master.md`, `personal_statement.md`, and the session-context file named by `profile/profile.toml` `[paths]`). The deterministic render lives in `src/boston_pm_tracker/job_apply.py`.
 
 ## What to do
 
@@ -15,23 +15,24 @@ Argument: `$ARGUMENTS`.
 
 - **A specific external_id** → jump straight to that role.
 - **`all`** → process every role in the pending queue, one at a time, in score order.
-- **Empty, `--top N`, or "what should I apply to"** → **Dispatch the `digest-triager` subagent** (Sonnet) with `top_n` = N (default 5). The agent reads the latest digest in `digests/`, ranks pending roles against James's fit profile, and returns a ranked list with one-sentence reasoning per role. Surface the triager's list verbatim to James and ask which to work — one external_id, several, or `all`.
+- **Empty, `--top N`, or "what should I apply to"** → **Dispatch the `digest-triager` subagent** (Sonnet) with `top_n` = N (default 5). The agent reads the latest digest in `digests/`, ranks pending roles against the fit profile in `profile/fit_profile.md`, and returns a ranked list with one-sentence reasoning per role. Surface the triager's list verbatim to the user and ask which to work — one external_id, several, or `all`.
 
   Fallback if the digest subagent dispatch fails: query `data/jobs.db` directly for the top N pending unapplied roles (`applied_at IS NULL` and `dismissed_at IS NULL`), sorted by `total_score DESC`, using the same SQL shape as `review.py:PENDING_SQL`.
 
-- **No-auto-apply gate (runs for every chosen role, no exceptions).** After a role is picked but before drafting any materials, check its `company_name` (case-insensitive) against the `companies[].name` entries in `seeds/no_auto_apply.json`. If it matches, **do not enter the apply loop for that role** — skip steps 2a–2i entirely. Instead, tell James: the company is on the no-auto-apply list, surface the `reason` from the file and the posting URL, and remind him to apply through his own channel. These companies stay in the digest on purpose (he wants the signal); only the agent-driven apply is blocked. If James said `all` or passed multiple ids, silently skip the blocked ones and process the rest, then note which were skipped in the batch summary.
+- **No-auto-apply gate (runs for every chosen role, no exceptions).** After a role is picked but before drafting any materials, check its `company_name` (case-insensitive) against the `companies[].name` entries in `seeds/no_auto_apply.json`. If it matches, **do not enter the apply loop for that role** — skip steps 2a–2i entirely. Instead, tell the user: the company is on the no-auto-apply list, surface the `reason` from the file and the posting URL, and remind them to apply through their own channel. These companies stay in the digest on purpose (they want the signal); only the agent-driven apply is blocked. If the user said `all` or passed multiple ids, silently skip the blocked ones and process the rest, then note which were skipped in the batch summary.
 
 ### 2. For each chosen role, do this loop:
 
 a. **Load context** (read these files once and keep in memory for the whole session):
-   - `~/path/to/job-search/inputs/resume_master.md`
-   - `~/path/to/job-search/inputs/personal_statement.md`
+   - `<inputs_dir>/resume_master.md`
+   - `<inputs_dir>/personal_statement.md`
+   (inputs_dir comes from `profile/profile.toml` `[paths]`; default `profile/`)
    - `~/.claude/ai_skills/SESSION_CONTEXT_Jobsearch.md`
    - `~/.claude/ai_skills/resume_generator/SKILL.md` (design rules)
    - `~/.claude/ai_skills/cover_letter_skill/SKILL.md` (cover-letter rules)
    - The full row for this posting from `data/jobs.db` — including `jd_text`. If the DB is empty (CI rebuilds it each run, doesn't commit) or `jd_text` is null, fetch the JD via WebFetch on the posting URL.
 
-b. **Show the user a one-paragraph read of the JD** — what they're hiring for, the 3–5 keywords/frames that genuinely map to James's resume, anything that risks overstatement. Ask James for any orientation before you draft (sometimes he'll have a specific angle).
+b. **Show the user a one-paragraph read of the JD** — what they're hiring for, the 3–5 keywords/frames that genuinely map to the user's resume, anything that risks overstatement. Ask the user for any orientation before you draft (sometimes they'll have a specific angle).
 
 c. **Draft `RESUME_DATA`** as a Python dict, following the tailoring workflow in `resume_generator/SKILL.md`:
    - Reorder Contoso bullets to lead with the strongest JD match
@@ -40,7 +41,7 @@ c. **Draft `RESUME_DATA`** as a Python dict, following the tailoring workflow in
    - Rotate the fourth clause in the fun bullet
    - Honor the anti-overstatement rules. If a JD keyword tempts overstatement, find a different angle or flag the gap for the cover letter.
 
-   **Show James a diff vs. the canonical `RESUME_DATA` in `~/.claude/ai_skills/resume_generator/generate_resume.py`.** Format as: changed-bullets-only. Wait for approval or edits.
+   **Show the user a diff vs. the canonical `RESUME_DATA` in the resume generator at `[paths].resume_skill_path` (default `profile/generate_resume.py`).** Format as: changed-bullets-only. Wait for approval or edits.
 
 d. **Draft the cover letter** as a dict matching `job_apply._render_cover_letter`'s schema:
    ```python
@@ -53,13 +54,13 @@ d. **Draft the cover letter** as a dict matching `job_apply._render_cover_letter
      "title_subtitle": "<must match the title subtitle in resume_data>",
    }
    ```
-   Voice: James's. Source: personal statement + master resume. Every claim must be traceable. No em-dashes anywhere. No AI tropes ("spearheaded," "leveraged," "delve," "navigate the landscape," etc.). Show James the draft, accept feedback.
+   Voice: the user's. Source: personal statement + master resume. Every claim must be traceable. No em-dashes anywhere. No AI tropes ("spearheaded," "leveraged," "delve," "navigate the landscape," etc.). Show the user the draft, accept feedback.
 
 e. **Draft 3–5 `why_this_matches` bullets** — short, factual, JD-keyword aligned. These go into `apply.md` for future reference.
 
 f. **Dispatch the `materials-fact-checker` subagent** (Sonnet) with `resume_data`, `cover_letter`, `jd_text`, `company` inline in the prompt. The agent cross-checks every claim against `resume_master.md`, `personal_statement.md`, and `SESSION_CONTEXT_Jobsearch.md` anti-overstatement rules; returns severity-tagged findings (CRITICAL / MEDIUM / LOW / NIT).
    - If the verdict is **CLEAN**, proceed to step g.
-   - If **FLAGS PRESENT**, surface the findings to James, propose one-line fixes for each, and revise after he confirms. Re-dispatch the fact-checker on the revised drafts if any CRITICAL finding was edited. Loop until CLEAN.
+   - If **FLAGS PRESENT**, surface the findings to the user, propose one-line fixes for each, and revise after they confirm. Re-dispatch the fact-checker on the revised drafts if any CRITICAL finding was edited. Loop until CLEAN.
    - If **BLOCK** (a fabricated metric or banned framing slipped in), do not proceed to render — fix the underlying claim first.
 
 g. **On final approval, call render()** by running this in the repo's venv. **Pass `open_browser=False`** because step h dispatches the autofill subagent, which drives its own Playwright-controlled browser.
@@ -85,11 +86,11 @@ g. **On final approval, call render()** by running this in the repo's venv. **Pa
 
 h. **Dispatch the `application-autofiller` subagent** (Sonnet) with `application_url` (the posting URL) and `folder_path` (the per-job folder returned by render()) inline in the prompt. If you drafted any short-answer text in step d that should be typed verbatim (cover-letter paste boxes, "Why this company" essay), include it as `short_answer_drafts` in the prompt.
 
-   The autofiller drives the Playwright MCP through the form, fills every mappable field, uploads the PDFs, and **stops without submitting**. It reports back what was filled and what's blank. Surface that report to James verbatim.
+   The autofiller drives the Playwright MCP through the form, fills every mappable field, uploads the PDFs, and **stops without submitting**. It reports back what was filled and what's blank. Surface that report to the user verbatim.
 
-   **If the Playwright MCP isn't loaded** (the session isn't rooted in `projects/boston-pm-tracker/`), the autofiller will report this and stop. Tell James to fill the form by hand using the folder + URL — do not fall back to another browser tool.
+   **If the Playwright MCP isn't loaded** (the session isn't rooted in `projects/boston-pm-tracker/`), the autofiller will report this and stop. Tell the user to fill the form by hand using the folder + URL — do not fall back to another browser tool.
 
-i. **Handoff.** Tell James:
+i. **Handoff.** Tell the user:
    - Folder path (markdown link)
    - That the resume + cover letter PDFs are inside
    - To review every field in the open browser window before submitting
@@ -97,15 +98,15 @@ i. **Handoff.** Tell James:
 
 ### 3. Batching
 
-If James said `all` or multiple ids, process them sequentially. Between roles, summarize what you did (one line per role) and pause briefly to let him interject.
+If the user said `all` or multiple ids, process them sequentially. Between roles, summarize what you did (one line per role) and pause briefly to let them interject.
 
 ## Rules
 
-- **Honor the no-auto-apply list.** `seeds/no_auto_apply.json` names companies that James handles through his own contacts. Never draft, render, or autofill an application for any role whose company is on that list — surface it for awareness and stop. This gate is non-negotiable even if he passes the role's `external_id` directly.
-- **Never invent facts.** Every claim must be in `resume_master.md` or `personal_statement.md` or something James said in this conversation.
+- **Honor the no-auto-apply list.** `seeds/no_auto_apply.json` names companies the user handles through their own contacts. Never draft, render, or autofill an application for any role whose company is on that list — surface it for awareness and stop. This gate is non-negotiable even if they pass the role's `external_id` directly.
+- **Never invent facts.** Every claim must be in `resume_master.md` or `personal_statement.md` or something the user said in this conversation.
 - **Anti-overstatement.** Read `SESSION_CONTEXT_Jobsearch.md` rules and apply them. Specifically: Connection Manager is not zero-to-one; AI agent is Phase 1 / business case projection; smart home is leading indicator + addressable market (not "delivered across 8M"); exactly 4 skill categories; no skills outside the source pool. The `materials-fact-checker` subagent will also enforce these — they're belt-and-suspenders.
-- **Show before render.** Always show James the RESUME_DATA changes and cover letter draft, then run the fact-checker, then surface findings. He gets the last word on every revision before render() fires.
-- **Don't auto-mark applied.** James submits by hand. He runs `mark-applied` after.
+- **Show before render.** Always show the user the RESUME_DATA changes and cover letter draft, then run the fact-checker, then surface findings. They get the last word on every revision before render() fires.
+- **Don't auto-mark applied.** The user submits by hand and runs `mark-applied` after.
 - **Never submit the form.** The autofiller subagent has hard guardrails against clicking Submit / Apply / Send. Salary fields always stay blank.
 - **One role at a time** unless he explicitly says `all`.
 

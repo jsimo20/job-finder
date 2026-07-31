@@ -1,0 +1,112 @@
+# Pipeline configuration — committed on purpose.
+#
+# Everything here is a preference, not a secret: which metros are in scope,
+# how domains and company stages are weighted, and the numeric filter knobs.
+# CI reads this file on every digest run, so it must be in git. Contact
+# details and EEO answers never belong here — those live in the gitignored
+# profile/ directory.
+#
+# A new user edits this file for their own search and commits it.
+
+[filters]
+comp_floor_usd = 140000
+# Roles asking for more years than this route to the stretch queue.
+yoe_main_queue_max = 7
+# Postings open longer than this are dropped as likely evergreen reqs.
+stale_days = 30
+
+# ── Location scope ───────────────────────────────────────────────────────────
+# in_scope_patterns: a posting passes the location gate when its location
+# string matches ANY pattern (case-insensitive), or the role is US-remote.
+# tiers: drive-time buckets from your home base, used only for the commute
+# warning in the digest. Checked far-first, because a distant city often also
+# matches a nearby state token ("Boston, MA" matches the MA that places
+# Springfield).
+
+[location]
+in_scope_patterns = [
+    '\b(boston|cambridge|somerville|watertown|waltham|burlington|brookline|newton|medford|massachusetts|MA)\b',
+    '\b(new york|nyc|manhattan|brooklyn|queens|NY)\b',
+    '\b(hartford|connecticut|CT)\b',
+    '\b(anytown|new haven|stamford|greenwich|norwalk|bridgeport|danbury|waterbury|middletown|new london|shelton|trumbull|milford)\b',
+    '\b(providence|rhode island|RI|pawtucket|warwick)\b',
+    '\b(springfield|worcester|holyoke|chicopee|amherst|northampton)\b',
+    '\b(new hampshire|NH|nashua)\b',
+    '\b(albany|schenectady)\b',
+    '\b(east coast|northeast(?:ern)?)\b',
+]
+
+[location.tiers]
+near = '\b(hartford|anytown|new haven|springfield|waterbury|middletown|holyoke|chicopee|amherst|northampton|connecticut|CT)\b'
+mid = '\b(worcester|providence|rhode island|RI|stamford|new london|pawtucket|warwick|danbury)\b'
+far = '\b(boston|cambridge|somerville|watertown|waltham|burlington|brookline|newton|medford|new york|nyc|manhattan|brooklyn|queens|greenwich|norwalk|bridgeport|albany|schenectady|nashua|new hampshire|NH)\b'
+
+[location.commute]
+# Warn (never discard) when a role's onsite days meet the tier's threshold.
+far_min_days = 4
+mid_min_days = 5
+far_note = "~2h each way from Anytown"
+mid_note = "~1-1.5h each way from Anytown"
+
+# ── Domain taxonomy ──────────────────────────────────────────────────────────
+# The extraction model tags each role with these domains; the scorer sums the
+# weights. Add, remove, or reweight to match your own background. Definitions
+# feed the extraction prompt, so keep them one line and concrete.
+
+[domains.ai_agentic]
+weight = 5
+definition = "AI/agentic/LLM platforms, foundation models, agent infra"
+
+[domains.developer_platform]
+weight = 4
+definition = "Developer platforms, partner ecosystems, public APIs, SDKs"
+
+[domains.consumer_at_scale]
+weight = 4
+definition = "Consumer products with 1M+ active users"
+
+[domains.iot_edge]
+weight = 3
+definition = "IoT, edge computing, smart home, embedded systems"
+
+[domains.connectivity_telecom]
+weight = 3
+definition = "Telecom, networking, 5G, ISPs, connectivity infra, CDN/edge networks"
+
+[domains.silicon]
+weight = 3
+definition = "Chips, semiconductors, photonics, hardware acceleration"
+
+[domains.space]
+weight = 3
+definition = "Space tech, satellites, launch, earth observation, in-orbit services"
+
+[domains.quantum]
+weight = 3
+definition = "Quantum computing hardware, software, cloud services"
+
+[domains.health_bio]
+weight = 2
+definition = "Clinical AI, diagnostics, life-sciences tooling, bio platforms"
+
+# ── Company-stage taxonomy ───────────────────────────────────────────────────
+
+[stages.series_b_d_ai_native]
+weight = 4
+definition = "Series B-D, AI-native or platform-native company"
+
+[stages.public_new_ai_line]
+weight = 3
+definition = "Public company launching a new AI/platform product line"
+
+[stages.late_stage_pre_ipo]
+weight = 3
+definition = "Late-stage private with strong product culture, pre-IPO"
+
+[stages.mega_corp_10k]
+weight = 2
+definition = "Public/private mega-corp with 10K+ employees, slower but stable"
+
+[stages.seed_series_a]
+weight = 1
+definition = "Seed or Series A, usually founder-led PM"

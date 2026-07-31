@@ -29,6 +29,9 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 
 ## Key files
 
+- `src/boston_pm_tracker/settings.py` — loaders for `config/pipeline.toml` (committed knobs) and `profile/` (gitignored identity); `require_profile()` is the gate before any real form fill or render
+- `config/pipeline.toml` — location scope, weights, filter knobs (committed, per-user)
+- `profile/` / `profile.example/` — identity, EEO, driving docs (gitignored / template)
 - `src/boston_pm_tracker/cli.py` — entry point (`run` subcommand drives the pipeline)
 - `src/boston_pm_tracker/adapters/*.py` — one per ATS, each exports `fetch()` and `normalize()`
 - `src/boston_pm_tracker/extract.py` — Claude Haiku call, system prompt cached, defensive BOM/whitespace strip on `ANTHROPIC_API_KEY`
@@ -55,11 +58,17 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 # external_id = gh_jid for Greenhouse, slug for Lever, id for Ashby
 ```
 
+## Per-user configuration (two layers)
+
+- **`config/pipeline.toml`** — committed. Location scope, metro tiers, commute thresholds/notes, domain + stage weights, comp floor, YoE cap, stale days. `settings.pipeline_config()` loads it; `taxonomy.py` and `filter.py` are thin views over it. CI reads it, so per-user pipeline preferences MUST go here, never in a gitignored file.
+- **`profile/`** — gitignored. Identity, EEO answers, `[paths]` to the driving docs, fit profile, QA checklist, the resume generator. `settings.load_profile()` falls back to the committed `profile.example/` so imports and tests work on a fresh clone; anything that acts on the values (form fill, PDF render) goes through `settings.require_profile()` and refuses the example.
+- Handing the repo to a new user: `python scripts/export_clean_copy.py <dir>` (never fork — history carries the applied log), then they follow `SETUP.md`.
+
 ## Location scope and the commute warning
 
-James lives in **Anytown, CT** and targets Boston deliberately, accepting the drive when the schedule is hybrid. `standard_answers.md` states Boston as his location on purpose — that is positioning, not an error.
+James lives in **Anytown, CT** and targets Boston deliberately, accepting the drive when the schedule is hybrid. `standard_answers.md` states Boston as his location on purpose — that is positioning, not an error. The actual metro regexes, tiers, and warning text live in `config/pipeline.toml [location]`.
 
-- **In scope** (`filter.stage1`): Boston metro, NYC metro, all of CT (incl. New Haven, Stamford, Bridgeport, Danbury, Waterbury, New London), RI/Providence, western + central MA (Springfield, Worcester, Northampton), any "East Coast"/"Northeast" phrasing, and any US-remote role. City-name-only postings now match; previously "New Haven" or "Providence" with no state token fell through to `discard:wrong_location`.
+- **In scope** (`filter.stage1`, via `in_scope_patterns`): Boston metro, NYC metro, all of CT, RI/Providence, western + central MA, southern NH, Albany, any "East Coast"/"Northeast" phrasing, and any US-remote role.
 - **Metro tiers** (`filter.metro_tier`) are drive time from Anytown: `near` (Hartford, New Haven, Springfield), `mid` (Worcester, Providence, Stamford), `far` (Boston metro, NYC metro). Checked far-first, because "Boston, MA" also matches the MA tokens that place Springfield.
 - **`filter.commute_warning`** flags `far` + 4-5 days onsite, and `mid` + 5 days. It **warns, never discards** — days-per-week is often negotiable and postings misstate it. Surfaced in the digest as a `⚠️ Commute:` line.
 - Depends on `onsite_days_per_week` from extraction (0-5 or null; null means the JD said nothing, and never warns). Validated at the boundary by `extract._clamp_days`, since the field feeds a user-facing warning.
@@ -86,7 +95,7 @@ James lives in **Anytown, CT** and targets Boston deliberately, accepting the dr
 - `/job-apply [external_id | --top N]` — tailors resume + cover letter for pending roles, runs the materials fact-checker, renders the per-job folder via `job_apply.render()`, then dispatches autofill. Logic in `.claude/commands/job-apply.md`; deterministic render in `src/boston_pm_tracker/job_apply.py`.
 - `/fill-application <url> [folder]` — standalone Playwright autofill via the `application-autofiller` subagent. Stops without submitting; James reviews and submits by hand. Logic in `.claude/commands/fill-application.md`.
 - **Greenhouse forms: prefer the deterministic script** over the agent — `python -m boston_pm_tracker.fill_greenhouse --url <url> --folder <per-app folder> [--city <city>]`. Fills the standard section (contact, auth, EEO, uploads) with zero LLM tokens, DOM-verifies every dropdown commit, prints a fill report, holds the browser open for review, never submits. ~2k tokens vs ~63k for the agent. One-time setup: `pip install -e .[apply]` + `playwright install chromium` (local only; CI never needs it). The agent stays as the fallback for unknown ATSes and custom questions.
-- Field values come from `~/path/to/job-search/inputs/standard_answers.md`.
+- Field values come from `profile/profile.toml` (identity, EEO, work-auth stance) plus `standard_answers.md` in the configured `inputs_dir` (for James: `~/path/to/job-search/inputs/`, set in `profile/profile.toml [paths]`).
 - **Every fill captures a before/after field inventory** to `data/fill_audits/<date>_<slug>.{pre,post}.json` (gitignored — the `value` column holds contact details). Both fill paths use `form_inventory.py` so their output is comparable; the deterministic script writes them directly, the agent via `browser_evaluate`. Capture is best-effort and never blocks a fill. Redact with `form_inventory.redact()` before promoting a manifest to `tests/fixtures/`. Design: `.claude/context/form-fill-evals.md`.
 - **Playwright MCP is project-scoped** (`.mcp.json`). Its `mcp__playwright__*` tools only load when the Claude session is rooted in this directory — autofill won't work from a session started in the parent `dev/` directory.
 - **Batch autofill = one Chrome instance, one tab per app** (never a separate browser per app). Dispatch a single `application-autofiller` with the full list of `(url, folder)` pairs; it opens each app in a new tab and leaves them all open, unsubmitted, for review. Rule lives in the Batch mode section of `.claude/agents/application-autofiller.md`.
