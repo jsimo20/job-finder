@@ -11,17 +11,17 @@ The tracked-company list at `data/companies.json` drives every daily run. It's t
 
 ```json
 {
-  "name": "Klaviyo",
+  "name": "Example Co",
   "ats_provider": "greenhouse",
-  "ats_slug": "klaviyo",
-  "careers_url": "https://www.klaviyo.com/careers",
-  "sector_tags": ["martech", "saas"],
+  "ats_slug": "exampleco",
+  "careers_url": "https://www.example.com/careers",
+  "sector_tags": ["ai_agentic", "saas"],
   "size_band": "500+"
 }
 ```
 
 - `ats_provider`: one of `greenhouse`, `lever`, `ashby` — all three adapters are live. Workday/ICIMS/Taleo/SuccessFactors have no public API; companies on those cannot be seeded.
-- `ats_slug`: the company's identifier inside the ATS URL. Example: `https://boards.greenhouse.io/klaviyo` → slug `klaviyo`. Often matches the company name but **not always** (Proof's Lever slug is `proof`, not `notarize`).
+- `ats_slug`: the company's identifier inside the ATS URL. Example: `https://boards.greenhouse.io/exampleco` → slug `exampleco`. Often matches the company name but **not always** — companies that renamed or were acquired frequently keep the old brand's slug.
 - `sector_tags`: free-form list, matches the taxonomy in `src/job_finder/taxonomy.py` where possible (e.g. `ai_agentic`, `developer_platform`, `silicon`, `space`, `quantum`).
 - `size_band`: one of `1-50`, `51-200`, `201-500`, `500+`. Curated manually; recheck monthly.
 

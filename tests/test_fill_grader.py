@@ -21,7 +21,7 @@ def _grade(fields, tmp_path, profile=PROFILE):
 
 
 def test_vetoed_sponsorship_answer_is_critical_and_caps_at_f(tmp_path):
-    """Regression: Smartsheet 2026-07-30 committed 'Yes' on a sponsorship field."""
+    """Regression: a live fill once committed 'Yes' on a sponsorship field."""
     fields = [
         {"label": "Do you now or will you in the future require immigration "
                   "sponsorship for work authorization?*",
@@ -58,7 +58,7 @@ def test_ruled_blank_is_missed_and_unruled_blank_is_backlog(tmp_path):
 
 
 def test_empty_option_dropdown_is_env_failure_not_missed(tmp_path):
-    """Smartsheet's race/disability menus rendered zero options to the filler."""
+    """Live case: async menus rendered zero options to the filler."""
     f = {"label": "My disability status is:*", "type": "react-select",
          "required": True, "value": "", "options": []}
     profile = dict(PROFILE, eeo={"disability": "no, i do not have"})

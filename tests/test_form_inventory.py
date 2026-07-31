@@ -14,7 +14,7 @@ from job_finder import form_inventory as fi
 
 SAMPLE = [
     {"field_id": "#first_name", "label": "First Name *", "type": "text",
-     "required": True, "value": "James", "options": None},
+     "required": True, "value": "Testname", "options": None},
     {"field_id": "#gender", "label": "Gender", "type": "react-select",
      "required": False, "value": "Male", "options": None},
     {"field_id": "#salary", "label": "Desired salary *", "type": "text",
@@ -23,8 +23,8 @@ SAMPLE = [
 
 
 def test_audit_path_shape(tmp_path):
-    p = fi.audit_path("datadog-senior-pm-fleet", "pre", when=date(2026, 7, 27), base=tmp_path)
-    assert p.name == "2026-07-27_datadog-senior-pm-fleet.pre.json"
+    p = fi.audit_path("exampleco-senior-pm-fleet", "pre", when=date(2026, 7, 27), base=tmp_path)
+    assert p.name == "2026-07-27_exampleco-senior-pm-fleet.pre.json"
 
 
 def test_audit_path_rejects_unknown_phase(tmp_path):
@@ -33,7 +33,7 @@ def test_audit_path_rejects_unknown_phase(tmp_path):
 
 
 def test_two_reqs_at_one_company_do_not_collide(tmp_path):
-    # The Datadog resumes once overwrote each other on a shared filename; the
+    # The Example Co resumes once overwrote each other on a shared filename; the
     # slug carries the role so manifests can't repeat it.
     a = fi.audit_path("mavenagi-senior-pm-integrations", "post", base=tmp_path)
     b = fi.audit_path("mavenagi-senior-pm-voice-agent", "post", base=tmp_path)
@@ -76,7 +76,7 @@ def test_redact_keeps_structure_drops_values():
     for before, after in zip(SAMPLE, out):
         for key in ("field_id", "label", "type", "required", "options"):
             assert before[key] == after[key]
-    assert "James" not in json.dumps(out)
+    assert "Testname" not in json.dumps(out)
 
 
 def test_inventory_js_is_a_bare_arrow_function():

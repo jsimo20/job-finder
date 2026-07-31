@@ -35,7 +35,7 @@ a. **Load context** (read these files once and keep in memory for the whole sess
 b. **Show the user a one-paragraph read of the JD** — what they're hiring for, the 3–5 keywords/frames that genuinely map to the user's resume, anything that risks overstatement. Ask the user for any orientation before you draft (sometimes they'll have a specific angle).
 
 c. **Draft `RESUME_DATA`** as a Python dict, following the tailoring workflow in `resume_generator/SKILL.md`:
-   - Reorder Contoso bullets to lead with the strongest JD match
+   - Reorder current-role bullets to lead with the strongest JD match
    - Adjust title subtitle (e.g., "Mobile, AI & SaaS Growth"; "AI, Developer Platforms & Trusted Automation"; "AI, Platforms & Zero-to-One Consumer Products"). Use "zero-to-one" spelled out — never the "0→1" glyph.
    - Re-prioritize/rename skill categories per `SESSION_CONTEXT` rules
    - Rotate the fourth clause in the fun bullet
@@ -104,7 +104,7 @@ If the user said `all` or multiple ids, process them sequentially. Between roles
 
 - **Honor the no-auto-apply list.** `data/no_auto_apply.json` names companies the user handles through their own contacts. Never draft, render, or autofill an application for any role whose company is on that list — surface it for awareness and stop. This gate is non-negotiable even if they pass the role's `external_id` directly.
 - **Never invent facts.** Every claim must be in `resume_master.md` or `personal_statement.md` or something the user said in this conversation.
-- **Anti-overstatement.** Read `SESSION_CONTEXT_Jobsearch.md` rules and apply them. Specifically: Connection Manager is not zero-to-one; AI agent is Phase 1 / business case projection; smart home is leading indicator + addressable market (not "delivered across 8M"); exactly 4 skill categories; no skills outside the source pool. The `materials-fact-checker` subagent will also enforce these — they're belt-and-suspenders.
+- **Anti-overstatement.** Read the session-context file named in `profile/profile.toml [paths]` and apply every rule in it literally (per-claim framing rules, the fixed skill-category count, the skill source pool). The `materials-fact-checker` subagent will also enforce these — they're belt-and-suspenders.
 - **Show before render.** Always show the user the RESUME_DATA changes and cover letter draft, then run the fact-checker, then surface findings. They get the last word on every revision before render() fires.
 - **Don't auto-mark applied.** The user submits by hand and runs `mark-applied` after.
 - **Never submit the form.** The autofiller subagent has hard guardrails against clicking Submit / Apply / Send. Salary fields always stay blank.

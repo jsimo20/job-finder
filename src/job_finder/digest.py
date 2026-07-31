@@ -37,7 +37,7 @@ def _row_md(row) -> str:
     if row["stretch_reason"]:
         extras = f" · _stretch: {row['stretch_reason']}_"
     # Warn, never drop: days-per-week is often negotiable and postings are not
-    # always accurate about it, so this is James's call to make.
+    # always accurate about it, so this is the user's call to make.
     commute = filter_mod.commute_warning(
         row["location"],
         _row_get(row, "onsite_days_per_week"),
@@ -88,9 +88,9 @@ _BASE_JOIN_WHERE = f"""
 def _pending_sql(queue: str) -> str:
     # One query per queue; the new-vs-carried split happens in Python against
     # the committed seen-ledger. The DB is rebuilt every run, so
-    # first_seen_at is always "now" and cannot make that distinction — every
-    # digest between 2026-07-07 and 2026-07-28 labeled all rows "new" and
-    # carried forward zero because of it.
+    # first_seen_at is always "now" and cannot make that distinction — before
+    # the ledger existed, every digest labeled all rows "new" and carried
+    # forward zero because of it.
     return f"""
         SELECT {_BASE_COLS}
         {_BASE_JOIN_WHERE}

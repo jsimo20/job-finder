@@ -10,7 +10,7 @@ Each recipe lists: direct URL pattern, known fields in fill order, EEO section n
 
 **Direct URL pattern:** `https://job-boards.greenhouse.io/<company>/jobs/<gh_jid>`
 
-Always use the direct Greenhouse URL. Never navigate via a company careers portal (e.g., `careers.datadoghq.com`) — the portal adds a click-through that costs extra snapshots for no gain. When the dispatching prompt supplies a `gh_jid` param or the `application_url` contains `gh_jid=<id>`, derive the direct URL as:
+Always use the direct Greenhouse URL. Never navigate via a company careers portal — the portal adds a click-through that costs extra snapshots for no gain. When the dispatching prompt supplies a `gh_jid` param or the `application_url` contains `gh_jid=<id>`, derive the direct URL as:
 `https://job-boards.greenhouse.io/<company_slug>/jobs/<gh_jid>`
 
 **Known fields (fill order):**
@@ -45,13 +45,14 @@ Always use the direct Greenhouse URL. Never navigate via a company careers porta
 Total realistic range: 15–25 snapshots for a full Greenhouse form (many react-select dropdowns). The ≤7 budget in old versions of this file was wrong — do not aim for it.
 
 **Known variations:**
-- Some Greenhouse forms omit the Cover Letter upload (Maven AGI, Datadog portal forms).
+- Some Greenhouse forms omit the Cover Letter upload entirely.
 - "In what cities are you available to work?" is a multi-select; type the city name, wait for autocomplete, click the match.
 - The phone field is two parts: a country-code react-select + a separate text input. Fill in order.
 - "I certify that all information provided is true" checkbox — required; check it.
 
 **Portal exceptions (direct URL rule does NOT apply):**
-- **Datadog** (`careers.datadoghq.com`): `job-boards.greenhouse.io/datadoghq/jobs/<id>` returns 404. Use the careers portal URL directly — the Greenhouse iframe loads inside the portal page with no extra click needed after navigating to the portal URL.
+- Some large companies 404 on the direct `job-boards.greenhouse.io/<slug>/jobs/<id>` URL and only serve the form inside their own careers portal (the Greenhouse iframe loads there with no extra click). If the direct URL 404s, fall back to the portal URL from the posting.
+- Some boards redirect to a slow-hydrating careers site; the embed URL `job-boards.greenhouse.io/embed/job_app?for=<slug>&token=<id>` reaches the same form without the redirect or cookie banner and is the cheaper target.
 
 ---
 
@@ -62,8 +63,7 @@ Total realistic range: 15–25 snapshots for a full Greenhouse form (many react-
 No portal wrapping, but **that URL is the posting, not the form**. It has zero
 form controls; the application lives at `<uuid>/application`. Navigate straight
 there rather than spending a snapshot on the "Apply for this Job" button.
-(Verified 2026-07-27: Maven AGI posting URL returned 0 controls, `/application`
-returned 8.)
+(Verified live: a posting URL returned 0 controls while `/application` returned the full form.)
 
 **Known fields (fill order):**
 
@@ -78,7 +78,7 @@ returned 8.)
    to the autofill box parses the PDF into the form and leaves the real resume
    field empty, so the form looks filled and submits without a resume. Match on
    the `Resume:` label, never on "first file input on the page."
-7. Cover Letter upload — **absent on most Ashby forms** (Maven AGI, Cyvl both lacked it); do not spend snapshots searching
+7. Cover Letter upload — **absent on most Ashby forms**; do not spend snapshots searching
 8. Work authorization radio (if present) — "Yes"
 9. Sponsorship radio (if present) — "No"
 10. Office attendance / onsite radio (if present) — answer from standard_answers per-app copy
@@ -93,19 +93,18 @@ Most Ashby forms do not have EEO sections. If one appears, apply the same defaul
 Total target: 2–4 snapshots for a standard Ashby form.
 
 **Known variations:**
-- Cyvl had two required short-answer questions (3–5 sentences each); these need Opus drafts, not autofill.
-- Maven AGI was 5 fields total — minimal form.
+- Some Ashby forms carry required short-answer questions (3–5 sentences each); these need drafts from the main conversation, not autofill.
+- Others are as small as 5 fields total.
 
 ---
 
 ## Multi-step wizard ATSes (Phenom People, etc.) — out of scope
 
-Gated multi-step wizards (e.g. Phenom People at careers.circle.com) are out
-of autofill and eval scope per James (2026-07-31): a single unanswerable
-required field on an early step blocks every later step, and the audit
-manifest can only see the step reached. Fill these by hand; the section
-documenting Phenom's quirks was removed with this decision (git history has
-it if the scope ever changes).
+Gated multi-step wizards (Phenom People and similar) are out of autofill and
+eval scope by user decision: a single unanswerable required field on an early
+step blocks every later step, and the audit manifest can only see the step
+reached. Fill these by hand; the recipe that documented one such wizard lives
+in git history if the scope ever changes.
 
 ## Adding a new ATS
 
@@ -113,4 +112,3 @@ When you encounter an ATS not listed here, proceed with the standard snapshot-an
 
 ---
 
-*Last verified: 2026-07-30 (Greenhouse: Starburst jobs/5252943008, Datadog jobs/7974481, jobs/7763117; Ashby: Maven AGI bbcd2fd7, Cyvl 2c32d055)*

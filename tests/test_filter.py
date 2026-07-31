@@ -156,7 +156,7 @@ def test_stage3_null_comp_kept():
 
 
 def test_dash_separated_non_us_remote_is_discarded():
-    """Regression: Cardata's "Canada - Remote" passed the location gate because
+    """Regression: a live posting's "Canada - Remote" passed the location gate because
     the country-then-remote pattern only allowed comma/space separators."""
     from job_finder.filter import stage1
     for loc in ("Canada - Remote", "Remote - Canada", "Canada, Remote"):

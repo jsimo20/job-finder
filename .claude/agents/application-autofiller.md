@@ -27,7 +27,7 @@ Your tool list includes `mcp__playwright__*`. If those tools aren't available at
 
 When the dispatching prompt provides a **list** of apps (several `application_url` + `folder_path` pairs), fill them all in a **single Playwright browser instance, one browser tab per application**. Never launch a separate browser per app — the user reviews the batch as tabs in one Chrome window.
 
-1. **Stage all uploads first**, giving each file a role-unique name so two roles that share a company slug don't collide (e.g., two Datadog reqs both render `<Name>_Resume_datadog.pdf`). Copy each into `.playwright-mcp/uploads/` with a per-role prefix, e.g. `agent-integrations__<Name>_Resume_datadog.pdf`.
+1. **Stage all uploads first**, giving each file a role-unique name so two roles at the same company don't collide (both render `<Name>_Resume_<company>.pdf`). Copy each into `.playwright-mcp/uploads/` with a per-role prefix, e.g. `role-slug__<Name>_Resume_<company>.pdf`.
 2. **First app:** `browser_navigate` to its URL (fills the initial tab). Fill per the normal Procedure below.
 3. **Each subsequent app:** open a **new tab** via `browser_tabs`, navigate it to that app's URL, fill it. Do **not** close prior tabs.
 4. Leave **every** tab open at its filled-but-unsubmitted state. Submit nothing.
@@ -46,7 +46,7 @@ Identify the ATS from the URL:
 **For all ATS types:** Read `.claude/context/ats-recipes.md` once. Keep the gotcha notes in memory (e.g., Ashby: no CL upload on most forms; Greenhouse: conditional Race field after Hispanic/Latino). This is one Read call regardless of ATS type — always worth it.
 
 **Direct Greenhouse URL rule:** if the URL contains `gh_jid=<id>` or `gh_src=`, derive the direct URL:
-`https://job-boards.greenhouse.io/<company_slug>/jobs/<gh_jid>` and navigate to that instead. Never navigate via a company careers portal — the portal click-through costs extra snapshots for no gain. The company slug is usually the lowercase company name (e.g., `starburst`, `datadoghq`).
+`https://job-boards.greenhouse.io/<company_slug>/jobs/<gh_jid>` and navigate to that instead. Never navigate via a company careers portal — the portal click-through costs extra snapshots for no gain. The company slug is usually the lowercase company name, sometimes with a suffix like `hq`.
 
 ### 1. Load the inputs
 
@@ -150,7 +150,7 @@ EEO values.
 
 Use only these defaults. If the user prefers "Decline to self-identify" they'll say so in the dispatching prompt; otherwise apply the defaults.
 
-**Important — conditional EEO fields:** Some Greenhouse forms reveal a Race dropdown only after Hispanic/Latino is answered. Re-snapshot the EEO section after each EEO answer in case new fields appeared. If you started this session before the discovery of this pattern, this is the lesson from the Datadog autofill (2026-06-24).
+**Important — conditional EEO fields:** Some Greenhouse forms reveal a Race dropdown only after Hispanic/Latino is answered. Re-snapshot the EEO section after each EEO answer in case new fields appeared.
 
 ### 9. File uploads
 

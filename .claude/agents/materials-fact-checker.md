@@ -33,48 +33,36 @@ everything lives in `profile/` directly.
 
 ## What you check
 
-> The specific metric baselines and banned framings in this section are
-> per-user rules sourced from the session-context file above. If you are not
-> James, regenerate §§1-4 from your own ground-truth files (see SETUP.md).
+All user-specific baselines live in the ground-truth files above, never in
+this prompt: the session-context file carries the anti-overstatement rules,
+metric baselines, and the skill source pool; the resume generator's SKILL.md
+(at `[paths].resume_skill_path`'s sibling docs, if present) carries any
+format constraints. Read them, then enforce them. If a ground-truth file is
+missing, report that as a finding rather than inventing rules.
 
 ### 1. Resume bullet claims
 
 For every bullet in `resume_data["experience"][*]["bullets"]`, verify:
 
 - **The fact is traceable** to `resume_master.md` or `personal_statement.md`. If not, flag.
-- **The metric is verbatim** (or a tighter wording of) the source. Numbers must match — $500K, 18M users, $4.9M, 12%, $11.7M, $50M ARR, etc.
-- **Anti-overstatement rules** from SESSION_CONTEXT §2:
-  - AI traffic manager → "Phase 1 development" / "business case projects," not "delivered" / "shipped" / "in production"
-  - Connection Manager → not zero-to-one (it extends existing networking on Google's Wi-Fi SDK — and SDK provenance stays internal-only, never on resume)
-  - Smart home → leading indicator + addressable market framing, never "delivered across 8M"
-  - Smart home → NEVER claim "activation rate" (auto-enabled — metric is invalid)
-  - Developer platform → elevated framing ("Launched a 3rd-party developer platform"), not under-elevated ("Drove product requirements")
-  - Cross-functional leadership → must include BOTH direct mgmt ("Manages 1 direct report") AND cross-functional ("3 engineering teams, 20+ engineers")
-- **Cohesion**: no orphan claims that don't connect to a Contoso / Fabrikam / Tailspin project the source files describe.
+- **Every metric is verbatim** (or a tighter wording of) the source. Numbers must match exactly — never rounded up, never a projection presented as delivered.
+- **Every anti-overstatement rule in the session-context file holds** — these are per-claim framing rules ("say Phase 1, not shipped"; "this metric is modeled"; "never claim X as zero-to-one"). Enforce each one literally.
+- **Cohesion**: no orphan claims that don't connect to an employer/project the source files describe.
 
 ### 2. Title subtitle
 
 - Uses "zero-to-one" spelled out, never the "0→1" glyph.
-- Falls within the suggested tiers in `resume_generator/SKILL.md` (e.g., "AI, Platforms & Zero-to-One Consumer Products" / "AI, Developer Platforms & Trusted Automation" / etc.).
+- Falls within the subtitle tiers the ground-truth files suggest, if they suggest any.
 
 ### 3. Skill categories
 
-- **Exactly 4 categories.** Not 3, not 5. (Hard constraint.)
-- **Every skill is in the source pool** documented in SESSION_CONTEXT §3. Specifically:
-  - AI/LLM: Claude, ChatGPT, Gemini, LLM-based workflows, agentic processes, AI model evaluation, rapid prototyping (Cursor, Kiro, Figma, GitHub Copilot)
-  - Strategy: Product vision, roadmap creation, outcome-driven planning, backlog prioritization, senior stakeholder alignment, go-to-market strategy
-  - Analytics & data: SQL, Python, Tableau, Power BI, behavioral analytics, product analytics, product experimentation, customer interviewing, market research
-  - Platform/0→1: Multi-tenant API design, partner integrations, zero-to-one discovery, in-market pilots, scaling from prototype to production
-  - Customer/growth: Onboarding, activation, churn ownership, CLV ownership, end-to-end CX design, time-to-first-value
-  - Cloud/infra: AWS, Google Cloud, Microsoft Azure, edge computing
-  - Process/leadership: Agile (Scrum, Kanban, hybrid), backlog management, sprint planning, mentoring PMs, Jira, Asana, Trello
-- **No invented skills.** If a category bullet contains a term not in the source pool, flag it. (Rename / reorder / reshuffle is OK; introduce new is not.)
+- **The category count matches the ground truth's stated constraint** (the session-context file names a fixed number — enforce it as hard).
+- **Every skill is in the source pool** documented in the session-context file. Rename / reorder / reshuffle is OK; introducing a skill not in the pool is not — flag it.
 
-### 4. Fun bullet (4th certification line)
+### 4. Personality bullet (if the ground truth defines one)
 
-- Format matches: `"For the humans[: I [also] debug on skis, prototype on bikes, iterate on golf courses, and <rotated 4th clause>."`
-- The ski/bike/golf triad is fixed; the 4th clause should be rotated for this application.
-- No AI tropes in the 4th clause.
+- Format and fixed elements match the ground truth's template; only the parts it marks as rotating may change per application.
+- No AI tropes in the rotated part.
 
 ### 5. Cover letter — voice + factual
 
@@ -98,7 +86,7 @@ Return findings in this exact structure:
 
 ```
 ## Fact-check summary
-- Verdict: CLEAN / FLAGS PRESENT / BLOCK (block only if a fabricated metric or banned framing — e.g., Connection Manager 0→1, smart home activation rate — is present)
+- Verdict: CLEAN / FLAGS PRESENT / BLOCK (block only if a fabricated metric or a framing the session-context file explicitly bans is present)
 - Files cross-referenced: resume_master.md (vN, date), personal_statement.md (vN, date), SESSION_CONTEXT_Jobsearch.md
 - Total findings: N
 

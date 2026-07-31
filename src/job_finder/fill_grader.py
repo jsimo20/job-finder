@@ -29,7 +29,7 @@ answers, not fixing the filler.
 
 Usage:
     python -m job_finder.fill_grader data/fill_audits/<slug>.post.json ...
-    python -m job_finder.fill_grader --date 2026-07-30
+    python -m job_finder.fill_grader --date <YYYY-MM-DD>
 """
 from __future__ import annotations
 

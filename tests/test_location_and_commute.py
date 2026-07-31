@@ -1,6 +1,7 @@
 """Search-radius expansion and the commute warning.
 
-James lives in Anytown, CT and targets Boston deliberately, accepting the
+The committed config places the home base in central Connecticut and targets
+Boston deliberately, accepting the
 drive when the schedule is hybrid. What he rules out is 4-5 days onsite at that
 distance, which is why this produces a warning rather than a discard.
 """
@@ -82,14 +83,14 @@ def test_boston_reads_as_far_not_near_despite_ma_token():
     assert f.metro_tier("Boston, MA") == "far"
 
 
-def test_formlabs_case_warns():
+def test_far_metro_heavy_onsite_case_warns():
     # The role that prompted this: Somerville, MA, 4-5 days onsite.
     assert f.commute_warning("Somerville, MA", 5) is not None
     assert f.commute_warning("Somerville, MA", 4) is not None
 
 
 def test_hybrid_boston_does_not_warn():
-    # Explicitly acceptable to James — this is the case the rule must not break.
+    # Explicitly acceptable per the config's intent — the case the rule must not break.
     assert f.commute_warning("Boston, MA", 3) is None
     assert f.commute_warning("Boston, MA", 2) is None
 

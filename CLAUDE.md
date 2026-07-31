@@ -67,10 +67,10 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 
 ## Location scope and the commute warning
 
-James lives in **Anytown, CT** and targets Boston deliberately, accepting the drive when the schedule is hybrid. `standard_answers.md` states Boston as his location on purpose — that is positioning, not an error. The actual metro regexes, tiers, and warning text live in `config/pipeline.toml [location]`.
+The committed config encodes the owner's home base and a deliberately different target metro; `standard_answers.md` may state the target metro as the location on purpose — that is positioning, not an error, so never "fix" it. The actual metro regexes, tiers, and warning text live in `config/pipeline.toml [location]`.
 
 - **In scope** (`filter.stage1`, via `in_scope_patterns`): Boston metro, NYC metro, all of CT, RI/Providence, western + central MA, southern NH, Albany, any "East Coast"/"Northeast" phrasing, and any US-remote role.
-- **Metro tiers** (`filter.metro_tier`) are drive time from Anytown: `near` (Hartford, New Haven, Springfield), `mid` (Worcester, Providence, Stamford), `far` (Boston metro, NYC metro). Checked far-first, because "Boston, MA" also matches the MA tokens that place Springfield.
+- **Metro tiers** (`filter.metro_tier`) are drive time from the configured home base, defined in `config/pipeline.toml [location.tiers]`. Checked far-first, because a far-metro string like "Boston, MA" also matches the state tokens that place near-metro cities.
 - **`filter.commute_warning`** flags `far` + 4-5 days onsite, and `mid` + 5 days. It **warns, never discards** — days-per-week is often negotiable and postings misstate it. Surfaced in the digest as a `⚠️ Commute:` line.
 - Depends on `onsite_days_per_week` from extraction (0-5 or null; null means the JD said nothing, and never warns). Validated at the boundary by `extract._clamp_days`, since the field feeds a user-facing warning.
 
@@ -94,9 +94,9 @@ James lives in **Anytown, CT** and targets Boston deliberately, accepting the dr
 ## Apply workflow (slash commands)
 
 - `/job-apply [external_id | --top N]` — tailors resume + cover letter for pending roles, runs the materials fact-checker, renders the per-job folder via `job_apply.render()`, then dispatches autofill. Logic in `.claude/commands/job-apply.md`; deterministic render in `src/job_finder/job_apply.py`.
-- `/fill-application <url> [folder]` — standalone Playwright autofill via the `application-autofiller` subagent. Stops without submitting; James reviews and submits by hand. Logic in `.claude/commands/fill-application.md`.
+- `/fill-application <url> [folder]` — standalone Playwright autofill via the `application-autofiller` subagent. Stops without submitting; the user reviews and submits by hand. Logic in `.claude/commands/fill-application.md`.
 - **Greenhouse forms: prefer the deterministic script** over the agent — `python -m job_finder.fill_greenhouse --url <url> --folder <per-app folder> [--city <city>]`. Fills the standard section (contact, auth, EEO, uploads) with zero LLM tokens, DOM-verifies every dropdown commit, prints a fill report, holds the browser open for review, never submits. ~2k tokens vs ~63k for the agent. One-time setup: `pip install -e .[apply]` + `playwright install chromium` (local only; CI never needs it). The agent stays as the fallback for unknown ATSes and custom questions.
-- Field values come from `profile/profile.toml` (identity, EEO, work-auth stance) plus `standard_answers.md` in the configured `inputs_dir` (for James: `~/path/to/job-search/inputs/`, set in `profile/profile.toml [paths]`).
+- Field values come from `profile/profile.toml` (identity, EEO, work-auth stance) plus `standard_answers.md` in the configured `inputs_dir` (`profile/profile.toml [paths]`; may point at a cloud-synced folder outside the repo).
 - **Grade every fill batch**: `python -m job_finder.fill_grader --date <YYYY-MM-DD>` letter-grades the audit manifests (Layer 1, zero tokens). Its `no_rule` output is the backlog — turn entries into `[[custom_combos]]` answers in `profile/profile.toml`. `python -m job_finder.profile_check` is the profile doctor (placeholder/missing-doc detection); SETUP.md tells new users to run it.
 - **Every fill captures a before/after field inventory** to `data/fill_audits/<date>_<slug>.{pre,post}.json` (gitignored — the `value` column holds contact details). Both fill paths use `form_inventory.py` so their output is comparable; the deterministic script writes them directly, the agent via `browser_evaluate`. Capture is best-effort and never blocks a fill. Redact with `form_inventory.redact()` before promoting a manifest to `tests/fixtures/`. Design: `.claude/context/form-fill-evals.md`.
 - **Playwright MCP is project-scoped** (`.mcp.json`). Its `mcp__playwright__*` tools only load when the Claude session is rooted in this directory — autofill won't work from a session started in the parent `dev/` directory.
@@ -119,36 +119,36 @@ James lives in **Anytown, CT** and targets Boston deliberately, accepting the dr
 
 ## Outreach log
 
-Tracks people James contacts on LinkedIn (name + company + date + optional role/context). Separate from the pipeline and the digest on purpose: not every contact is tied to a role application (he often reaches out for an internal referral), and the DB gets wiped every run so it can't hold durable state.
+Tracks people the user contacts on LinkedIn (name + company + date + optional role/context). Separate from the pipeline and the digest on purpose: not every contact is tied to a role application (outreach is often for an internal referral), and the DB gets wiped every run so it can't hold durable state.
 
 - **Store:** `data/outreach.jsonl` — append-only, **gitignored** (third-party names are PII; local-only, does not sync across machines). Untouched by the pipeline.
 - **Module:** `src/job_finder/outreach.py` — `add_contact()`, `list_contacts(company=…)`, `format_contacts()`.
 - **CLI:**
   ```sh
-  job-finder outreach add --name "Contact-A" --company "ZoomInfo" [--role "…"] [--type connection-request|message|hm-message] [--notes "…"] [--date YYYY-MM-DD]
-  job-finder outreach list [--company zoominfo]
-  job-finder outreach remove --name "Contact-C" --company "Axon"   # exact name+company, case-insensitive
+  job-finder outreach add --name "First Last" --company "Example Co" [--role "…"] [--type connection-request|message|hm-message] [--notes "…"] [--date YYYY-MM-DD]
+  job-finder outreach list [--company exampleco]
+  job-finder outreach remove --name "First Last" --company "Example Co"   # exact name+company, case-insensitive
   ```
 
-**Agent trigger (do this automatically):** whenever James asks you to draft a LinkedIn message or connection request for someone, log it with `outreach add` afterward. **Always get the person's name and their company from James** before logging — ask if either is missing. Default `--type` to `connection-request`, or `hm-message` for a hiring-manager message. This keeps a recall-able record of who he talked to, when, and where they work.
+**Agent trigger (do this automatically):** whenever the user asks you to draft a LinkedIn message or connection request for someone, log it with `outreach add` afterward. **Always get the person's name and their company from the user** before logging — ask if either is missing. Default `--type` to `connection-request`, or `hm-message` for a hiring-manager message. This keeps a recall-able record of who they talked to, when, and where they work.
 
 ## Applied log
 
 Durable record of roles applied to, keyed by `external_id`. Fixes the fact that `data/jobs.db` (and its `applied_at` flag) is rebuilt every run, so applied roles otherwise resurface in the next digest. Also captures **ad-hoc roles** applied to outside the pipeline (pasted URLs never in the tracked-company list), which the DB never knew about.
 
-- **Store:** `data/applied.jsonl` — append-only, **committed** (unlike the outreach log). It must be in git so the CI-generated digest can read it to suppress already-applied roles. Contents are James's own application records (no third-party PII), fine for a private repo.
+- **Store:** `data/applied.jsonl` — append-only, **committed** (unlike the outreach log). It must be in git so the CI-generated digest can read it to suppress already-applied roles. Contents are the owner's own application records (no third-party PII), fine for a private repo.
 - **Module:** `src/job_finder/applied.py` — `record_applied()`, `list_applied()`, `is_applied(external_id=…, url=…)`, `applied_external_ids()`, `remove_applied()`. URL matching normalizes scheme/query/trailing `/apply`/`/application` so a pasted apply-form link matches the posting.
 - **Digest integration:** `digest.render()` drops any row whose `external_id` is in the log (both new and carried-forward, main and stretch queues).
 - **CLI:**
   ```sh
-  job-finder applied add --external-id 8030599 --company Datadog --title "Senior PM - Agent Integrations" [--url …] [--date YYYY-MM-DD] [--source …]
-  job-finder applied list [--company datadog]
-  job-finder applied check 8030599        # or a full posting/apply URL → "APPLIED" / "not applied"
-  job-finder applied remove --external-id 8596193002   # drop a role you decided not to submit
+  job-finder applied add --external-id 1234567 --company "Example Co" --title "Senior Product Manager" [--url …] [--date YYYY-MM-DD] [--source …]
+  job-finder applied list [--company exampleco]
+  job-finder applied check 1234567        # or a full posting/apply URL → "APPLIED" / "not applied"
+  job-finder applied remove --external-id 1234567   # drop a role you decided not to submit
   ```
   `mark-applied <external_id>` also writes to this log automatically (pulling company/title/url from the DB row). For ad-hoc roles with no DB row, use `applied add`.
 
-**Agent trigger:** when James applies to (or has you prep+fill) any role — especially ad-hoc ones pasted directly — record it with `applied add`. When he asks "have we applied to X?", answer with `applied check`.
+**Agent trigger:** when the user applies to (or has you prep+fill) any role — especially ad-hoc ones pasted directly — record it with `applied add`. When they ask "have we applied to X?", answer with `applied check`.
 
 ## Reviewer rubric
 

@@ -56,13 +56,13 @@ TEXT_FIELDS: list[tuple[str, str]] = [
 #
 # Candidates are ordered most-specific first. Short answers like "no" are last
 # resorts because forms that phrase their options as sentences make them
-# ambiguous: Agero's sponsorship options are "I do not require sponsorship" and
-# "I require sponsorship now or in the future", and BOTH contain "no" (in "not"
-# and in "now"). A bare "no" there once selected the wrong one, which would have
-# told Agero he needs visa sponsorship.
+# ambiguous: one live form's sponsorship options were "I do not require
+# sponsorship" and "I require sponsorship now or in the future", and BOTH
+# contain "no" (in "not" and in "now"). A bare "no" there once selected the
+# wrong one, which would have claimed the applicant needs visa sponsorship.
 # Options that must never be selected for a field, whatever the match says.
-# The sponsorship veto is the important one. Agero phrases the correct answer as
-# a positive statement, not a negation:
+# The sponsorship veto is the important one. Some forms phrase the correct
+# answer as a positive statement, not a negation:
 #     "I am legally authorized to work in this country for any employer."
 #     "I require sponsorship now or in the future."
 # so none of the negation candidates match, and a bare "no" resolves cleanly and
@@ -104,12 +104,11 @@ def build_combo_fields(profile: dict) -> list[tuple[str, list[str]]]:
     authorized_no_sponsor = (answers.get("work_authorized")
                              and not answers.get("requires_sponsorship", True))
     if authorized_no_sponsor:
-        # Order is load-bearing. sponsor BEFORE authorization: Smartsheet's
+        # Order is load-bearing. sponsor BEFORE authorization: a live form's
         # "Do you ... require immigration sponsorship for work authorization?"
         # contains both words, and matching the authorization row first
         # committed its "yes" candidate — the one answer that must never land
-        # on a sponsorship question (caught in the 2026-07-30 post-fill
-        # audit). A sponsorship label that mentions authorization is still a
+        # on a sponsorship question (caught in a post-fill audit). A sponsorship label that mentions authorization is still a
         # sponsorship question; a plain authorization question never says
         # "sponsor". Then authorization before country, whose label contains
         # the word "country".
@@ -131,8 +130,8 @@ def build_combo_fields(profile: dict) -> list[tuple[str, list[str]]]:
             combos.append((pattern, list(value) if isinstance(value, list) else [value]))
     # transgender before gender: "I identify as transgender" contains the
     # substring "gender", and the gender row once tried "Male" against its
-    # Yes/No options (Smartsheet 2026-07-30 — fail-closed left it blank, but
-    # only by luck of the option texts).
+    # Yes/No options on a live form (fail-closed left it blank, but only by
+    # luck of the option texts).
     for pattern, key in ((r"transgender", "transgender"),
                          (r"(?<!trans)gender", "gender"), (r"hispanic", "hispanic"),
                          (r"race", "race"), (r"veteran", "veteran"),
@@ -278,11 +277,11 @@ def match_option(texts: list[str], want: str) -> int | None:
     Tiered so a precise match always beats a loose one: exact, then whole-word,
     then substring. Ambiguity at the winning tier returns None on purpose.
 
-    Failing closed matters more than filling the field. Agero's sponsorship
-    options are "I do not require sponsorship" and "I require sponsorship now or
-    in the future"; a substring search for "no" matches both (via "not" and
-    "now"), and the old code took whichever came first in the DOM. It picked the
-    wrong one. A blank field is recoverable at review time; a submitted
+    Failing closed matters more than filling the field. One live form's
+    sponsorship options were "I do not require sponsorship" and "I require
+    sponsorship now or in the future"; a substring search for "no" matches both
+    (via "not" and "now"), and the old code took whichever came first in the
+    DOM. It picked the wrong one. A blank field is recoverable at review time; a submitted
     application claiming the applicant needs visa sponsorship is not.
     """
     w = want.lower().strip()
@@ -459,7 +458,7 @@ def _try_upload(el, path: Path, what: str, report: dict, *, how: str = "",
                 root=None) -> bool:
     """Attach one file and VERIFY it stuck. Never reports an upload it can't see.
 
-    Two distinct failures, both observed on 2026-07-27:
+    Two distinct failures, both observed live:
 
     A non-actionable file input (a hidden drag-drop target, or a cover-letter
     slot the company disabled) raises a timeout. Letting that propagate cost
@@ -492,8 +491,8 @@ def _upload_via_chooser(page, root, label_res: list[str], path: Path, what: str,
     input but handle the browser's own file-chooser event, so this reaches the
     ones the direct path cannot.
 
-    Tries each label pattern in order — Smartsheet's cover-letter widget has
-    no element whose text says "cover letter" (that's a section header); the
+    Tries each label pattern in order — some cover-letter widgets have no
+    element whose text says "cover letter" (that's a section header); the
     clickable button just says "Attach". Success is only reported when the
     filename renders on the form, same as every other upload path.
     """
@@ -658,10 +657,10 @@ def fill_one(context, url: str, folder: Path, city: str, *,
 
     root = find_form_root(page)
     if form_inventory.control_count(root) == 0:
-        # Company-wrapped boards can still be hydrating. Formlabs redirects to
-        # careers.formlabs.com and loads a YouTube embed and reCAPTCHA alongside
-        # the Greenhouse iframe; under a five-tab batch it lost the race and the
-        # whole application filled zero fields. Give the slow case a second look
+        # Company-wrapped boards can still be hydrating. One careers site
+        # loaded a video embed and reCAPTCHA alongside the Greenhouse iframe;
+        # under a multi-tab batch it lost the race and the whole application
+        # filled zero fields. Give the slow case a second look
         # before declaring the form empty.
         page.wait_for_timeout(5000)
         root = form_inventory.find_form_root(page, settle_ms=20000)

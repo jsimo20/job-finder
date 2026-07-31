@@ -3,7 +3,7 @@
 Separate from the pipeline DB on purpose. `data/jobs.db` is rebuilt every run,
 so it can't hold durable state; this log is an append-only JSONL file that the
 pipeline never touches. Each line is one outreach record. Not every contact is
-tied to a role application (James often reaches out for an internal referral),
+tied to a role application (outreach is often for an internal referral),
 so this is deliberately decoupled from the postings table and the digest.
 """
 from __future__ import annotations

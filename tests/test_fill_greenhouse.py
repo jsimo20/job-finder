@@ -12,38 +12,38 @@ pytest.importorskip("playwright", reason="fill_greenhouse needs the [apply] extr
 from job_finder import fill_greenhouse as fg  # noqa: E402
 
 
-# The two options Agero's sponsorship dropdown actually offers. Both contain
+# The two options a live form's sponsorship dropdown actually offers. Both contain
 # "no" as a substring — in "not" and in "now" — which is what made the old
-# first-substring-wins matcher answer that James requires visa sponsorship.
-AGERO_SPONSORSHIP = [
+# first-substring-wins matcher answer that the applicant requires visa sponsorship.
+SENTENCE_SPONSOR_OPTIONS = [
     "i require sponsorship now or in the future.",
     "i do not require sponsorship.",
 ]
 
 
-# The options Agero's sponsorship dropdown ACTUALLY offers, read out of the
+# The options a live form's sponsorship dropdown ACTUALLY offers, read out of the
 # captured audit manifest. Note there is no "I do not require sponsorship"
 # option at all: the correct answer is phrased as a positive authorization
 # statement, which is why every negation candidate missed and a bare "no"
 # resolved cleanly and uniquely to the wrong option through "now".
-AGERO_REAL = [
+POSITIVE_PHRASED_OPTIONS = [
     "i am legally authorized to work in this country for any employer.",
     "i require sponsorship now or in the future.",
 ]
 
 
-def test_bare_no_matches_the_wrong_agero_option_uniquely():
+def test_bare_no_matches_the_wrong_liveform_option_uniquely():
     # Documents WHY the ambiguity guard alone was not enough: this is a clean,
     # unambiguous match onto the answer that must never be given.
-    assert fg.match_option(AGERO_REAL, "no") == 1
+    assert fg.match_option(POSITIVE_PHRASED_OPTIONS, "no") == 1
 
 
-def test_sponsorship_veto_covers_the_wrong_agero_option():
+def test_sponsorship_veto_covers_the_wrong_liveform_option():
     veto = fg.veto_for("Will you now or in the future require sponsorship for employment VISA status")
     assert veto is not None
     import re as _re
-    assert _re.search(veto, AGERO_REAL[1], _re.I), "must veto the requires-sponsorship option"
-    assert not _re.search(veto, AGERO_REAL[0], _re.I), "must not veto the authorized option"
+    assert _re.search(veto, POSITIVE_PHRASED_OPTIONS[1], _re.I), "must veto the requires-sponsorship option"
+    assert not _re.search(veto, POSITIVE_PHRASED_OPTIONS[0], _re.I), "must not veto the authorized option"
 
 
 def test_sponsorship_veto_allows_a_plain_negation():
@@ -52,23 +52,23 @@ def test_sponsorship_veto_allows_a_plain_negation():
     assert not _re.search(veto, "i do not require sponsorship.", _re.I)
 
 
-def test_authorized_candidate_resolves_the_real_agero_options():
+def test_authorized_candidate_resolves_the_real_liveform_options():
     cands = next(c for pat, c in fg.COMBO_FIELDS if pat == r"sponsor")
-    assert fg.match_option(AGERO_REAL, cands[0]) == 0
+    assert fg.match_option(POSITIVE_PHRASED_OPTIONS, cands[0]) == 0
 
 
-def test_bare_no_is_ambiguous_against_agero_sponsorship():
+def test_bare_no_is_ambiguous_against_liveform_sponsorship():
     # Must refuse rather than guess: picking wrong here is unrecoverable.
-    assert fg.match_option(AGERO_SPONSORSHIP, "no") is None
+    assert fg.match_option(SENTENCE_SPONSOR_OPTIONS, "no") is None
 
 
-def test_specific_candidate_resolves_agero_sponsorship():
-    idx = fg.match_option(AGERO_SPONSORSHIP, "do not require sponsorship")
+def test_specific_candidate_resolves_liveform_sponsorship():
+    idx = fg.match_option(SENTENCE_SPONSOR_OPTIONS, "do not require sponsorship")
     assert idx == 1
 
 
 def test_sponsorship_candidates_are_ordered_specific_first():
-    # Ordering is load-bearing. "no" must stay last: on Agero's real options it
+    # Ordering is load-bearing. "no" must stay last: on one live form's options it
     # matches uniquely and wrongly, so anything specific has to be tried first.
     cands = next(c for pat, c in fg.COMBO_FIELDS if pat == r"sponsor")
     assert cands[0] == "legally authorized to work"
@@ -94,7 +94,7 @@ def test_no_match_returns_none():
 
 
 @pytest.mark.parametrize("label", [
-    "If Referred by an Agero Employee, please indicate their first and last name.",
+    "If Referred by an a live form Employee, please indicate their first and last name.",
     "Emergency contact last name",
     "Referred by (first and last name)",
     "Your manager's name",

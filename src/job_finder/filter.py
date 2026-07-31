@@ -84,7 +84,7 @@ NON_US_REMOTE_RE = re.compile(
     r"japan|philippines|vietnam|singapore|hong\s*kong|israel|india|"
     r"brazil|mexico|argentina|colombia|chile|costa\s*rica|"
     r"australia|new\s*zealand"
-    r")[-,\s]+remote"   # dash separator: "Canada - Remote" (Cardata)
+    r")[-,\s]+remote"   # dash separator: "Canada - Remote"
     r")\b",
     re.IGNORECASE,
 )

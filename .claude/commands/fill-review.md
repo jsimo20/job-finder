@@ -77,7 +77,7 @@ the filler actually holds these answers.
   user restating the answer — the veto table exists because this is the one
   field where a wrong commit is unrecoverable.
 - Multi-step wizard forms (Phenom/Circle) are out of eval scope by the
-  user's decision (2026-07-31): grade what the manifest shows, don't chase
+  user's decision: grade what the manifest shows, don't chase
   the unreached steps.
 - Code fixes go through a PR like everything else; profile/standard-answer
   edits are local files, no PR needed.

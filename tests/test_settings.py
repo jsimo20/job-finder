@@ -58,7 +58,7 @@ def test_combo_fields_omit_authorization_when_answers_missing():
     assert r"authori[sz]" not in patterns
 
 
-SMARTSHEET_LABEL = ("Do you now or will you in the future require immigration "
+SPONSOR_AUTH_LABEL = ("Do you now or will you in the future require immigration "
                     "sponsorship for work authorization?")
 
 
@@ -71,11 +71,11 @@ def _first_matching(combos, label):
 
 
 def test_sponsorship_label_mentioning_authorization_hits_sponsor_row_first():
-    """Regression: Smartsheet 2026-07-30. The label contains both 'sponsorship'
+    """Regression from a live form. The label contains both 'sponsorship'
     and 'authorization'; matching the authorization row first committed its
-    'yes' candidate, answering that James DOES need sponsorship."""
+    'yes' candidate, answering that the applicant DOES need sponsorship."""
     profile = {"answers": {"work_authorized": True, "requires_sponsorship": False}}
-    pattern, candidates = _first_matching(build_combo_fields(profile), SMARTSHEET_LABEL)
+    pattern, candidates = _first_matching(build_combo_fields(profile), SPONSOR_AUTH_LABEL)
     assert pattern == r"sponsor"
     assert "yes" not in [c.lower() for c in candidates]
     # and against a plain Yes/No dropdown, the row resolves to No
@@ -86,7 +86,7 @@ def test_sponsorship_label_mentioning_authorization_hits_sponsor_row_first():
 def test_sponsor_veto_blocks_bare_yes_option():
     import re
     from job_finder.fill_greenhouse import veto_for
-    veto = veto_for(SMARTSHEET_LABEL)
+    veto = veto_for(SPONSOR_AUTH_LABEL)
     assert veto is not None
     assert re.search(veto, "Yes", re.I)
     assert re.search(veto, " yes. ", re.I)
@@ -138,7 +138,7 @@ def test_education_values_accept_ordered_fallback_lists():
 
 
 def test_transgender_question_never_routes_to_the_gender_row():
-    """Regression: Smartsheet 2026-07-30. 'I identify as transgender:' contains
+    """Regression from a live form. 'I identify as transgender:' contains
     the substring 'gender' and used to hit the gender row's 'Male' candidate."""
     profile = {"eeo": {"gender": "Male", "transgender": "No"}}
     combos = build_combo_fields(profile)
@@ -159,10 +159,10 @@ def test_veteran_fallback_list_covers_both_phrasings():
     profile = {"eeo": {"veteran": ["not a protected", "not a veteran"]}}
     _, candidates = _first_matching(build_combo_fields(profile), "My veteran status is:")
     greenhouse = ["i am not a protected veteran", "i identify as one or more", "i don't wish to answer"]
-    smartsheet = ["yes, i am a veteran", "no, i am not a veteran", "i don't wish to answer"]
+    vendor_b = ["yes, i am a veteran", "no, i am not a veteran", "i don't wish to answer"]
     assert match_option(greenhouse, candidates[0]) == 0
-    assert match_option(smartsheet, candidates[0]) is None
-    assert match_option(smartsheet, candidates[1]) == 1
+    assert match_option(vendor_b, candidates[0]) is None
+    assert match_option(vendor_b, candidates[1]) == 1
 
 
 def test_custom_text_rules_parse_and_filter():

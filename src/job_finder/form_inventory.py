@@ -12,7 +12,7 @@ imports it directly, and the `application-autofiller` subagent runs
 `INVENTORY_JS` through `browser_evaluate` for ATSes the deterministic script
 does not cover.
 
-Audits carry James's contact details in the `value` column, so
+Audits carry the user's contact details in the `value` column, so
 `data/fill_audits/` is gitignored. Promoting a manifest into `tests/fixtures/`
 requires `redact()` first — Layer 1 asserts on structure, never on contents.
 
@@ -340,7 +340,7 @@ def audit_path(slug: str, phase: str, *, when: date | None = None,
     """data/fill_audits/<date>_<slug>.<phase>.json
 
     The slug carries company *and* role because two reqs at one company collide
-    otherwise — the way both Datadog resumes once rendered to one filename.
+    otherwise — the way two same-company resumes once rendered to one filename.
     """
     if phase not in ("pre", "post"):
         raise ValueError("phase must be 'pre' or 'post'")

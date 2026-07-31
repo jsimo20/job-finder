@@ -1,4 +1,4 @@
-"""Durable applied-log: the roles James has applied to, across pipeline runs.
+"""Durable applied-log: the roles the user has applied to, across pipeline runs.
 
 `data/jobs.db` is rebuilt from scratch every pipeline run, so its `applied_at`
 flag can never persist — a role you applied to last week reappears in the next
@@ -101,9 +101,8 @@ def _norm_title(title: str | None) -> str | None:
 def applied_company_titles(*, path: Path = DEFAULT_APPLIED_PATH) -> set[tuple[str, str]]:
     """(company, normalized title) pairs for repost suppression.
 
-    A reposted req gets a fresh external_id (observed: ZoomInfo AI Data
-    Foundation, 8568079002 reposted as 8634904002), so the id-keyed check
-    alone lets an applied role resurface in the digest. Same company + same
+    A reposted req gets a fresh external_id (observed live), so the id-keyed
+    check alone lets an applied role resurface in the digest. Same company + same
     title is treated as the same application.
     """
     pairs = set()

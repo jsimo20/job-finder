@@ -6,21 +6,21 @@ from job_finder import applied, cli
 
 def test_record_and_list(tmp_path):
     p = tmp_path / "applied.jsonl"
-    rec = applied.record_applied("8030599", company="Datadog", title="Senior PM - Agent Integrations",
-                                 url="https://careers.datadoghq.com/detail/8030599/?gh_jid=8030599",
+    rec = applied.record_applied("1234567", company="Example Co", title="Senior PM - Integrations",
+                                 url="https://careers.example.com/detail/1234567/?gh_jid=1234567",
                                  applied_on="2026-07-08", path=p)
     assert rec is not None
     rows = applied.list_applied(path=p)
     assert len(rows) == 1
-    assert rows[0]["external_id"] == "8030599"
-    assert rows[0]["company"] == "Datadog"
+    assert rows[0]["external_id"] == "1234567"
+    assert rows[0]["company"] == "Example Co"
     assert rows[0]["applied_at"] == "2026-07-08"
 
 
 def test_dedupe_by_external_id(tmp_path):
     p = tmp_path / "applied.jsonl"
-    first = applied.record_applied("abc-123", company="WHOOP", title="Senior PM, Growth", path=p)
-    second = applied.record_applied("abc-123", company="WHOOP", title="Senior PM, Growth (dupe)", path=p)
+    first = applied.record_applied("abc-123", company="Other Corp", title="Senior PM, Growth", path=p)
+    second = applied.record_applied("abc-123", company="Other Corp", title="Senior PM, Growth (dupe)", path=p)
     assert first is not None
     assert second is None  # already logged
     assert len(applied.list_applied(path=p)) == 1
@@ -28,17 +28,17 @@ def test_dedupe_by_external_id(tmp_path):
 
 def test_is_applied_by_external_id(tmp_path):
     p = tmp_path / "applied.jsonl"
-    applied.record_applied("5252943008", company="Starburst", title="Senior PM - IAM", path=p)
-    assert applied.is_applied(external_id="5252943008", path=p) is True
+    applied.record_applied("5250000000", company="Example Co", title="Senior PM - IAM", path=p)
+    assert applied.is_applied(external_id="5250000000", path=p) is True
     assert applied.is_applied(external_id="nope", path=p) is False
 
 
 def test_is_applied_by_url_normalization(tmp_path):
     p = tmp_path / "applied.jsonl"
-    applied.record_applied("x1", company="Assembled", title="Senior PM",
-                           url="https://jobs.ashbyhq.com/assembledhq/526d0177", path=p)
+    applied.record_applied("x1", company="Example Co", title="Senior PM",
+                           url="https://jobs.ashbyhq.com/exampleco/526d0177", path=p)
     # Same role, different scheme + an /application suffix + tracking query — still matches.
-    assert applied.is_applied(url="http://jobs.ashbyhq.com/assembledhq/526d0177/application?lever-source=x", path=p) is True
+    assert applied.is_applied(url="http://jobs.ashbyhq.com/exampleco/526d0177/application?lever-source=x", path=p) is True
     assert applied.is_applied(url="https://jobs.ashbyhq.com/other/999", path=p) is False
 
 
@@ -51,10 +51,10 @@ def test_applied_external_ids_set(tmp_path):
 
 def test_list_filter_by_company(tmp_path):
     p = tmp_path / "applied.jsonl"
-    applied.record_applied("a", company="Datadog", title="T1", path=p)
-    applied.record_applied("b", company="WHOOP", title="T2", path=p)
-    rows = applied.list_applied(company="datadog", path=p)
-    assert len(rows) == 1 and rows[0]["company"] == "Datadog"
+    applied.record_applied("a", company="Example Co", title="T1", path=p)
+    applied.record_applied("b", company="Other Corp", title="T2", path=p)
+    rows = applied.list_applied(company="example", path=p)
+    assert len(rows) == 1 and rows[0]["company"] == "Example Co"
 
 
 def test_missing_required_fields(tmp_path):
@@ -102,11 +102,11 @@ def test_empty_log(tmp_path):
 
 def test_applied_company_titles_normalizes_punctuation(tmp_path):
     path = tmp_path / "applied.jsonl"
-    applied.record_applied("8568079002", company="ZoomInfo",
+    applied.record_applied("9000001", company="Example Co",
                            title="Senior Product Manager - AI Data Foundation",
                            path=path)
     pairs = applied.applied_company_titles(path=path)
-    assert ("zoominfo", "senior product manager ai data foundation") in pairs
+    assert ("example co", "senior product manager ai data foundation") in pairs
     # the repost's comma-phrased title normalizes to the same pair
     assert applied._norm_title("Senior Product Manager, AI Data Foundation") == \
         "senior product manager ai data foundation"
