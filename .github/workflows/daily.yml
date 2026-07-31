@@ -2,10 +2,10 @@ name: pm-digest
 
 on:
   schedule:
-    # 13:00 UTC every 3rd day of the month (1, 4, 7, 10, ...).
-    # The day-of-month counter resets each month, so a calendar rollover can
-    # produce a 1- or 2-day gap — acceptable for a low-frequency digest.
-    - cron: "0 13 */3 * *"
+    # 13:00 UTC every Monday. Weekly cadence to keep Anthropic token spend low;
+    # postings older than STALE_DAYS are dropped anyway, so a 7-day gap loses
+    # nothing except a few days of lead time on brand-new postings.
+    - cron: "0 13 * * 1"
   workflow_dispatch:
 
 permissions:
