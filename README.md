@@ -1,87 +1,76 @@
 # job-finder
 
-Cron-driven pipeline that tracks job postings at a curated set of companies,
-scores them against a configurable profile, and emails a ranked Markdown
-digest. A second, local-only half tailors application materials and autofills
-forms — always stopping short of Submit.
-
-Everything that defines "your search" is configuration, not code — target
-titles and industry, metros, weights, identity:
+A job-search system in three parts: it **finds** roles worth applying to,
+**preps and fills** the applications (stopping short of Submit, always), and
+**grades its own fills** so coverage improves with every batch. Everything
+that defines "your search" — titles, industry, metros, identity — is
+configuration, not code:
 
 - **`config/pipeline.toml`** (committed) — target job titles and seniority
-  band, metros, commute tiers, domain/stage weights, comp floor. The shipped
+  band, metros, commute tiers, domain/stage weights, comp floor. Shipped
   defaults target senior product management roles in New England; edit every
   section for your own market.
-- **`profile/`** (gitignored) — who you are: identity, EEO answers, master
-  resume, writing voice. Copied from `profile.example/`.
+- **`profile/`** (gitignored) — who you are: identity, EEO answers, stock
+  screening answers, master resume, writing voice. Copied from
+  `profile.example/`; `python -m job_finder.profile_check` verifies it's
+  filled in.
 
-New user? Follow **[SETUP.md](SETUP.md)** top to bottom — it's written so you
-can hand it to a Claude Code session and let it drive.
+New user? Follow **[SETUP.md](SETUP.md)** top to bottom — written so you can
+hand it to a Claude Code session and let it drive.
 
-## How the pipeline works
+## Find — the weekly digest
 
-1. **Collect** — hit each seed company's public ATS endpoint (Greenhouse,
-   Lever, Ashby) and normalize postings.
-2. **Stage 1 hard filters** — discard wrong title, wrong location, wrong
-   seniority (title patterns and geography both from `config/pipeline.toml`).
-3. **Extract** — one Claude Haiku call per surviving JD returns structured
-   JSON (YOE, comp range, domain tags, company stage, onsite days).
-4. **Stage 3 hard filters** — comp floor, YOE routing to main vs stretch.
-5. **Score** — deterministic scorer sums the configured domain + stage + comp
-   weights.
-6. **Digest** — render Markdown to `digests/YYYY-MM-DD.md`, sorted by score,
-   with commute warnings for distant-but-heavy-onsite roles.
+GitHub Actions (Mondays 13:00 UTC) collects postings from each seed company's
+public ATS endpoint (Greenhouse, Lever, Ashby), hard-filters on title,
+seniority, and location, extracts structured signals with one Claude Haiku
+call per surviving JD (YOE, comp, domains, onsite days), scores
+deterministically, and emails a ranked Markdown digest with commute warnings.
 
-State lives in `data/jobs.db` (SQLite, gitignored, rebuilt every run).
-Roles you've applied to are suppressed via the committed `data/applied.jsonl`
-log. Stale postings (older than `stale_days`) are dropped as likely
-evergreen reqs.
+The SQLite DB is rebuilt every run; durable state lives in committed JSONL
+ledgers instead: `data/applied.jsonl` suppresses roles you've applied to
+(including reposts, matched by company + title) and `data/seen.jsonl` drives
+the digest's new-vs-carried-forward split. The `manage-seeds` Claude skill
+edits the company universe from plain English.
+
+## Apply — materials and autofill (local-only)
+
+- `/job-apply` — pick a role (or feed it ad-hoc URLs), review a tailored
+  resume + cover-letter draft, fact-checked against your master resume by a
+  separate agent so nothing gets overstated, then rendered to a per-job PDF
+  folder.
+- `python -m job_finder.fill_greenhouse --url … --folder …` — deterministic
+  Greenhouse filler, zero LLM tokens: contact, work authorization, EEO,
+  education, uploads, and your stored screening answers, in one browser with
+  one tab per application. `/fill-application` is the agent fallback for
+  other ATSes.
+- Hard rules, both paths: never clicks Submit, never answers salary or legal
+  questions, refuses ambiguous dropdown matches, and won't run at all until
+  a real `profile/` exists.
+- `job-finder applied add` / `outreach add` record what you submitted and who
+  you contacted, so nothing resurfaces and nothing is forgotten.
+
+## Improve — the eval loop
+
+Every fill captures before/after field inventories to `data/fill_audits/`.
+Each batch ends with a letter-graded scorecard
+(`python -m job_finder.fill_grader --date …`, zero tokens): what filled, what
+missed, what had no configured answer. `/fill-review` turns that into
+permanent improvements — wrong answers become code fixes with regression
+tests, unanswered questions get asked once and stored in your profile, so
+the next batch starts where the last one left off.
 
 ## Run
 
 ```bash
 python -m job_finder.cli run             # full pipeline (spends API tokens)
 python -m job_finder.cli review          # interactive picker: applied/dismissed
-job-finder applied add --external-id …   # record an ad-hoc application
-job-finder outreach add --name … --company …   # log a LinkedIn contact
+python -m job_finder.profile_check       # is my profile complete?
+python -m job_finder.fill_grader --date <YYYY-MM-DD> --suggest
+pytest                                    # no network, keys, or profile needed
 ```
 
-GitHub Actions runs the pipeline weekly (Mondays 13:00 UTC) and emails the
-digest; see SETUP.md §6 for the three required secrets.
-
-## Apply workflow (Claude Code, local-only)
-
-- `/job-apply` — conversational loop: pick a role, review a tailored
-  RESUME_DATA diff + cover-letter draft (fact-checked against your
-  `profile/resume_master.md`), render a per-job folder of PDFs.
-- `/fill-application <url> [folder]` — agent-driven Playwright autofill for
-  any ATS. Stops before Submit, always.
-- **Greenhouse forms: prefer the deterministic script** — zero LLM tokens:
-
-  ```bash
-  python -m job_finder.fill_greenhouse --url <url> --folder <per-app folder>
-  ```
-
-  Identity, work-authorization stance, and EEO answers come from
-  `profile/profile.toml`; it refuses to run until that file exists. Salary
-  fields are always left blank. Every fill captures a before/after field
-  inventory to `data/fill_audits/` (gitignored).
-
-## Editing the company universe
-
-- **Manually**: edit `seeds/companies.json` (`name`, `ats_provider`,
-  `ats_slug`).
-- **Via Claude**: the [manage-seeds skill](.claude/skills/manage-seeds/SKILL.md)
-  handles add / remove / probe / audit from plain English.
-
-## Tests
-
-```bash
-pytest
-```
-
-No network, no API keys, no profile required — the suite must pass on a
-fresh clone.
+Secrets (GitHub Actions): `ANTHROPIC_API_KEY`, `GMAIL_USER`,
+`GMAIL_APP_PASSWORD` — see SETUP.md §6.
 
 ## Handing this repo to someone else
 
@@ -93,4 +82,4 @@ python scripts/export_clean_copy.py <target_dir>
 ```
 
 which copies tracked files minus personal data and inits a fresh repo. The
-recipient then follows SETUP.md.
+recipient follows SETUP.md.
