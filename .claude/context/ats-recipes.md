@@ -98,10 +98,71 @@ Total target: 2–4 snapshots for a standard Ashby form.
 
 ---
 
+## Phenom People (careers.circle.com and similar)
+
+**URL pattern:** Posting at `https://careers.<company>.com/us/en/job/<external_id>/<slug>`.
+Click "Apply Now" or navigate directly to
+`https://careers.<company>.com/us/en/apply?jobSeqNo=<external_id>&step=1&stepname=personalInformation`
+(no click-through needed once you know the pattern). No account/password wall
+observed on Circle's flow.
+
+**Multi-step wizard, gated.** Steps run `personalInformation` (1) →
+`workAndEducation` (2) → `jobSpecificQuestions` (3) → voluntary disclosures (4)
+→ self identify (5, EEO lives here) → review (6). The toolbar tabs at the top
+look clickable at any time but **do not actually let you jump ahead** — clicking
+"Next" (or a later tab) re-validates the current step and blocks with a
+"Please enter all required fields" alert if anything required is empty. This
+means a single unanswerable required field on an early step **blocks reaching
+EEO entirely** — plan the report around whichever step you got stuck on.
+
+**Resume upload auto-parses into Work Experience and Education on step 2.**
+Uploading the resume on step 1 triggers a "You have Uploaded Resume
+Successfully" alert (dismiss via `browser_handle_dialog`), then step 2 arrives
+pre-populated with parsed work-experience entries (job title, company, dates,
+full role description) that matched the resume text accurately in testing.
+**Education did not parse reliably** — school name and degree came back empty
+and blocked advancement even though the resume PDF had a clean "EDUCATION"
+section; re-enter them manually. School name is a type-ahead combobox: type 3+
+characters, wait for the listbox to populate (options render server-side, not
+instantly), then click the match — selecting from the native `<select>` API
+doesn't work here, it needs a genuine click on the `option` role element.
+
+**Cover letter has no dedicated field.** It goes in the "Additional
+attachments" uploader on step 2 (same widget also shows the already-uploaded
+resume in a file list) — accepts DOC/DOCX/PDF/HTML/TXT, 5MB max. Verify both
+files by their rendered filename in that list, not by re-checking the resume
+upload area from step 1.
+
+**"How did you hear about us?" reveals a conditional required "Source" field**
+when you pick certain answers (e.g., picking "Career Site" reveals a "Source"
+dropdown with options like "Circle Careers Site" / "Networking Event" /
+"Career Fair or Recruiting Event"). Re-snapshot after answering to catch it,
+same pattern as Greenhouse's conditional Race field.
+
+**A CSAT popup ("How would you rate your experience?") can appear over the
+form** mid-fill; it doesn't block field access but close it via its own X
+button before continuing, since it visually overlaps the top of the form.
+
+**Legal/compliance questions on the application-questions step are a common
+blocker.** Circle's included "Have you entered into an agreement with your
+employer or a prior employer that impacts your ability to do business in any
+way?" — a restrictive-covenant question with no safe default. Leave it blank
+per the never-guess-legal-questions rule and report it as the reason the
+wizard couldn't advance past that step; don't try alternate phrasings of "No"
+to force it through.
+
+**Snapshot strategy:** budget higher than Ashby, lower than a full Greenhouse
+react-select gauntlet — figure ~20-25 for a 3-step form with one resume-parse
+review and one blocked step. Native `<select>` elements dominate (fast,
+`browser_select_option` works directly by ref), the school-name combobox is
+the only true type-ahead needing a targeted snapshot + click.
+
+---
+
 ## Adding a new ATS
 
 When you encounter an ATS not listed here, proceed with the standard snapshot-and-discover flow. After the run completes, note the ATS name, URL pattern, field list, and any gotchas in your report — the main conversation will update this file.
 
 ---
 
-*Last verified: 2026-07-06 (Greenhouse: Starburst jobs/5252943008, Datadog jobs/7974481, jobs/7763117; Ashby: Maven AGI bbcd2fd7, Cyvl 2c32d055)*
+*Last verified: 2026-07-30 (Greenhouse: Starburst jobs/5252943008, Datadog jobs/7974481, jobs/7763117; Ashby: Maven AGI bbcd2fd7, Cyvl 2c32d055; Phenom People: Circle JR100882)*
