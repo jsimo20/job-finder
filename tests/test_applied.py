@@ -98,3 +98,20 @@ def test_empty_log(tmp_path):
     assert applied.applied_external_ids(path=p) == set()
     assert applied.is_applied(external_id="x", path=p) is False
     assert applied.format_applied([]) == "No applications logged yet."
+
+
+def test_applied_company_titles_normalizes_punctuation(tmp_path):
+    path = tmp_path / "applied.jsonl"
+    applied.record_applied("8568079002", company="ZoomInfo",
+                           title="Senior Product Manager - AI Data Foundation",
+                           path=path)
+    pairs = applied.applied_company_titles(path=path)
+    assert ("zoominfo", "senior product manager ai data foundation") in pairs
+    # the repost's comma-phrased title normalizes to the same pair
+    assert applied._norm_title("Senior Product Manager, AI Data Foundation") == \
+        "senior product manager ai data foundation"
+
+
+def test_norm_title_handles_empty():
+    assert applied._norm_title(None) is None
+    assert applied._norm_title("  --  ") is None

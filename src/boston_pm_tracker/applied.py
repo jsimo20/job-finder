@@ -14,6 +14,7 @@ the same key `mark-applied` and the postings table use.
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 from pathlib import Path
 from typing import Any, Iterable
@@ -87,6 +88,31 @@ def list_applied(*, company: str | None = None, path: Path = DEFAULT_APPLIED_PAT
 def applied_external_ids(*, path: Path = DEFAULT_APPLIED_PATH) -> set[str]:
     """The set of applied external_ids — used by the digest to suppress rows."""
     return {r["external_id"] for r in list_applied(path=path) if r.get("external_id")}
+
+
+def _norm_title(title: str | None) -> str | None:
+    """Lowercase, punctuation-free, whitespace-collapsed — so 'Senior PM -
+    AI Data Foundation' and 'Senior PM, AI Data Foundation' compare equal."""
+    if not title:
+        return None
+    return re.sub(r"[^a-z0-9]+", " ", title.lower()).strip() or None
+
+
+def applied_company_titles(*, path: Path = DEFAULT_APPLIED_PATH) -> set[tuple[str, str]]:
+    """(company, normalized title) pairs for repost suppression.
+
+    A reposted req gets a fresh external_id (observed: ZoomInfo AI Data
+    Foundation, 8568079002 reposted as 8634904002), so the id-keyed check
+    alone lets an applied role resurface in the digest. Same company + same
+    title is treated as the same application.
+    """
+    pairs = set()
+    for r in list_applied(path=path):
+        company = (r.get("company") or "").strip().lower()
+        title = _norm_title(r.get("title"))
+        if company and title:
+            pairs.add((company, title))
+    return pairs
 
 
 def is_applied(

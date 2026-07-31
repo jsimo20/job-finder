@@ -113,11 +113,18 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
     target = target_date or datetime.now(timezone.utc).date().isoformat()
     # Durable suppression: the DB's applied_at is wiped every rebuild, so also
     # drop anything recorded in the committed applied-log (covers ad-hoc roles
-    # the DB never saw). Keyed by external_id.
+    # the DB never saw). Keyed by external_id, plus company+title so a
+    # reposted req (fresh external_id, same role) stays suppressed.
     applied_ids = applied.applied_external_ids()
+    applied_pairs = applied.applied_company_titles()
 
     def _drop_applied(rows):
-        return [r for r in rows if r["external_id"] not in applied_ids]
+        return [
+            r for r in rows
+            if r["external_id"] not in applied_ids
+            and ((r["company_name"] or "").strip().lower(),
+                 applied._norm_title(r["title"])) not in applied_pairs
+        ]
 
     with db.connect(db_path) as conn:
         main_rows = _drop_applied(conn.execute(_new_today_sql("main"), (target,)).fetchall())
