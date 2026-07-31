@@ -1,4 +1,4 @@
-"""Collect: fetch each seeded company's ATS feed, normalize, apply Stage 1 filter, upsert into DB."""
+"""Collect: fetch each tracked company's ATS feed, normalize, apply Stage 1 filter, upsert into DB."""
 from __future__ import annotations
 
 import json
@@ -79,7 +79,6 @@ def run(state_db: Path = state.DEFAULT_STATE_DB, db_path: Path = db.DEFAULT_DB_P
                     title=p.title,
                     location=p.location,
                     workplace_type=p.workplace_type,
-                    level=p.level,
                     url=p.url,
                     jd_text=p.jd_text,
                     posted_at=p.posted_at,

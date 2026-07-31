@@ -4,7 +4,7 @@
       "id": 12345,
       "title": "Senior Product Manager, AI Platform",
       "absolute_url": "https://boards.greenhouse.io/example/jobs/12345",
-      "location": {"name": "Cambridge, MA (Hybrid)"},
+      "location": {"name": "Bigcity, EX (Hybrid)"},
       "first_published": "2026-05-10T12:00:00Z",
       "updated_at": "2026-05-12T08:00:00Z",
       "content": "<p>We are looking for a Senior PM to lead our AI platform.</p><p>5+ years of product management experience required.</p>"
@@ -13,7 +13,7 @@
       "id": 12346,
       "title": "Associate Product Manager",
       "absolute_url": "https://boards.greenhouse.io/example/jobs/12346",
-      "location": {"name": "Boston, MA"},
+      "location": {"name": "Farport, EX"},
       "content": "<p>Junior role.</p>"
     }
   ]

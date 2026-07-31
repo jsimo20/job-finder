@@ -94,7 +94,7 @@ def test_no_match_returns_none():
 
 
 @pytest.mark.parametrize("label", [
-    "If Referred by an a live form Employee, please indicate their first and last name.",
+    "If Referred by an Employee, please indicate their first and last name.",
     "Emergency contact last name",
     "Referred by (first and last name)",
     "Your manager's name",

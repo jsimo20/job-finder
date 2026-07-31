@@ -7,13 +7,13 @@ and published date (both unavailable in the board-level brief type).
 from __future__ import annotations
 
 import html
-import re
 import time
-from dataclasses import dataclass
 from typing import Any
 
 import httpx
 from bs4 import BeautifulSoup
+
+from .base import NormalizedPosting
 
 API_URL = "https://jobs.ashbyhq.com/api/non-user-graphql"
 JOB_BASE = "https://jobs.ashbyhq.com"
@@ -34,18 +34,6 @@ _DETAIL_QUERY = (
 )
 
 
-@dataclass
-class NormalizedPosting:
-    external_id: str
-    title: str
-    location: str | None
-    workplace_type: str | None
-    level: str | None
-    url: str
-    jd_text: str | None
-    posted_at: str | None
-
-
 def _strip_html(content: str | None) -> str | None:
     if not content:
         return None
@@ -62,24 +50,6 @@ def _infer_workplace(job: dict[str, Any]) -> str | None:
     return None
 
 
-_LEVEL_RE = re.compile(
-    r"\b(senior|sr\.?|staff|principal|lead|group|head of product)\b",
-    re.IGNORECASE,
-)
-
-
-def _infer_level(title: str) -> str | None:
-    m = _LEVEL_RE.search(title)
-    if not m:
-        return None
-    tok = m.group(1).lower().replace(".", "")
-    if tok in {"sr", "senior"}:
-        return "senior"
-    if tok == "head of product":
-        return "head"
-    return tok
-
-
 def normalize(job: dict[str, Any], slug: str) -> NormalizedPosting:
     title = job["title"].replace(_BOM, "")
     jd_parts: list[str] = []
@@ -94,7 +64,6 @@ def normalize(job: dict[str, Any], slug: str) -> NormalizedPosting:
         title=title,
         location=job.get("locationName"),
         workplace_type=_infer_workplace(job),
-        level=_infer_level(title),
         url=f"{JOB_BASE}/{slug}/{job['id']}",
         jd_text=jd_text,
         posted_at=job.get("publishedDate"),

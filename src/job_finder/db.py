@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from contextlib import contextmanager
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator
 
@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS postings (
   title TEXT NOT NULL,
   location TEXT,
   workplace_type TEXT,
-  level TEXT,
   url TEXT NOT NULL,
   jd_text TEXT,
   posted_at TEXT,
@@ -71,14 +70,6 @@ CREATE TABLE IF NOT EXISTS scores (
   scored_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS daily_log (
-  date TEXT PRIMARY KEY,
-  new_count INTEGER,
-  closed_count INTEGER,
-  changed_count INTEGER,
-  digest_md TEXT
-);
-
 CREATE INDEX IF NOT EXISTS idx_postings_company ON postings(company_id);
 CREATE INDEX IF NOT EXISTS idx_postings_closed ON postings(closed_at);
 """
@@ -86,10 +77,6 @@ CREATE INDEX IF NOT EXISTS idx_postings_closed ON postings(closed_at);
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-
-def today_iso() -> str:
-    return date.today().isoformat()
 
 
 @contextmanager
@@ -108,15 +95,6 @@ def connect(db_path: Path = DEFAULT_DB_PATH) -> Iterator[sqlite3.Connection]:
 def init_db(db_path: Path = DEFAULT_DB_PATH) -> None:
     with connect(db_path) as conn:
         conn.executescript(SCHEMA)
-        # Idempotent column additions for DBs created before these columns existed.
-        _ensure_column(conn, "postings", "applied_at", "TEXT")
-        _ensure_column(conn, "postings", "dismissed_at", "TEXT")
-
-
-def _ensure_column(conn: sqlite3.Connection, table: str, column: str, decl: str) -> None:
-    cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
-    if column not in cols:
-        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
 
 
 def mark_applied(conn: sqlite3.Connection, *, external_id: str) -> int:
@@ -163,7 +141,7 @@ def upsert_company(conn: sqlite3.Connection, *, name: str, ats_provider: str, at
 
 
 def upsert_posting(conn: sqlite3.Connection, *, company_id: int, external_id: str, title: str,
-                   location: str | None, workplace_type: str | None, level: str | None,
+                   location: str | None, workplace_type: str | None,
                    url: str, jd_text: str | None, posted_at: str | None,
                    hard_filter_verdict: str) -> int:
     row = conn.execute(
@@ -172,13 +150,13 @@ def upsert_posting(conn: sqlite3.Connection, *, company_id: int, external_id: st
     ).fetchone()
     if row:
         conn.execute(
-            "UPDATE postings SET title = ?, location = ?, workplace_type = ?, level = ?, url = ?, jd_text = ?, posted_at = COALESCE(?, posted_at), last_seen_at = ?, closed_at = NULL, hard_filter_verdict = ? WHERE id = ?",
-            (title, location, workplace_type, level, url, jd_text, posted_at, now_iso(), hard_filter_verdict, row["id"]),
+            "UPDATE postings SET title = ?, location = ?, workplace_type = ?, url = ?, jd_text = ?, posted_at = COALESCE(?, posted_at), last_seen_at = ?, closed_at = NULL, hard_filter_verdict = ? WHERE id = ?",
+            (title, location, workplace_type, url, jd_text, posted_at, now_iso(), hard_filter_verdict, row["id"]),
         )
         return row["id"]
     cur = conn.execute(
-        "INSERT INTO postings (company_id, external_id, title, location, workplace_type, level, url, jd_text, posted_at, first_seen_at, last_seen_at, hard_filter_verdict) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (company_id, external_id, title, location, workplace_type, level, url, jd_text, posted_at, now_iso(), now_iso(), hard_filter_verdict),
+        "INSERT INTO postings (company_id, external_id, title, location, workplace_type, url, jd_text, posted_at, first_seen_at, last_seen_at, hard_filter_verdict) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (company_id, external_id, title, location, workplace_type, url, jd_text, posted_at, now_iso(), now_iso(), hard_filter_verdict),
     )
     return cur.lastrowid
 

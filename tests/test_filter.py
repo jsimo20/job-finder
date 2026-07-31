@@ -1,7 +1,7 @@
 from job_finder.filter import stage1, stage3
 
 
-def test_stage1_keeps_senior_pm_boston():
+def test_stage1_keeps_senior_pm_far_metro():
     r = stage1(title="Senior Product Manager, Platform", location="Farport, EX", workplace_type="hybrid")
     assert r.keep, r.reason
 
@@ -40,7 +40,7 @@ def test_stage1_rejects_director():
 
 
 def test_stage1_rejects_engineering_manager_with_product():
-    r = stage1(title="Senior Software Engineering Manager, Toast Web Platform",
+    r = stage1(title="Senior Software Engineering Manager, Web Platform",
                location="Farport, EX", workplace_type="hybrid")
     assert not r.keep
     assert "engineering_or_ic_role" in r.reason

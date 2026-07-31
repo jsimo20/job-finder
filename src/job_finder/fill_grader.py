@@ -43,8 +43,7 @@ from typing import Any
 from . import settings
 from .fill_greenhouse import (CITY_PATTERN, NAME_TRAP_PATTERN, SKIP_PATTERN,
                               TEXT_FIELDS, build_combo_fields, veto_for)
-
-AUDITS_DIR = Path(__file__).resolve().parents[2] / "data" / "fill_audits"
+from .form_inventory import DEFAULT_AUDIT_DIR as AUDITS_DIR
 
 # Questions where a blank is the only correct output, whoever asks.
 LEGAL_PATTERN = re.compile(

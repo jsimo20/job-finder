@@ -23,9 +23,9 @@ def fixture_resume_data() -> dict:
         "contact": "555-555-0100",
         "experience": [
             {
-                "company": "CONTOSO",
+                "company": "TEST CORP",
                 "role": "PRINCIPAL PM",
-                "dates": "JUL 2022 – PRESENT",
+                "dates": "JAN 2020 – PRESENT",
                 "bullets": ["Test bullet about something."],
             },
         ],
@@ -49,7 +49,7 @@ def fixture_resume_data() -> dict:
 def fixture_cover_letter() -> dict:
     return {
         "date": "May 17, 2026",
-        "recipient": "Hiring Team\nTest Corp\nBoston, MA",
+        "recipient": "Hiring Team\nTest Corp\nFarport, EX",
         "salutation": "To the Hiring Team,",
         "paragraphs": [
             "First paragraph of the cover letter.",
@@ -66,7 +66,7 @@ def fixture_posting_row() -> dict:
         "external_id": "test-123",
         "title": "Senior Product Manager, Platform",
         "company_name": "Test Corp",
-        "location": "Boston, MA",
+        "location": "Farport, EX",
         "url": "https://example.com/jobs/test-123",
         "total_score": 85,
         "queue": "main",

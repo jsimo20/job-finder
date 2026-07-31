@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import subprocess
 import sys
 import webbrowser
 from datetime import date
@@ -144,7 +145,6 @@ def _render_resume(skill_path: Path, resume_data: dict, output_pdf: Path) -> Non
     script_copy = output_pdf.with_suffix(".py")
     script_copy.write_text(patched, encoding="utf-8")
 
-    import subprocess
     result = subprocess.run(
         [sys.executable, str(script_copy)],
         cwd=script_copy.parent,
@@ -384,8 +384,8 @@ Your job: produce a JSON object with three keys:
 1. resume_data — a Python-style dict matching the RESUME_DATA schema in generate_resume.py:
    keys: name, title, contact, experience (list of {company, role, dates, bullets}),
          skills (list of [category, body] pairs), education, certifications (list)
-   Edit ONLY the order and wording of bullets, the title subtitle, the skill category order,
-   and the fourth clause of the fun-bullet. Keep all factual content traceable to the master.
+   Edit ONLY the order and wording of bullets, the title subtitle, and the skill
+   category order. Keep all factual content traceable to the master.
 
 2. cover_letter — dict with keys: date, recipient, salutation, paragraphs (list of strings),
    closing, title_subtitle. Body should be 3-5 paragraphs, traceable to source material.
@@ -412,7 +412,7 @@ def tailor(posting_row: Mapping[str, Any], *, config: Config | None = None,
     personal_statement = config.personal_statement_md.read_text(encoding="utf-8")
     session_ctx = (
         config.session_context_path.read_text(encoding="utf-8")
-        if config.session_context_path.exists() else "(SESSION_CONTEXT_Jobsearch.md not found)"
+        if config.session_context_path.exists() else "(session context file not found)"
     )
 
     user_prompt = (
@@ -422,7 +422,7 @@ def tailor(posting_row: Mapping[str, Any], *, config: Config | None = None,
         f"```\n{posting_row.get('jd_text') or '(no jd_text in DB — fall back to title + company)'}\n```\n\n"
         f"## Master resume\n\n{resume_master}\n\n"
         f"## Personal statement\n\n{personal_statement}\n\n"
-        f"## Anti-overstatement rules (SESSION_CONTEXT_Jobsearch.md)\n\n{session_ctx}\n"
+        f"## Anti-overstatement rules (session context)\n\n{session_ctx}\n"
     )
 
     client = Anthropic()

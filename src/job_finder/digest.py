@@ -1,4 +1,4 @@
-"""Render the daily Markdown digest from the DB state."""
+"""Render the Markdown digest from the DB state."""
 from __future__ import annotations
 
 import json
@@ -7,7 +7,7 @@ from pathlib import Path
 
 from . import applied, db, seen, state
 from . import filter as filter_mod
-from .taxonomy import STALE_DAYS
+from .taxonomy import STALE_DAYS, YOE_MAIN_QUEUE_MAX
 
 DEFAULT_DIGEST_DIR = Path(__file__).resolve().parents[2] / "digests"
 CARRY_FORWARD_CAP = 20
@@ -40,8 +40,8 @@ def _row_md(row) -> str:
     # always accurate about it, so this is the user's call to make.
     commute = filter_mod.commute_warning(
         row["location"],
-        _row_get(row, "onsite_days_per_week"),
-        remote_us_ok=bool(_row_get(row, "remote_us_ok")),
+        row["onsite_days_per_week"],
+        remote_us_ok=bool(row["remote_us_ok"]),
     )
     commute_line = f"- ⚠️ **Commute:** {commute}\n" if commute else ""
     return (
@@ -51,15 +51,6 @@ def _row_md(row) -> str:
         f"{commute_line}"
         f"- **[Apply →]({row['url']})**\n"
     )
-
-
-def _row_get(row, key):
-    """sqlite3.Row raises on a missing key rather than returning None, and a DB
-    written before onsite_days_per_week existed will not have the column."""
-    try:
-        return row[key]
-    except (IndexError, KeyError):
-        return None
 
 
 _BASE_COLS = """
@@ -87,7 +78,7 @@ _BASE_JOIN_WHERE = f"""
 
 def _pending_sql(queue: str) -> str:
     # One query per queue; the new-vs-carried split happens in Python against
-    # the committed seen-ledger. The DB is rebuilt every run, so
+    # the seen-ledger in state.db. The working DB is rebuilt every run, so
     # first_seen_at is always "now" and cannot make that distinction — before
     # the ledger existed, every digest labeled all rows "new" and carried
     # forward zero because of it.
@@ -170,16 +161,17 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
         else:
             lines.append("_(none)_\n")
 
-    lines: list[str] = [f"# PM Jobs — {target}", ""]
+    stretch_blurb = f"YOE above {YOE_MAIN_QUEUE_MAX}; review only."
+    lines: list[str] = [f"# Job Digest — {target}", ""]
     _section("Main queue — new", "Sorted by score desc.", main_rows)
     _section(
         "Main queue — carried forward",
         f"Pending from prior digests (top {CARRY_FORWARD_CAP} by score). "
-        "Mark applied or dismissed via `python -m job_finder.cli review`.",
+        "Mark applied or dismissed via `job-finder review`.",
         main_carry,
     )
-    _section("Stretch queue — new", "YOE ≥ 8; review only.", stretch_rows)
-    _section("Stretch queue — carried forward", "YOE ≥ 8; review only.", stretch_carry)
+    _section("Stretch queue — new", stretch_blurb, stretch_rows)
+    _section("Stretch queue — carried forward", stretch_blurb, stretch_carry)
 
     lines.append(f"## Closed ({len(closed_rows)})")
     if closed_rows:
@@ -216,8 +208,7 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
         target, state_db,
     )
     # The durable archive lives in state.db; the md file above is the working
-    # copy for humans and the digest-triager. daily_log in the ephemeral
-    # jobs.db used to hold a third copy — that double-storage is gone.
+    # copy for humans and the digest-triager.
     state.save_digest(target, body, state_db)
 
     return out_path

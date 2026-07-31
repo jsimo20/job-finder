@@ -9,7 +9,7 @@ Local-first pipeline that surfaces target roles and emails a weekly digest. Runs
 ## Pipeline architecture
 
 ```
-data/companies.json
+companies table (data/state.db)
     ↓
 collect (adapters/{greenhouse,lever,ashby}.py)  →  postings table
     ↓
@@ -99,7 +99,7 @@ Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract), `GMAIL_USER` + `GMAIL_
 
 ## Project-level skills
 
-- `.claude/skills/manage-companies/SKILL.md` — add/remove/probe companies in `data/companies.json` from plain-English instructions, without manual JSON editing.
+- `.claude/skills/manage-companies/SKILL.md` — add/remove/probe tracked companies in `data/state.db` from plain-English instructions, via the `job-finder companies` CLI.
 
 ## Subagents
 

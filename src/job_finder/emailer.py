@@ -3,8 +3,6 @@
 Credentials come from the environment (.env, loaded by the CLI):
 GMAIL_USER is both the SMTP login and the recipient; GMAIL_APP_PASSWORD is a
 16-character app password (myaccount.google.com/apppasswords, requires 2FA).
-The pipeline used to email from CI with the same two values as Actions
-secrets; local-first moves them into the gitignored .env.
 """
 from __future__ import annotations
 

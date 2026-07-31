@@ -80,8 +80,8 @@ def test_remove_applied(tmp_path):
 
 
 def test_cli_applied_remove_is_reachable(tmp_path, monkeypatch):
-    # remove_applied() worked for 19 days; the bug was that no argparse
-    # subcommand reached it. Goes through cli.main so it fails on wiring.
+    # Goes through cli.main so it fails on wiring: remove_applied() once
+    # worked while no argparse subcommand actually reached it.
     p = tmp_path / "state.db"
     applied.record_applied("a", company="C1", title="T1", db_path=p)
     real_remove = applied.remove_applied

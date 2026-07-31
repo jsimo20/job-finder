@@ -1,4 +1,7 @@
-"""CLI entrypoint: init-db | collect | extract | score | digest | run."""
+"""CLI entrypoint. `run` drives the whole pipeline; the stage subcommands
+(collect, extract, score, digest) run pieces of it, and the rest manage
+durable state in data/state.db (companies, no-auto, applied, digest-archive,
+outreach) or the working DB (review, mark-applied, dismiss, unmark)."""
 from __future__ import annotations
 
 import argparse

@@ -111,11 +111,11 @@ def test_custom_combos_prepend_and_override():
 def test_education_rows_only_when_configured():
     plain = build_combo_fields({})
     assert not any("school" in p for p, _ in plain)
-    profile = {"education": {"school": "University of Denver", "degree": "Bachelor's Degree",
-                             "discipline": "Biochemistry", "start_month": "September"}}
+    profile = {"education": {"school": "Example University", "degree": "Bachelor's Degree",
+                             "discipline": "Cartography", "start_month": "September"}}
     combos = build_combo_fields(profile)
     pattern, candidates = _first_matching(combos, "School")
-    assert candidates == ["University of Denver"]
+    assert candidates == ["Example University"]
     pattern, candidates = _first_matching(combos, "Start date month")
     assert candidates == ["September"]
 
@@ -131,10 +131,10 @@ def test_parse_answers_pulls_address_and_years_from_profile(tmp_path):
 
 
 def test_education_values_accept_ordered_fallback_lists():
-    profile = {"education": {"discipline": ["Biochemistry", "Chemistry"]}}
+    profile = {"education": {"discipline": ["Cartography", "Geography"]}}
     combos = build_combo_fields(profile)
     pattern, candidates = _first_matching(combos, "Discipline")
-    assert candidates == ["Biochemistry", "Chemistry"]
+    assert candidates == ["Cartography", "Geography"]
 
 
 def test_transgender_question_never_routes_to_the_gender_row():
@@ -168,8 +168,8 @@ def test_veteran_fallback_list_covers_both_phrasings():
 def test_custom_text_rules_parse_and_filter():
     from job_finder.fill_greenhouse import build_custom_text
     profile = {"custom_text": [
-        {"label": r"zip.{0,10}code", "value": "06119"},
+        {"label": r"zip.{0,10}code", "value": "99999"},
         {"label": "", "value": "orphan"},
         {"label": "no-value"},
     ]}
-    assert build_custom_text(profile) == [(r"zip.{0,10}code", "06119")]
+    assert build_custom_text(profile) == [(r"zip.{0,10}code", "99999")]

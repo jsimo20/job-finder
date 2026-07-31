@@ -6,25 +6,14 @@ Returns published jobs with full content. No auth required.
 from __future__ import annotations
 
 import html
-import re
-from dataclasses import dataclass
+from typing import Any
 
 import httpx
 from bs4 import BeautifulSoup
 
+from .base import NormalizedPosting
+
 API_BASE = "https://api.greenhouse.io/v1/boards"
-
-
-@dataclass
-class NormalizedPosting:
-    external_id: str
-    title: str
-    location: str | None
-    workplace_type: str | None
-    level: str | None
-    url: str
-    jd_text: str | None
-    posted_at: str | None
 
 
 def _strip_html(content: str | None) -> str | None:
@@ -43,24 +32,6 @@ def _infer_workplace(job: dict[str, Any]) -> str | None:
     return None
 
 
-_LEVEL_RE = re.compile(
-    r"\b(senior|sr\.?|staff|principal|lead|group|head of product)\b",
-    re.IGNORECASE,
-)
-
-
-def _infer_level(title: str) -> str | None:
-    m = _LEVEL_RE.search(title)
-    if not m:
-        return None
-    tok = m.group(1).lower().replace(".", "")
-    if tok in {"sr", "senior"}:
-        return "senior"
-    if tok == "head of product":
-        return "head"
-    return tok
-
-
 def normalize(job: dict[str, Any]) -> NormalizedPosting:
     # Greenhouse's `updated_at` tracks the last edit; `first_published` (when present)
     # is the original post date. Prefer first_published to avoid resetting age on minor edits.
@@ -70,7 +41,6 @@ def normalize(job: dict[str, Any]) -> NormalizedPosting:
         title=job["title"],
         location=(job.get("location") or {}).get("name"),
         workplace_type=_infer_workplace(job),
-        level=_infer_level(job["title"]),
         url=job["absolute_url"],
         jd_text=_strip_html(job.get("content")),
         posted_at=posted_at,

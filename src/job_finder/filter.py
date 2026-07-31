@@ -47,8 +47,9 @@ configure(pipeline_config())
 def metro_tier(location: str | None) -> str | None:
     """near | mid | far | None, by drive time from the configured home base.
 
-    Checked most-distant first: "Boston, MA" also matches the MA tokens that
-    place Springfield, and the far reading is the one that matters for commute.
+    Checked most-distant first: a far-metro city string usually also matches
+    the state tokens that place near-metro cities, and the far reading is the
+    one that matters for commute.
     """
     loc = location or ""
     if FAR_METRO_RE.search(loc):
@@ -116,8 +117,8 @@ def stage1(*, title: str, location: str | None, workplace_type: str | None) -> F
 
     Only the explicit `location` and `workplace_type` fields are used for the location
     check — earlier versions scanned the full raw JSON, which produced false positives
-    because most ATS payloads embed company-wide office strings ("Boston, MA") on
-    every posting regardless of the role's actual location.
+    because most ATS payloads embed company-wide office strings on every posting
+    regardless of the role's actual location.
     """
     # Track filter
     if EXCLUDE_TRACK_RE.search(title):

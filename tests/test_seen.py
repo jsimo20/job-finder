@@ -6,14 +6,14 @@ from job_finder.digest import split_new_carry
 
 
 def test_record_and_load_roundtrip(tmp_path):
-    p = tmp_path / "seen.jsonl"
+    p = tmp_path / "state.db"
     assert seen.record_seen(["a", "b"], "2026-07-01", p) == 2
     assert seen.record_seen(["b", "c", ""], "2026-07-08", p) == 1  # b dupe, "" skipped
     assert seen.load_seen(p) == {"a": "2026-07-01", "b": "2026-07-01", "c": "2026-07-08"}
 
 
-def test_load_missing_file_is_empty(tmp_path):
-    assert seen.load_seen(tmp_path / "nope.jsonl") == {}
+def test_load_missing_db_is_empty(tmp_path):
+    assert seen.load_seen(tmp_path / "nope.db") == {}
 
 
 def _rows(*eids):

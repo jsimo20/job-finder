@@ -5,43 +5,15 @@ Returns published postings. No auth required.
 """
 from __future__ import annotations
 
-import re
-from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any
 
 import httpx
 
+from .base import NormalizedPosting
+
 API_BASE = "https://api.lever.co/v0/postings"
 _BOM = chr(0xfeff)  # U+FEFF byte-order mark; some Lever feeds embed it in descriptions
-
-
-@dataclass
-class NormalizedPosting:
-    external_id: str
-    title: str
-    location: str | None
-    workplace_type: str | None
-    level: str | None
-    url: str
-    jd_text: str | None
-    posted_at: str | None
-
-
-_LEVEL_RE = re.compile(
-    r"\b(senior|sr\.?|staff|principal|lead|group|head of product)\b",
-    re.IGNORECASE,
-)
-
-
-def _infer_level(title: str) -> str | None:
-    m = _LEVEL_RE.search(title)
-    if not m:
-        return None
-    tok = m.group(1).lower().replace(".", "")
-    if tok in {"sr", "senior"}:
-        return "senior"
-    if tok == "head of product":
-        return "head"
-    return tok
 
 
 def _infer_workplace(posting: dict[str, Any]) -> str | None:
@@ -78,7 +50,6 @@ def normalize(posting: dict[str, Any]) -> NormalizedPosting:
     # produce comparable strings.
     posted_at = None
     if created := posting.get("createdAt"):
-        from datetime import datetime, timezone
         try:
             posted_at = datetime.fromtimestamp(int(created) / 1000, tz=timezone.utc).isoformat(timespec="seconds")
         except (ValueError, TypeError, OSError):
@@ -89,7 +60,6 @@ def normalize(posting: dict[str, Any]) -> NormalizedPosting:
         title=title,
         location=categories.get("location"),
         workplace_type=_infer_workplace(posting),
-        level=_infer_level(title),
         url=posting["hostedUrl"],
         jd_text=_jd_text(posting),
         posted_at=posted_at,

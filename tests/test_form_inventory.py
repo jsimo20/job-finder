@@ -33,10 +33,10 @@ def test_audit_path_rejects_unknown_phase(tmp_path):
 
 
 def test_two_reqs_at_one_company_do_not_collide(tmp_path):
-    # The Example Co resumes once overwrote each other on a shared filename; the
-    # slug carries the role so manifests can't repeat it.
-    a = fi.audit_path("mavenagi-senior-pm-integrations", "post", base=tmp_path)
-    b = fi.audit_path("mavenagi-senior-pm-voice-agent", "post", base=tmp_path)
+    # Two same-company resumes once overwrote each other on a shared filename;
+    # the slug carries the role so manifests can't repeat it.
+    a = fi.audit_path("exampleco-senior-pm-integrations", "post", base=tmp_path)
+    b = fi.audit_path("exampleco-senior-pm-voice-agent", "post", base=tmp_path)
     assert a != b
 
 

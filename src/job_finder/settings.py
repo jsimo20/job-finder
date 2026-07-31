@@ -1,8 +1,8 @@
 """Loaders for the two per-user config layers.
 
-config/pipeline.toml — committed. Filter geography, scoring weights, and
-numeric knobs. CI reads it on every run, so it must live in git; it contains
-preferences, never contact details.
+config/pipeline.toml — gitignored. Filter geography, scoring weights, and
+numeric knobs; preferences, never contact details. A fresh clone falls back
+to the committed config/pipeline.example.toml.
 
 profile/ — gitignored. Identity, EEO answers, and paths to the driving docs
 (master resume, personal statement, standard answers). Only the local apply

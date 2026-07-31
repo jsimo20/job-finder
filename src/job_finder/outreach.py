@@ -95,7 +95,7 @@ def remove_contact(
 
     Returns the removed records (empty if none matched). Rewrites the file only
     when something is removed. Use `list_contacts` first to get the exact logged
-    name (e.g. a truncated "Tina Spalten O'...").
+    name — LinkedIn sometimes truncates long surnames, and the match is exact.
     """
     if not path.exists():
         return []

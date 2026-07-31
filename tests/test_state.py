@@ -1,4 +1,4 @@
-"""Tests for the local-first state store (state.py, migrate_state.py, emailer)."""
+"""Tests for the local-first state store (state.py, emailer)."""
 from __future__ import annotations
 
 import json
@@ -63,43 +63,6 @@ def test_digest_archive_latest_and_by_date(tmp_path):
     state.save_digest("2026-08-10", "revised body", db)   # re-render same date
     assert state.get_digest("2026-08-10", db)["body"] == "revised body"
     assert state.list_digests(db) == ["2026-08-03", "2026-08-10"]
-
-
-def test_migration_from_legacy_files(tmp_path, monkeypatch):
-    from job_finder import migrate_state
-    legacy_dir = tmp_path / "data"
-    legacy_dir.mkdir()
-    (legacy_dir / "companies.json").write_text(json.dumps(
-        [{"name": "A", "ats_provider": "greenhouse", "ats_slug": "a"}]), encoding="utf-8")
-    (legacy_dir / "no_auto_apply.json").write_text(json.dumps(
-        {"companies": [{"name": "B", "reason": "contact"}]}), encoding="utf-8")
-    (legacy_dir / "applied.jsonl").write_text(
-        json.dumps({"external_id": "1", "company": "C", "title": "T",
-                    "applied_at": "2026-07-01", "source": "manual"}) + "\n", encoding="utf-8")
-    (legacy_dir / "seen.jsonl").write_text(
-        json.dumps({"external_id": "1", "first_seen": "2026-07-01"}) + "\n", encoding="utf-8")
-    digests_dir = tmp_path / "digests"
-    digests_dir.mkdir()
-    (digests_dir / "2026-07-01.md").write_text("# digest", encoding="utf-8")
-
-    db = tmp_path / "state.db"
-    monkeypatch.setattr(migrate_state, "LEGACY_COMPANIES", legacy_dir / "companies.json")
-    monkeypatch.setattr(migrate_state, "LEGACY_NO_AUTO", legacy_dir / "no_auto_apply.json")
-    monkeypatch.setattr(migrate_state, "LEGACY_APPLIED", legacy_dir / "applied.jsonl")
-    monkeypatch.setattr(migrate_state, "LEGACY_SEEN", legacy_dir / "seen.jsonl")
-    monkeypatch.setattr(migrate_state, "LEGACY_DIGESTS", digests_dir)
-    monkeypatch.setattr(state, "DEFAULT_STATE_DB", db)
-
-    assert migrate_state.main() == 0
-    assert [c["name"] for c in state.list_companies(db)] == ["A"]
-    assert state.is_no_auto("B", db)
-    from job_finder import applied, seen
-    assert applied.applied_external_ids(db_path=db) == {"1"}
-    assert seen.load_seen(db) == {"1": "2026-07-01"}
-    assert state.get_digest("2026-07-01", db)["body"] == "# digest"
-    # idempotent: a second run imports nothing new
-    assert migrate_state.main() == 0
-    assert len(state.list_companies(db)) == 1
 
 
 def test_emailer_refuses_without_credentials(monkeypatch):

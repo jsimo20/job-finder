@@ -35,7 +35,7 @@ try:
 except ImportError:  # the grader reads captured manifests and needs no browser
     PWTimeout = TimeoutError
 
-DEFAULT_AUDIT_DIR =Path(__file__).resolve().parents[2] / "data" / "fill_audits"
+DEFAULT_AUDIT_DIR = Path(__file__).resolve().parents[2] / "data" / "fill_audits"
 
 # Value markers used by redact(); a fixture keeps the shape and drops the PII.
 _REDACT_EMPTY = ""
@@ -324,7 +324,7 @@ def merge_options(inventory: list[dict], harvested: dict[str, list[str]]) -> lis
 
 
 def redact(inventory: list[dict]) -> list[dict]:
-    """Strip PII so a manifest can be committed as a CI fixture.
+    """Strip PII so a manifest can be committed as a test fixture.
 
     Keeps everything Layer 1 asserts on — label, type, required, options, and
     whether a value is present — and discards the contents of every value.

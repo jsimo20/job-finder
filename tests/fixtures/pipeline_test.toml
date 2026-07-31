@@ -43,8 +43,8 @@ senior_scope = "a typical Senior/Staff PM scope"
 # string matches ANY pattern (case-insensitive), or the role is US-remote.
 # tiers: drive-time buckets from your home base, used only for the commute
 # warning in the digest. Checked far-first, because a distant city often also
-# matches a nearby state token ("Boston, MA" matches the MA that places
-# Springfield).
+# matches a nearby state token ("Farport, EX" matches the EX that places
+# Nearville).
 
 [location]
 in_scope_patterns = [

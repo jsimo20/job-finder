@@ -10,7 +10,7 @@ and the per-app folder's standard_answers.md.
 
 Usage (single):
     python -m job_finder.fill_greenhouse --url <application_url> \
-        --folder "<per-app folder>" [--city "Boston"] [--no-hold]
+        --folder "<per-app folder>" [--city "Anytown"] [--no-hold]
 
 Usage (batch): repeat --url and --folder in matching order. All applications
 fill in ONE browser, one tab each, and every tab is left open for review.
@@ -51,15 +51,6 @@ TEXT_FIELDS: list[tuple[str, str]] = [
     (r"address", "address"),
 ]
 
-# (label regex, candidate texts tried in order). Each candidate is typed into
-# the react-select filter, then matched against what the menu actually shows.
-#
-# Candidates are ordered most-specific first. Short answers like "no" are last
-# resorts because forms that phrase their options as sentences make them
-# ambiguous: one live form's sponsorship options were "I do not require
-# sponsorship" and "I require sponsorship now or in the future", and BOTH
-# contain "no" (in "not" and in "now"). A bare "no" there once selected the
-# wrong one, which would have claimed the applicant needs visa sponsorship.
 # Options that must never be selected for a field, whatever the match says.
 # The sponsorship veto is the important one. Some forms phrase the correct
 # answer as a positive statement, not a negation:
@@ -124,9 +115,8 @@ def build_combo_fields(profile: dict) -> list[tuple[str, list[str]]]:
                          (r"end\s*(date\s*)?month", "end_month")):
         value = education.get(key)
         if value:
-            # A list means ordered fallbacks — e.g. discipline
-            # ["Biochemistry", "Chemistry"] for forms whose major list has no
-            # Biochemistry entry.
+            # A list means ordered fallbacks, for forms whose option list has
+            # no entry for the first-choice answer.
             combos.append((pattern, list(value) if isinstance(value, list) else [value]))
     # transgender before gender: "I identify as transgender" contains the
     # substring "gender", and the gender row once tried "Male" against its
@@ -439,8 +429,7 @@ def _upload_landed(root, path: Path, *, timeout_ms: int = 4000) -> bool:
     Checked against the rendered filename, NOT input.files. Greenhouse consumes
     the file on change, removes the input node, and renders a filename chip in
     its place, so reading files.length back finds either a detached node or the
-    next empty input and reports 0 on a perfectly good upload. Verifying that
-    way briefly convinced me four working uploads had failed.
+    next empty input and reports 0 on a perfectly good upload.
     """
     waited = 0
     while waited < timeout_ms:
