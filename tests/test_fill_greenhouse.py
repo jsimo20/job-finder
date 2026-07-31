@@ -9,7 +9,7 @@ import pytest
 
 pytest.importorskip("playwright", reason="fill_greenhouse needs the [apply] extra")
 
-from boston_pm_tracker import fill_greenhouse as fg  # noqa: E402
+from job_finder import fill_greenhouse as fg  # noqa: E402
 
 
 # The two options Agero's sponsorship dropdown actually offers. Both contain

@@ -1,7 +1,7 @@
 """Tests for the durable applied-log (applied.py)."""
 from __future__ import annotations
 
-from boston_pm_tracker import applied, cli
+from job_finder import applied, cli
 
 
 def test_record_and_list(tmp_path):

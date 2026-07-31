@@ -181,7 +181,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="boston-pm-tracker")
+    parser = argparse.ArgumentParser(prog="job-finder")
     parser.add_argument("--db", help="path to sqlite db")
     sub = parser.add_subparsers(dest="cmd", required=True)
 

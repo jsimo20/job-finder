@@ -272,7 +272,7 @@ def _render_cover_letter(identity: Mapping[str, str], cover_letter: dict,
 
 APPLY_MD_TEMPLATE = """# Apply notes — {company} / {title}
 
-- **External ID:** `{external_id}` (use `boston-pm-tracker mark-applied {external_id}` after submit)
+- **External ID:** `{external_id}` (use `job-finder mark-applied {external_id}` after submit)
 - **Score / Queue:** {score} / {queue}
 - **Location:** {location}
 - **URL:** {url}

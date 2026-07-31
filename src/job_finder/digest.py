@@ -175,7 +175,7 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
     _section(
         "Main queue — carried forward",
         f"Pending from prior digests (top {CARRY_FORWARD_CAP} by score). "
-        "Mark applied or dismissed via `python -m boston_pm_tracker.cli review`.",
+        "Mark applied or dismissed via `python -m job_finder.cli review`.",
         main_carry,
     )
     _section("Stretch queue — new", "YOE ≥ 8; review only.", stretch_rows)

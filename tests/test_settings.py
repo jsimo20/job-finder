@@ -1,8 +1,8 @@
 """Tests for the config/profile loaders and the profile-driven combo builder."""
 from __future__ import annotations
 
-from boston_pm_tracker import settings
-from boston_pm_tracker.fill_greenhouse import build_combo_fields
+from job_finder import settings
+from job_finder.fill_greenhouse import build_combo_fields
 
 
 def test_pipeline_config_parses_and_has_required_tables():
@@ -79,13 +79,13 @@ def test_sponsorship_label_mentioning_authorization_hits_sponsor_row_first():
     assert pattern == r"sponsor"
     assert "yes" not in [c.lower() for c in candidates]
     # and against a plain Yes/No dropdown, the row resolves to No
-    from boston_pm_tracker.fill_greenhouse import match_option
+    from job_finder.fill_greenhouse import match_option
     assert match_option(["yes", "no"], candidates[-1]) == 1
 
 
 def test_sponsor_veto_blocks_bare_yes_option():
     import re
-    from boston_pm_tracker.fill_greenhouse import veto_for
+    from job_finder.fill_greenhouse import veto_for
     veto = veto_for(SMARTSHEET_LABEL)
     assert veto is not None
     assert re.search(veto, "Yes", re.I)
@@ -121,7 +121,7 @@ def test_education_rows_only_when_configured():
 
 
 def test_parse_answers_pulls_address_and_years_from_profile(tmp_path):
-    from boston_pm_tracker.fill_greenhouse import parse_answers
+    from job_finder.fill_greenhouse import parse_answers
     profile = {"identity": {"name": "Test Person", "address": "1 Test St"},
                "education": {"start_year": "2014", "end_year": "2018"}}
     answers = parse_answers(tmp_path, profile)   # no standard_answers.md present
@@ -155,7 +155,7 @@ def test_gender_row_ignores_transgender_even_without_a_transgender_answer():
 
 
 def test_veteran_fallback_list_covers_both_phrasings():
-    from boston_pm_tracker.fill_greenhouse import match_option
+    from job_finder.fill_greenhouse import match_option
     profile = {"eeo": {"veteran": ["not a protected", "not a veteran"]}}
     _, candidates = _first_matching(build_combo_fields(profile), "My veteran status is:")
     greenhouse = ["i am not a protected veteran", "i identify as one or more", "i don't wish to answer"]
@@ -166,7 +166,7 @@ def test_veteran_fallback_list_covers_both_phrasings():
 
 
 def test_custom_text_rules_parse_and_filter():
-    from boston_pm_tracker.fill_greenhouse import build_custom_text
+    from job_finder.fill_greenhouse import build_custom_text
     profile = {"custom_text": [
         {"label": r"zip.{0,10}code", "value": "06119"},
         {"label": "", "value": "orphan"},

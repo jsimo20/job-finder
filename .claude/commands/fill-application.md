@@ -3,7 +3,7 @@ description: Autofill a job application form in-browser via the application-auto
 argument-hint: <application-url> [path-to-per-job-folder]
 ---
 
-Standalone autofill for any job application URL — including roles that aren't tracked in the boston-pm-tracker DB. Delegates the work to the `application-autofiller` subagent (Sonnet), which drives the Playwright MCP through the form, fills every mappable field, uploads the resume + cover-letter PDFs, and stops without submitting. The user reviews the filled form in the open browser and clicks Submit themselves.
+Standalone autofill for any job application URL — including roles that aren't tracked in the job-finder DB. Delegates the work to the `application-autofiller` subagent (Sonnet), which drives the Playwright MCP through the form, fills every mappable field, uploads the resume + cover-letter PDFs, and stops without submitting. The user reviews the filled form in the open browser and clicks Submit themselves.
 
 This command is intentionally thin — almost all the actual procedure lives in `.claude/agents/application-autofiller.md`. Keeping the subagent definition as the source of truth means both `/fill-application` and `/job-apply`'s step h get the same behavior.
 
@@ -32,11 +32,11 @@ The autofiller runs on Sonnet and handles everything from there. It will produce
 
 When the subagent returns, present its report verbatim to the user. Add no commentary unless something needs flagging. End with:
 
-> Ready for your review — check every answer in the open browser window and click Submit yourself. If this was a tracked role, run `boston-pm-tracker mark-applied <external_id>` after submitting.
+> Ready for your review — check every answer in the open browser window and click Submit yourself. If this was a tracked role, run `job-finder mark-applied <external_id>` after submitting.
 
 ## Prerequisite — Playwright MCP must be loaded
 
-The autofiller's tool list includes `mcp__playwright__*`. Those tools only load when the Claude session is rooted in `projects/boston-pm-tracker/` (the MCP is project-scoped via `.mcp.json`). If the subagent reports the tools aren't available, the parent session was started in the wrong directory. Tell the user to restart `claude` from inside the project directory; do not fall back to another browser tool.
+The autofiller's tool list includes `mcp__playwright__*`. Those tools only load when the Claude session is rooted in `projects/job-finder/` (the MCP is project-scoped via `.mcp.json`). If the subagent reports the tools aren't available, the parent session was started in the wrong directory. Tell the user to restart `claude` from inside the project directory; do not fall back to another browser tool.
 
 ## Hard rules (enforced by the autofiller)
 

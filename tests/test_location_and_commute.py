@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from boston_pm_tracker import filter as f
-from boston_pm_tracker.extract import _clamp_days
+from job_finder import filter as f
+from job_finder.extract import _clamp_days
 
 
 def _keep(location, title="Senior Product Manager", workplace_type=None):

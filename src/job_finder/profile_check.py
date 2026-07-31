@@ -1,7 +1,7 @@
 """Profile doctor: verify the gitignored profile/ is filled in, not a copy of
 the example. Run it after setup and before the first real application:
 
-    python -m boston_pm_tracker.profile_check
+    python -m job_finder.profile_check
 
 Exit code 0 = ready; 1 = issues listed below the report.
 """

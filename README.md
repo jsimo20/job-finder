@@ -1,4 +1,4 @@
-# pm-tracker (boston-pm-tracker)
+# pm-tracker (job-finder)
 
 Cron-driven pipeline that tracks senior Product Manager roles at a curated set
 of companies, scores them against a configurable profile, and emails a ranked
@@ -37,10 +37,10 @@ evergreen reqs.
 ## Run
 
 ```bash
-python -m boston_pm_tracker.cli run             # full pipeline (spends API tokens)
-python -m boston_pm_tracker.cli review          # interactive picker: applied/dismissed
-boston-pm-tracker applied add --external-id …   # record an ad-hoc application
-boston-pm-tracker outreach add --name … --company …   # log a LinkedIn contact
+python -m job_finder.cli run             # full pipeline (spends API tokens)
+python -m job_finder.cli review          # interactive picker: applied/dismissed
+job-finder applied add --external-id …   # record an ad-hoc application
+job-finder outreach add --name … --company …   # log a LinkedIn contact
 ```
 
 GitHub Actions runs the pipeline weekly (Mondays 13:00 UTC) and emails the
@@ -56,7 +56,7 @@ digest; see SETUP.md §6 for the three required secrets.
 - **Greenhouse forms: prefer the deterministic script** — zero LLM tokens:
 
   ```bash
-  python -m boston_pm_tracker.fill_greenhouse --url <url> --folder <per-app folder>
+  python -m job_finder.fill_greenhouse --url <url> --folder <per-app folder>
   ```
 
   Identity, work-authorization stance, and EEO answers come from

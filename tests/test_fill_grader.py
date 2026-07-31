@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from boston_pm_tracker import fill_grader
+from job_finder import fill_grader
 
 PROFILE = {
     "identity": {"name": "Test Person", "email": "t@example.org", "phone": "5", "address": "1 St"},

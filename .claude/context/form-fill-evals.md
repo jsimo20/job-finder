@@ -1,7 +1,7 @@
 # Form-fill evals — design
 
-Status: **Layer 1 implemented 2026-07-31** as `src/boston_pm_tracker/fill_grader.py`
-(zero LLM tokens; run `python -m boston_pm_tracker.fill_grader --date <date>`).
+Status: **Layer 1 implemented 2026-07-31** as `src/job_finder/fill_grader.py`
+(zero LLM tokens; run `python -m job_finder.fill_grader --date <date>`).
 Layer 2 (LLM judgment grading) remains unbuilt and local-only by design.
 
 Calibration: James hand-graded the 2026-07-30 batch "C+ — the Greenhouse ones
@@ -63,7 +63,7 @@ iframes, and "did the page visually render broken."
 
 ## What already exists
 
-`src/boston_pm_tracker/fill_greenhouse.py` has roughly two-thirds of the inventory:
+`src/job_finder/fill_greenhouse.py` has roughly two-thirds of the inventory:
 
 - `label_of` / `_dom_label` (line ~95) — label resolution
 - `audit_required` (line ~279) — required-field detection

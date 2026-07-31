@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from boston_pm_tracker import outreach
+from job_finder import outreach
 
 
 def test_add_and_list_roundtrip(tmp_path):

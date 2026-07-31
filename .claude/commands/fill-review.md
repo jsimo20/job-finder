@@ -10,7 +10,7 @@ graded gap either becomes a stored answer, a code fix, or an explicit
 ## 1. Grade with suggestions
 
 ```sh
-python -m boston_pm_tracker.fill_grader --date <date> --suggest
+python -m job_finder.fill_grader --date <date> --suggest
 ```
 
 ## 2. Triage each bucket, in this order
@@ -59,7 +59,7 @@ profile.toml so the next review doesn't re-ask.
 Re-run the grader on the same date after persisting answers:
 
 ```sh
-python -m boston_pm_tracker.fill_grader --date <date> --quiet
+python -m job_finder.fill_grader --date <date> --quiet
 ```
 
 Read the delta correctly: the manifest is frozen, so every question you just

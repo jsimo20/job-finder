@@ -35,7 +35,7 @@ jobs:
       - name: Run pipeline
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python -m boston_pm_tracker.cli run
+        run: python -m job_finder.cli run
 
       - name: Commit updated data and digests
         run: |

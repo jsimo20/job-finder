@@ -1,8 +1,8 @@
 """Tests for the first-seen ledger and the digest's new/carried split."""
 from __future__ import annotations
 
-from boston_pm_tracker import seen
-from boston_pm_tracker.digest import split_new_carry
+from job_finder import seen
+from job_finder.digest import split_new_carry
 
 
 def test_record_and_load_roundtrip(tmp_path):
@@ -43,7 +43,7 @@ def test_split_same_day_rerender_is_stable():
 
 
 def test_split_caps_carry_forward():
-    from boston_pm_tracker.digest import CARRY_FORWARD_CAP
+    from job_finder.digest import CARRY_FORWARD_CAP
     ledger = {f"e{i}": "2026-07-01" for i in range(CARRY_FORWARD_CAP + 5)}
     new, carry = split_new_carry(_rows(*ledger), ledger, "2026-08-03")
     assert len(carry) == CARRY_FORWARD_CAP

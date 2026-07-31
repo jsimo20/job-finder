@@ -1,4 +1,4 @@
-from boston_pm_tracker.score import comp_score, domain_score, stage_score
+from job_finder.score import comp_score, domain_score, stage_score
 
 
 def test_domain_score_sums_weights():

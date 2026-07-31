@@ -1,4 +1,4 @@
-from boston_pm_tracker.filter import stage1, stage3
+from job_finder.filter import stage1, stage3
 
 
 def test_stage1_keeps_senior_pm_boston():

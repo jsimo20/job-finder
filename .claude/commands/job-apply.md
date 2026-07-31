@@ -3,7 +3,7 @@ description: Tailor resume + cover letter for pending roles and prep apply packa
 argument-hint: [external_id or --top N]
 ---
 
-You are driving the apply-prep loop for the user. The pipeline that picks the roles is `boston-pm-tracker`; the tailoring ground truth lives in the profile driving docs (`resume_master.md`, `personal_statement.md`, and the session-context file named by `profile/profile.toml` `[paths]`). The deterministic render lives in `src/boston_pm_tracker/job_apply.py`.
+You are driving the apply-prep loop for the user. The pipeline that picks the roles is `job-finder`; the tailoring ground truth lives in the profile driving docs (`resume_master.md`, `personal_statement.md`, and the session-context file named by `profile/profile.toml` `[paths]`). The deterministic render lives in `src/job_finder/job_apply.py`.
 
 ## What to do
 
@@ -67,7 +67,7 @@ g. **On final approval, call render()** by running this in the repo's venv. **Pa
 
    ```
    .venv/Scripts/python.exe -c "
-   from boston_pm_tracker import job_apply, db
+   from job_finder import job_apply, db
    import json
    posting_row = json.loads('''<POSTING_ROW_JSON>''')  # build from DB row or hand-construct if DB is empty
    resume_data = json.loads('''<RESUME_DATA_JSON>''')
@@ -88,13 +88,13 @@ h. **Dispatch the `application-autofiller` subagent** (Sonnet) with `application
 
    The autofiller drives the Playwright MCP through the form, fills every mappable field, uploads the PDFs, and **stops without submitting**. It reports back what was filled and what's blank. Surface that report to the user verbatim.
 
-   **If the Playwright MCP isn't loaded** (the session isn't rooted in `projects/boston-pm-tracker/`), the autofiller will report this and stop. Tell the user to fill the form by hand using the folder + URL — do not fall back to another browser tool.
+   **If the Playwright MCP isn't loaded** (the session isn't rooted in `projects/job-finder/`), the autofiller will report this and stop. Tell the user to fill the form by hand using the folder + URL — do not fall back to another browser tool.
 
 i. **Handoff.** Tell the user:
    - Folder path (markdown link)
    - That the resume + cover letter PDFs are inside
    - To review every field in the open browser window before submitting
-   - To run `.venv/Scripts/boston-pm-tracker.exe mark-applied <external_id>` from the repo root after submitting
+   - To run `.venv/Scripts/job-finder.exe mark-applied <external_id>` from the repo root after submitting
 
 ### 3. Batching
 

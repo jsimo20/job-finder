@@ -10,7 +10,7 @@ from datetime import date
 
 import pytest
 
-from boston_pm_tracker import form_inventory as fi
+from job_finder import form_inventory as fi
 
 SAMPLE = [
     {"field_id": "#first_name", "label": "First Name *", "type": "text",

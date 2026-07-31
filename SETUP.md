@@ -81,7 +81,7 @@ read those files; with placeholders still in them you'd be submitting
 applications carrying example data. When you think you're done, prove it:
 
 ```sh
-python -m boston_pm_tracker.profile_check
+python -m job_finder.profile_check
 ```
 
 It flags every placeholder value and missing driving doc, and exits non-zero
@@ -155,12 +155,12 @@ suppress roles you've already applied to.
 
 ```sh
 python -m pytest -q                              # tests
-python -m boston_pm_tracker.profile_check         # is my profile complete?
-boston-pm-tracker review                          # interactive digest review
-boston-pm-tracker applied add --external-id ...   # record an application
-python -m boston_pm_tracker.fill_greenhouse \
+python -m job_finder.profile_check         # is my profile complete?
+job-finder review                          # interactive digest review
+job-finder applied add --external-id ...   # record an application
+python -m job_finder.fill_greenhouse \
     --url <apply url> --folder <per-app folder>   # deterministic form fill
-python -m boston_pm_tracker.fill_grader --date <YYYY-MM-DD>   # grade a fill batch
+python -m job_finder.fill_grader --date <YYYY-MM-DD>   # grade a fill batch
 ```
 
 After every fill batch, run the grader on that date's audit manifests. It
@@ -169,5 +169,5 @@ violations like a wrong sponsorship answer) and its `no_rule` list is your
 backlog: each entry becomes a new `[[custom_combos]]` answer in
 `profile/profile.toml`, so coverage compounds batch over batch.
 
-The pipeline itself (`boston-pm-tracker run`) normally only runs in CI — it
+The pipeline itself (`job-finder run`) normally only runs in CI — it
 spends real Anthropic tokens, so avoid running it casually on a laptop.

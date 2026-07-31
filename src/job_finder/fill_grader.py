@@ -28,8 +28,8 @@ backlog, not counted against the grade — the fix for those is adding
 answers, not fixing the filler.
 
 Usage:
-    python -m boston_pm_tracker.fill_grader data/fill_audits/<slug>.post.json ...
-    python -m boston_pm_tracker.fill_grader --date 2026-07-30
+    python -m job_finder.fill_grader data/fill_audits/<slug>.post.json ...
+    python -m job_finder.fill_grader --date 2026-07-30
 """
 from __future__ import annotations
 

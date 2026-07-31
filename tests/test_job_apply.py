@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from boston_pm_tracker import job_apply
+from job_finder import job_apply
 
 
 @pytest.fixture
@@ -131,7 +131,7 @@ def test_outdir_for_format(fixture_posting_row, tmp_path):
 
 def test_load_config_defaults_into_profile_dir():
     """Without a [paths] table every path resolves inside the profile dir."""
-    from boston_pm_tracker import settings
+    from job_finder import settings
 
     cfg = job_apply.load_config(profile={})
     base = settings.profile_dir()
@@ -176,7 +176,7 @@ def test_render_creates_per_job_folder_with_expected_files(
     assert "test-123" in apply_md
     assert "Test Corp" in apply_md
     assert "Bullet one" in apply_md
-    assert "boston-pm-tracker mark-applied test-123" in apply_md
+    assert "job-finder mark-applied test-123" in apply_md
 
 
 def test_render_is_idempotent(

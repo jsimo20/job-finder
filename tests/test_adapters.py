@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from boston_pm_tracker.adapters import greenhouse, lever
+from job_finder.adapters import greenhouse, lever
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -34,7 +34,7 @@ def test_lever_normalize():
 
 
 def test_ashby_normalize():
-    from boston_pm_tracker.adapters import ashby
+    from job_finder.adapters import ashby
 
     jobs = json.loads((FIXTURES / "ashby_sample.json").read_text())
     normalized = [ashby.normalize(j, slug="benchling") for j in jobs if j.get("isListed")]
@@ -51,7 +51,7 @@ def test_ashby_normalize():
 
 
 def test_ashby_normalize_strips_utf8_bom():
-    from boston_pm_tracker.adapters import ashby
+    from job_finder.adapters import ashby
 
     bom = chr(0xfeff)
     job = {

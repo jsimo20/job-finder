@@ -1,4 +1,4 @@
-from boston_pm_tracker import db
+from job_finder import db
 
 
 def test_init_db_creates_tables(tmp_path):

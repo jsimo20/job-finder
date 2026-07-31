@@ -21,7 +21,7 @@ If the folder is missing, fall back to the global `standard_answers.md` in the c
 
 ## Prerequisite — Playwright MCP must be loaded
 
-Your tool list includes `mcp__playwright__*`. If those tools aren't available at runtime, the parent session wasn't rooted in `projects/boston-pm-tracker/`. Report this in one line and stop — do not fall back to another browser tool. This project standardized on Playwright; stay consistent.
+Your tool list includes `mcp__playwright__*`. If those tools aren't available at runtime, the parent session wasn't rooted in `projects/job-finder/`. Report this in one line and stop — do not fall back to another browser tool. This project standardized on Playwright; stay consistent.
 
 ## Batch mode — multiple apps in ONE browser instance
 
@@ -95,7 +95,7 @@ DOM state instead of a reconstruction.
 1. Get the inventory function once per dispatch (not once per form):
 
    ```sh
-   python -c "from boston_pm_tracker.form_inventory import INVENTORY_JS; print(INVENTORY_JS)"
+   python -c "from job_finder.form_inventory import INVENTORY_JS; print(INVENTORY_JS)"
    ```
 
 2. Pass it verbatim to `browser_evaluate`.
@@ -195,6 +195,6 @@ When you stop, your final message must include:
 1. **Filled** — grouped checklist by section: contact · location · work auth · EEO · uploads · short-answers.
 2. **Blank** — list every field left empty and why: salary (always), unmappable (which ones), short-answer needing Opus judgment (which ones), required fields still empty (call these out loudly — they block submission).
 3. **Audits** — one line per form: `<slug>: pre N fields, post M fields`, or the reason a capture failed. Paths only, never the JSON.
-4. **One closing line**: "Ready for review — check every answer in the open browser window and click Submit yourself. If this was a tracked role, run `boston-pm-tracker mark-applied <external_id>` after submitting."
+4. **One closing line**: "Ready for review — check every answer in the open browser window and click Submit yourself. If this was a tracked role, run `job-finder mark-applied <external_id>` after submitting."
 
 Keep the report tight. The dispatching conversation will surface it to the user.
