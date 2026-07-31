@@ -23,22 +23,20 @@ Argument: `$ARGUMENTS`.
 
 ### 2. For each chosen role, do this loop:
 
-a. **Load context** (read these files once and keep in memory for the whole session):
+a. **Load context** (read these files once and keep in memory for the whole session; all paths come from `profile/profile.toml` `[paths]`, defaulting into `profile/`):
    - `<inputs_dir>/resume_master.md`
    - `<inputs_dir>/personal_statement.md`
-   (inputs_dir comes from `profile/profile.toml` `[paths]`; default `profile/`)
-   - `~/.claude/ai_skills/SESSION_CONTEXT_Jobsearch.md`
-   - `~/.claude/ai_skills/resume_generator/SKILL.md` (design rules)
-   - `~/.claude/ai_skills/cover_letter_skill/SKILL.md` (cover-letter rules)
-   - The full row for this posting from `data/jobs.db` — including `jd_text`. If the DB is empty (CI rebuilds it each run, doesn't commit) or `jd_text` is null, fetch the JD via WebFetch on the posting URL.
+   - the session-context file at `[paths].session_context_path` (default `profile/session_context.md`) — anti-overstatement and voice rules
+   - the resume generator at `[paths].resume_skill_path` (default `profile/generate_resume.py`); read any SKILL.md or design notes sitting next to it, if present
+   - The full row for this posting from `data/jobs.db` — including `jd_text`. If the DB is stale (it's rebuilt by each pipeline run) or `jd_text` is null, fetch the JD via WebFetch on the posting URL.
 
 b. **Show the user a one-paragraph read of the JD** — what they're hiring for, the 3–5 keywords/frames that genuinely map to the user's resume, anything that risks overstatement. Ask the user for any orientation before you draft (sometimes they'll have a specific angle).
 
-c. **Draft `RESUME_DATA`** as a Python dict, following the tailoring workflow in `resume_generator/SKILL.md`:
+c. **Draft `RESUME_DATA`** as a Python dict, editing only what the resume generator's schema allows:
    - Reorder current-role bullets to lead with the strongest JD match
-   - Adjust title subtitle (e.g., "Mobile, AI & SaaS Growth"; "AI, Developer Platforms & Trusted Automation"; "AI, Platforms & Zero-to-One Consumer Products"). Use "zero-to-one" spelled out — never the "0→1" glyph.
-   - Re-prioritize/rename skill categories per `SESSION_CONTEXT` rules
-   - Rotate the fourth clause in the fun bullet
+   - Adjust the title subtitle toward the JD's framing, staying within any subtitle rules the session-context file sets
+   - Re-prioritize/rename skill categories per the session-context file's rules
+   - Apply any per-application rotation rules the session-context file defines
    - Honor the anti-overstatement rules. If a JD keyword tempts overstatement, find a different angle or flag the gap for the cover letter.
 
    **Show the user a diff vs. the canonical `RESUME_DATA` in the resume generator at `[paths].resume_skill_path` (default `profile/generate_resume.py`).** Format as: changed-bullets-only. Wait for approval or edits.
@@ -58,7 +56,7 @@ d. **Draft the cover letter** as a dict matching `job_apply._render_cover_letter
 
 e. **Draft 3–5 `why_this_matches` bullets** — short, factual, JD-keyword aligned. These go into `apply.md` for future reference.
 
-f. **Dispatch the `materials-fact-checker` subagent** (Sonnet) with `resume_data`, `cover_letter`, `jd_text`, `company` inline in the prompt. The agent cross-checks every claim against `resume_master.md`, `personal_statement.md`, and `SESSION_CONTEXT_Jobsearch.md` anti-overstatement rules; returns severity-tagged findings (CRITICAL / MEDIUM / LOW / NIT).
+f. **Dispatch the `materials-fact-checker` subagent** (Sonnet) with `resume_data`, `cover_letter`, `jd_text`, `company` inline in the prompt. The agent cross-checks every claim against `resume_master.md`, `personal_statement.md`, and the session-context file's anti-overstatement rules; returns severity-tagged findings (CRITICAL / MEDIUM / LOW / NIT).
    - If the verdict is **CLEAN**, proceed to step g.
    - If **FLAGS PRESENT**, surface the findings to the user, propose one-line fixes for each, and revise after they confirm. Re-dispatch the fact-checker on the revised drafts if any CRITICAL finding was edited. Loop until CLEAN.
    - If **BLOCK** (a fabricated metric or banned framing slipped in), do not proceed to render — fix the underlying claim first.

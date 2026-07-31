@@ -55,7 +55,7 @@ Load `@.claude/context/ai-agent-security.md` only when the diff touches files ma
 
 ### 5. General OWASP Top 10:2025 hits
 - A01 access control, A03 supply chain (unpinned deps), A04 crypto (no homemade), A05 injection (parameterized queries only), A09 logging secrets, A10 mishandling exceptions
-- Reference: root `SECURITY.md` and global `~/.claude/rules/development-rules.md`
+- Reference: root `SECURITY.md`, plus `~/.claude/rules/development-rules.md` if present (user-global; absent in CI)
 
 ### 6. Tests
 - New behavior → must have a test. Bug fix → must have a regression test.

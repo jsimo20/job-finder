@@ -20,6 +20,16 @@ pipeline to configure.
 - A Windows machine that's usually on (the weekly run is a Scheduled Task;
   on macOS/Linux use cron/launchd with the same command)
 
+If a Claude Code session is driving this setup, four things still need a
+human first — everything else it can do from this document:
+
+1. Installing Claude Code itself (plus Python/git/gh above)
+2. Access to this repo (a collaborator invite, or a copy from whoever
+   handed it to you)
+3. Creating the Anthropic API key and adding billing
+4. Generating the Gmail app password (§2) — never paste it into chat;
+   put it straight into `.env` yourself
+
 ## 1. Get a copy
 
 ```sh
@@ -157,16 +167,19 @@ GitHub Actions secret: `ANTHROPIC_API_KEY` (paste via a plain-text editor —
 invisible BOMs from rich editors break the SDK). Delete that workflow file if
 you don't want reviews.
 
-## 7. Personalize the Claude-side prompts
+## 7. Personalize the Claude-side workflows
 
-If you use the Claude Code workflows, three files still describe the previous
-owner's rules and should be regenerated from YOUR profile docs (a Claude
-session can do this: "rewrite these against my profile/ files"):
+The `.claude/` prompts are generic: every user-specific rule (metric
+baselines, banned framings, voice) is read at run time from your profile
+docs, mainly `profile/session_context.md` and the files in `[paths]`. So
+personalization happens in §3, not by editing prompts. Two things worth a
+skim anyway:
 
-- `.claude/agents/materials-fact-checker.md` §§1–4 — metric baselines and
-  banned framings specific to the owner's resume
-- `.claude/commands/job-apply.md` — workflow is generic, skim for fit
-- `CLAUDE.md` — rewrite the project instructions for your own setup
+- `profile/session_context.md` — the anti-overstatement and voice rules the
+  fact-checker enforces come from here; the richer you make it, the more it
+  catches
+- `CLAUDE.md` — project instructions; adjust anything that doesn't match how
+  you work
 
 ## 8. What never goes in git
 

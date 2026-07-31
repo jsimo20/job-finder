@@ -1,6 +1,6 @@
 ---
 name: digest-triager
-description: Reads the latest pm-digest output, ranks pending roles against the user's fit profile (profile/fit_profile.md), and surfaces the top N candidates with reasoning. Dispatched from the main conversation when asked "what should I apply to" or "give me top N from the digest." Saves Opus tokens on the comparison-and-ranking phase.
+description: Reads the latest digest, ranks pending roles against the user's fit profile (profile/fit_profile.md), and surfaces the top N candidates with reasoning. Dispatched from the main conversation when asked "what should I apply to" or "give me top N from the digest." Saves Opus tokens on the comparison-and-ranking phase.
 tools: Read, Glob, Bash
 model: sonnet
 ---

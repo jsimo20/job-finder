@@ -1,6 +1,6 @@
 ---
 name: materials-fact-checker
-description: Cross-checks drafted RESUME_DATA and cover letter dicts against ground-truth source files (resume_master.md, personal_statement.md, SESSION_CONTEXT_Jobsearch.md). Flags overstatement, invented metrics, voice slips, and skill-source-pool violations before render. Dispatched by `/job-apply` after Opus drafts materials, before the user approves render.
+description: Cross-checks drafted RESUME_DATA and cover letter dicts against ground-truth source files (resume_master.md, personal_statement.md, the profile's session-context file). Flags overstatement, invented metrics, voice slips, and skill-source-pool violations before render. Dispatched by `/job-apply` after Opus drafts materials, before the user approves render.
 tools: Read, Glob
 model: sonnet
 ---
@@ -29,7 +29,7 @@ everything lives in `profile/` directly.
 - `<inputs_dir>/resume_master.md` — canonical experience and metrics.
 - `<inputs_dir>/personal_statement.md` — narrative voice + supplementary context.
 - `<session_context_path>` — anti-overstatement rules, skill source pool, factual baselines.
-- `~/.claude/rules/writing-style.md` — canonical voice rules (chat vs. voice mode, the em-dash ban, the AI-trope ban list, the punchy-confidence-line ban, the pre-send self-check). This is the authority for the cover-letter voice checks in §5 below.
+- `~/.claude/rules/writing-style.md` — the user's global voice rules, **if the file exists** (it's outside the repo and machine-specific). When present it is the authority for the cover-letter voice checks in §5; when absent, enforce §5's inline rules plus whatever voice rules the session-context file carries.
 
 ## What you check
 
@@ -87,7 +87,7 @@ Return findings in this exact structure:
 ```
 ## Fact-check summary
 - Verdict: CLEAN / FLAGS PRESENT / BLOCK (block only if a fabricated metric or a framing the session-context file explicitly bans is present)
-- Files cross-referenced: resume_master.md (vN, date), personal_statement.md (vN, date), SESSION_CONTEXT_Jobsearch.md
+- Files cross-referenced: resume_master.md (vN, date), personal_statement.md (vN, date), the session-context file
 - Total findings: N
 
 ## Findings
