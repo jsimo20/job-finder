@@ -9,23 +9,39 @@ from dataclasses import dataclass
 from .settings import pipeline_config
 from .taxonomy import COMP_FLOOR_USD, YOE_MAIN_QUEUE_MAX
 
-# Location scope lives in config/pipeline.toml, not here — it is a per-user
-# preference. This module only compiles what the config declares.
-_LOCATION = pipeline_config()["location"]
+# Location scope and title targeting live in config/pipeline.toml — per-user
+# preferences. configure() compiles what a config declares; tests call it
+# with a fictional fixture geography so no real region is baked in anywhere.
 
-IN_SCOPE_RE = re.compile(
-    "|".join(f"(?:{p})" for p in _LOCATION["in_scope_patterns"]),
-    re.IGNORECASE,
-)
+IN_SCOPE_RE = NEAR_METRO_RE = MID_METRO_RE = FAR_METRO_RE = None
+ROLE_TITLE_RE = EXCLUDE_TRACK_RE = EXCLUDE_ROLE_RE = None
+SENIORITY_KEEP_RE = SENIORITY_REJECT_RE = DIRECTOR_PLUS_RE = None
+_COMMUTE: dict = {}
 
-# Drive-time tiers measured from the user's home base. Distance alone never
-# discards a role; a heavy onsite requirement at distance produces a flag,
-# because days-per-week is often negotiable and postings misstate it.
-NEAR_METRO_RE = re.compile(_LOCATION["tiers"]["near"], re.IGNORECASE)
-MID_METRO_RE = re.compile(_LOCATION["tiers"]["mid"], re.IGNORECASE)
-FAR_METRO_RE = re.compile(_LOCATION["tiers"]["far"], re.IGNORECASE)
 
-_COMMUTE = _LOCATION["commute"]
+def configure(cfg: dict) -> None:
+    """(Re)compile all config-driven matchers from a pipeline-config dict."""
+    global IN_SCOPE_RE, NEAR_METRO_RE, MID_METRO_RE, FAR_METRO_RE, _COMMUTE
+    global ROLE_TITLE_RE, EXCLUDE_TRACK_RE, EXCLUDE_ROLE_RE
+    global SENIORITY_KEEP_RE, SENIORITY_REJECT_RE, DIRECTOR_PLUS_RE
+    location = cfg["location"]
+    IN_SCOPE_RE = re.compile(
+        "|".join(f"(?:{p})" for p in location["in_scope_patterns"]), re.IGNORECASE)
+    NEAR_METRO_RE = re.compile(location["tiers"]["near"], re.IGNORECASE)
+    MID_METRO_RE = re.compile(location["tiers"]["mid"], re.IGNORECASE)
+    FAR_METRO_RE = re.compile(location["tiers"]["far"], re.IGNORECASE)
+    _COMMUTE = location["commute"]
+    titles = cfg["titles"]
+    ROLE_TITLE_RE = re.compile(
+        "|".join(f"(?:{p})" for p in titles["role_patterns"]), re.IGNORECASE)
+    EXCLUDE_TRACK_RE = re.compile(titles["exclude_track"], re.IGNORECASE)
+    EXCLUDE_ROLE_RE = re.compile(titles["exclude_role"], re.IGNORECASE)
+    SENIORITY_KEEP_RE = re.compile(titles["seniority_keep"], re.IGNORECASE)
+    SENIORITY_REJECT_RE = re.compile(titles["seniority_reject"], re.IGNORECASE)
+    DIRECTOR_PLUS_RE = re.compile(titles["above_band"], re.IGNORECASE)
+
+
+configure(pipeline_config())
 
 
 def metro_tier(location: str | None) -> str | None:
@@ -88,20 +104,6 @@ NON_US_REMOTE_RE = re.compile(
     r")\b",
     re.IGNORECASE,
 )
-
-# Title targeting is per-user market preference and lives in
-# config/pipeline.toml [titles]; this module only compiles it.
-_TITLES = pipeline_config()["titles"]
-
-ROLE_TITLE_RE = re.compile(
-    "|".join(f"(?:{p})" for p in _TITLES["role_patterns"]), re.IGNORECASE)
-EXCLUDE_TRACK_RE = re.compile(_TITLES["exclude_track"], re.IGNORECASE)
-# Titles that contain target words but are really a different job.
-EXCLUDE_ROLE_RE = re.compile(_TITLES["exclude_role"], re.IGNORECASE)
-SENIORITY_KEEP_RE = re.compile(_TITLES["seniority_keep"], re.IGNORECASE)
-SENIORITY_REJECT_RE = re.compile(_TITLES["seniority_reject"], re.IGNORECASE)
-DIRECTOR_PLUS_RE = re.compile(_TITLES["above_band"], re.IGNORECASE)
-
 
 @dataclass
 class FilterResult:

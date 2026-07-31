@@ -1,9 +1,10 @@
-"""Search-radius expansion and the commute warning.
+"""Location gate + commute warning, exercised against the fictional fixture
+geography in tests/fixtures/pipeline_test.toml (see conftest.py). The
+mechanisms under test are real; no real region is baked into the suite.
 
-The committed config places the home base in central Connecticut and targets
-Boston deliberately, accepting the
-drive when the schedule is hybrid. What he rules out is 4-5 days onsite at that
-distance, which is why this produces a warning rather than a discard.
+Fixture model: far = Farport/Bigcity, mid = Midway, near = Nearville/Centerton,
+state token EX covers the near tier. "Farport, EX" therefore matches both the
+far city token and the near state token — the far reading must win.
 """
 from __future__ import annotations
 
@@ -13,109 +14,98 @@ from job_finder import filter as f
 from job_finder.extract import _clamp_days
 
 
-def _keep(location, title="Senior Product Manager", workplace_type=None):
-    return f.stage1(title=title, location=location, workplace_type=workplace_type).keep
-
+# ── Stage-1 location gate ────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("loc", [
-    "New Haven",          # city with no state — matched nothing before
-    "Stamford",
-    "Providence",
-    "Springfield",
-    "Worcester",
-    "Hartford, CT",
-    "Anytown, CT",
-    "New London, CT",
-    "Pawtucket, RI",
-    "Northampton, MA",
+    "Farport, EX", "Bigcity", "Midway, EX", "Nearville", "Centerton, EX",
+    "Somewhere, EX",          # bare state token qualifies
+    "East Coast (Remote OK)", # region phrase qualifies
 ])
-def test_expanded_metros_are_in_scope(loc):
-    assert _keep(loc), f"{loc} should be in scope"
+def test_in_scope_locations_keep(loc):
+    r = f.stage1(title="Senior Product Manager", location=loc, workplace_type="hybrid")
+    assert r.keep, (loc, r.reason)
 
 
-@pytest.mark.parametrize("loc", ["Boston, MA", "New York, NY", "Remote, US", "East Coast, USA"])
-def test_original_scope_still_kept(loc):
-    assert _keep(loc)
+@pytest.mark.parametrize("loc", ["Otherville, ZZ", "London, UK", "Ambleton"])
+def test_out_of_scope_locations_discard(loc):
+    r = f.stage1(title="Senior Product Manager", location=loc, workplace_type="hybrid")
+    assert r.reason == "discard:wrong_location", loc
 
 
-@pytest.mark.parametrize("loc", ["Nashua, NH", "Manchester, NH", "Albany, NY", "Schenectady, NY"])
-def test_second_ring_metros_in_scope(loc):
-    # Same ~2h drive as Boston, so same tolerance.
-    assert _keep(loc)
-    assert f.metro_tier(loc) == "far"
+def test_city_name_collision_needs_the_state_token():
+    """A near-tier city name that also exists elsewhere qualifies only through
+    the explicit state token (the Manchester-CT-vs-Manchester-UK class of bug:
+    the city name alone is not in scope, EX is)."""
+    assert f.stage1(title="Senior Product Manager", location="Nearville, EX",
+                    workplace_type="hybrid").keep
+    r = f.stage1(title="Senior Product Manager", location="Ambleton, UK",
+                 workplace_type="hybrid")
+    assert not r.keep
 
 
-def test_manchester_ct_is_near_not_far():
-    # Manchester, CT is ten minutes away. It must not inherit the NH tier.
-    assert f.metro_tier("Manchester, CT") == "near"
-    assert f.commute_warning("Manchester, CT", 5) is None
+def test_us_remote_is_always_in_scope():
+    r = f.stage1(title="Senior Product Manager", location="Remote - US",
+                 workplace_type="remote")
+    assert r.keep
 
 
-def test_bare_manchester_does_not_pull_in_the_uk():
-    # "Manchester" alone qualifies for nothing; only an explicit NH token does.
-    assert not _keep("Manchester, United Kingdom")
+# ── Metro tiers ──────────────────────────────────────────────────────────────
+
+def test_tiers_resolve():
+    assert f.metro_tier("Nearville") == "near"
+    assert f.metro_tier("Midway") == "mid"
+    assert f.metro_tier("Farport") == "far"
+    assert f.metro_tier("Otherville") is None
+    assert f.metro_tier(None) is None
 
 
-@pytest.mark.parametrize("loc", ["Austin, TX", "San Francisco, CA", "Denver, CO", "Seattle, WA"])
-def test_out_of_region_still_discarded(loc):
-    assert not _keep(loc)
+def test_far_city_wins_over_near_state_token():
+    """"Farport, EX" matches the near tier's EX token too; checked far-first
+    because the far reading is the one that matters for commute."""
+    assert f.metro_tier("Farport, EX") == "far"
 
 
-@pytest.mark.parametrize("loc,tier", [
-    ("Boston, MA", "far"),
-    ("Somerville, MA", "far"),
-    ("New York, NY", "far"),
-    ("Providence, RI", "mid"),
-    ("Worcester, MA", "mid"),
-    ("Stamford, CT", "mid"),
-    ("Hartford, CT", "near"),
-    ("New Haven, CT", "near"),
-    ("Springfield, MA", "near"),
-    ("Austin, TX", None),
-])
-def test_metro_tiers(loc, tier):
-    assert f.metro_tier(loc) == tier
+# ── Commute warning ──────────────────────────────────────────────────────────
+
+def test_far_metro_heavy_onsite_warns():
+    assert f.commute_warning("Farport, EX", 5) is not None
+    assert f.commute_warning("Farport, EX", 4) is not None
 
 
-def test_boston_reads_as_far_not_near_despite_ma_token():
-    # "Boston, MA" also matches the MA tokens that place Springfield; the far
-    # reading is the one that matters for commute, so it must win.
-    assert f.metro_tier("Boston, MA") == "far"
+def test_far_metro_hybrid_does_not_warn():
+    # The case the rule must never break: distance is fine when hybrid.
+    assert f.commute_warning("Farport, EX", 3) is None
+    assert f.commute_warning("Farport, EX", 2) is None
 
 
-def test_far_metro_heavy_onsite_case_warns():
-    # The role that prompted this: Somerville, MA, 4-5 days onsite.
-    assert f.commute_warning("Somerville, MA", 5) is not None
-    assert f.commute_warning("Somerville, MA", 4) is not None
+def test_mid_metro_warns_only_at_five_days():
+    assert f.commute_warning("Midway", 5) is not None
+    assert f.commute_warning("Midway", 4) is None
 
 
-def test_hybrid_boston_does_not_warn():
-    # Explicitly acceptable per the config's intent — the case the rule must not break.
-    assert f.commute_warning("Boston, MA", 3) is None
-    assert f.commute_warning("Boston, MA", 2) is None
+def test_near_metro_never_warns():
+    assert f.commute_warning("Nearville", 5) is None
 
 
 def test_remote_never_warns():
-    assert f.commute_warning("Boston, MA", 5, remote_us_ok=True) is None
+    assert f.commute_warning("Farport, EX", 5, remote_us_ok=True) is None
 
 
-def test_unknown_schedule_does_not_warn():
+def test_unknown_schedule_never_warns():
     # Null means the JD said nothing; warning on that would fire on most roles.
-    assert f.commute_warning("Boston, MA", None) is None
+    assert f.commute_warning("Farport, EX", None) is None
 
 
-def test_nearby_onsite_does_not_warn():
-    assert f.commute_warning("Hartford, CT", 5) is None
+def test_warning_carries_the_configured_note():
+    warning = f.commute_warning("Farport, EX", 5)
+    assert warning == "5 days onsite, ~2h each way from home base"
 
 
-def test_mid_tier_warns_only_at_five_days():
-    assert f.commute_warning("Providence, RI", 4) is None
-    assert f.commute_warning("Providence, RI", 5) is not None
-
+# ── onsite_days_per_week boundary validation ─────────────────────────────────
 
 @pytest.mark.parametrize("raw,expected", [
-    (3, 3), ("3", 3), (0, 0), (5, 5),
-    (None, None), (7, None), (-1, None), ("hybrid", None), (2.9, 2),
+    (3, 3), (0, 0), (5, 5), ("4", 4), (None, None),
+    (6, None), (-1, None), ("many", None), (2.0, 2),
 ])
-def test_clamp_days_validates_model_output(raw, expected):
+def test_clamp_days(raw, expected):
     assert _clamp_days(raw) == expected

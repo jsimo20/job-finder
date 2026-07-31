@@ -1,3 +1,4 @@
+# TEST FIXTURE — fictional geography exercising the location mechanism.
 # EXAMPLE pipeline configuration — a working demonstration, not anyone's
 # real search. Copy it and replace every value with your own:
 #
@@ -46,26 +47,21 @@ senior_scope = "a typical Senior/Staff PM scope"
 # Springfield).
 
 [location]
-# Replace with your own metros. A posting passes when its location matches any
-# pattern (case-insensitive) or the role is US-remote. Placeholders below are
-# obviously fictional so nothing steers you before you edit.
 in_scope_patterns = [
-    '\b(examplecity|nearbytown|midtown|EX)\b',
+    '\b(farport|bigcity|midway|nearville|centerton|EX)\b',
+    '\b(east coast|northeast(?:ern)?)\b',
 ]
 
 [location.tiers]
-# Drive-time buckets from your home base, used only for the commute warning.
-# Checked far-first: a far city often also matches a near state token.
-near = '\b(nearbytown|EX)\b'
-mid = '\b(midtown)\b'
-far = '\b(examplecity)\b'
+near = '\b(nearville|centerton|EX)\b'
+mid = '\b(midway)\b'
+far = '\b(farport|bigcity)\b'
 
 [location.commute]
-# Warn (never discard) when a role's onsite days meet the tier's threshold.
 far_min_days = 4
 mid_min_days = 5
-far_note = "~2h each way from home"
-mid_note = "~1h each way from home"
+far_note = "~2h each way from home base"
+mid_note = "~1-1.5h each way from home base"
 
 # ── Domain taxonomy ──────────────────────────────────────────────────────────
 # The extraction model tags each role with these domains; the scorer sums the

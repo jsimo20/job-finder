@@ -2,7 +2,7 @@ from job_finder.filter import stage1, stage3
 
 
 def test_stage1_keeps_senior_pm_boston():
-    r = stage1(title="Senior Product Manager, Platform", location="Boston, MA", workplace_type="hybrid")
+    r = stage1(title="Senior Product Manager, Platform", location="Farport, EX", workplace_type="hybrid")
     assert r.keep, r.reason
 
 
@@ -12,65 +12,65 @@ def test_stage1_keeps_staff_pm_remote_us():
 
 
 def test_stage1_rejects_pmm():
-    r = stage1(title="Senior Product Marketing Manager", location="Boston, MA", workplace_type=None)
+    r = stage1(title="Senior Product Marketing Manager", location="Farport, EX", workplace_type=None)
     assert not r.keep
     assert "wrong_track" in r.reason
 
 
 def test_stage1_rejects_project_manager():
-    r = stage1(title="Senior Project Manager", location="Boston, MA", workplace_type=None)
+    r = stage1(title="Senior Project Manager", location="Farport, EX", workplace_type=None)
     assert not r.keep
 
 
 def test_stage1_rejects_product_owner():
-    r = stage1(title="Senior Product Owner", location="Boston, MA", workplace_type=None)
+    r = stage1(title="Senior Product Owner", location="Farport, EX", workplace_type=None)
     assert not r.keep
 
 
 def test_stage1_rejects_apm():
-    r = stage1(title="Associate Product Manager", location="Boston, MA", workplace_type=None)
+    r = stage1(title="Associate Product Manager", location="Farport, EX", workplace_type=None)
     assert not r.keep
     assert "too_junior" in r.reason
 
 
 def test_stage1_rejects_director():
-    r = stage1(title="Director of Product", location="Boston, MA", workplace_type=None)
+    r = stage1(title="Director of Product", location="Farport, EX", workplace_type=None)
     assert not r.keep
     assert "director_plus" in r.reason
 
 
 def test_stage1_rejects_engineering_manager_with_product():
     r = stage1(title="Senior Software Engineering Manager, Toast Web Platform",
-               location="Boston, MA", workplace_type="hybrid")
+               location="Farport, EX", workplace_type="hybrid")
     assert not r.keep
     assert "engineering_or_ic_role" in r.reason
 
 
 def test_stage1_rejects_product_security_engineer():
-    r = stage1(title="Senior Product Security Engineer", location="Boston, MA", workplace_type=None)
+    r = stage1(title="Senior Product Security Engineer", location="Farport, EX", workplace_type=None)
     assert not r.keep
 
 
 def test_stage1_rejects_full_stack_with_product():
-    r = stage1(title="Senior Full Stack Engineer - New Product", location="Boston, MA", workplace_type=None)
+    r = stage1(title="Senior Full Stack Engineer - New Product", location="Farport, EX", workplace_type=None)
     assert not r.keep
 
 
 def test_stage1_keeps_pm_for_developer_experience():
     # "Developer Experience" is the product area, not the role; PM stem wins.
     r = stage1(title="Lead Product Manager, Developer Experience",
-               location="Boston, MA", workplace_type="hybrid")
+               location="Farport, EX", workplace_type="hybrid")
     assert r.keep
 
 
 def test_stage1_keeps_engineering_product_manager():
     r = stage1(title="Principal Engineering Product Manager, Optics",
-               location="Cambridge, MA", workplace_type="hybrid")
+               location="Bigcity, EX", workplace_type="hybrid")
     assert r.keep
 
 
 def test_stage1_keeps_head_of_product():
-    r = stage1(title="Head of Product, Platform", location="NYC", workplace_type="hybrid")
+    r = stage1(title="Head of Product, Platform", location="Farport", workplace_type="hybrid")
     assert r.keep
 
 
@@ -112,8 +112,8 @@ def test_stage1_rejects_dublin_pm():
     assert "wrong_location" in r.reason
 
 
-def test_stage1_keeps_hartford():
-    r = stage1(title="Principal Product Manager", location="Hartford, CT", workplace_type="hybrid")
+def test_stage1_keeps_near_metro():
+    r = stage1(title="Principal Product Manager", location="Nearville, EX", workplace_type="hybrid")
     assert r.keep
 
 
