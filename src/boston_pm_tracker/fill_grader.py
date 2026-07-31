@@ -1,0 +1,190 @@
+"""Layer-1 form-fill grader: deterministic assertions over audit manifests.
+
+Grades the post-fill field inventories captured to data/fill_audits/ by both
+fill paths. Zero LLM tokens. Design: .claude/context/form-fill-evals.md.
+
+Every field lands in exactly one bucket:
+
+- filled            — has a value
+- deliberate_blank  — blank is CORRECT: salary/comp, legal questions,
+                      name-trap fields (asks about someone else), checkboxes
+                      (consent is always manual)
+- missed            — we have a rule for this label but it's blank
+- env_failure       — we have a rule, but the dropdown showed zero options
+                      while the filler had it open (async menu lost the race)
+- no_rule           — nothing configured can answer it; the growth backlog
+- upload            — file inputs; verified by the fill report's rendered-
+                      filename check, not gradable from the manifest
+
+Critical violations (any one caps the grade at F):
+
+- a sponsorship-type field holding a vetoed answer
+- a salary/comp field holding any value
+- a name-trap field holding any value
+
+Grade = filled / (filled + missed) over ruled fields only:
+A >= 95%, B >= 85%, C >= 70%, D below. no_rule blanks are reported as
+backlog, not counted against the grade — the fix for those is adding
+answers, not fixing the filler.
+
+Usage:
+    python -m boston_pm_tracker.fill_grader data/fill_audits/<slug>.post.json ...
+    python -m boston_pm_tracker.fill_grader --date 2026-07-30
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+from . import settings
+from .fill_greenhouse import (CITY_PATTERN, NAME_TRAP_PATTERN, SKIP_PATTERN,
+                              TEXT_FIELDS, build_combo_fields, veto_for)
+
+AUDITS_DIR = Path(__file__).resolve().parents[2] / "data" / "fill_audits"
+
+# Questions where a blank is the only correct output, whoever asks.
+LEGAL_PATTERN = re.compile(
+    r"non-?compete|restrictive covenant|agreement with (your|a|any) (current|prior|former)?\s*employer|"
+    r"impacts your ability to do business", re.I)
+
+GRADE_BANDS = [(0.95, "A"), (0.85, "B"), (0.70, "C"), (0.0, "D")]
+
+
+def _text_keys_answerable(profile: dict) -> set[str]:
+    """Which TEXT_FIELDS answer keys the profile can actually supply."""
+    ident = profile.get("identity", {})
+    education = profile.get("education", {})
+    keys = set()
+    for key in ("email", "phone", "linkedin", "github", "address"):
+        if ident.get(key):
+            keys.add(key)
+    if ident.get("name"):
+        keys.update({"first_name", "last_name", "preferred_name"})
+    if education.get("start_year"):
+        keys.add("start_year")
+    if education.get("end_year"):
+        keys.add("end_year")
+    return keys
+
+
+def classify(field: dict[str, Any], combos, text_keys) -> tuple[str, str]:
+    """(bucket, detail) for one manifest field."""
+    label = (field.get("label") or "").strip()
+    ftype = (field.get("type") or "").lower()
+    value = (field.get("value") or "").strip()
+    options = field.get("options")
+
+    if ftype == "file":
+        return "upload", "verified by the fill report, not the manifest"
+    if label and SKIP_PATTERN.search(label):
+        if value:
+            return "critical", f"salary/comp field holds a value: {value[:40]!r}"
+        return "deliberate_blank", "salary/comp — always manual"
+    if label and NAME_TRAP_PATTERN.search(label):
+        if value:
+            return "critical", f"name-trap field holds a value: {value[:40]!r}"
+        return "deliberate_blank", "asks about someone else — never autofilled"
+    if label and LEGAL_PATTERN.search(label):
+        return "deliberate_blank", "legal question — always manual"
+    if ftype == "checkbox":
+        return "deliberate_blank", "checkbox — consent stays manual"
+
+    veto = veto_for(label) if label else None
+    if value and veto and re.search(veto, value, re.I):
+        return "critical", f"vetoed answer committed: {value[:40]!r}"
+    if value:
+        return "filled", value[:40]
+
+    # Blank: do we have a rule that should have filled it?
+    ruled = bool(label) and (
+        CITY_PATTERN.search(label)
+        or re.search(r"phone", label, re.I)
+        or any(re.search(p, label, re.I) for p, _ in combos)
+        or any(re.search(p, label, re.I) for p, k in TEXT_FIELDS if k in text_keys)
+    )
+    if not ruled:
+        return "no_rule", "no configured answer"
+    if ftype == "react-select" and not options:
+        return "env_failure", "dropdown options never rendered"
+    return "missed", "rule exists but field is blank"
+
+
+def grade_manifest(path: Path, profile: dict) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    # Two shapes on disk: the script writes {slug, phase, ..., fields: [...]};
+    # early agent-path captures wrote the bare field list.
+    if isinstance(data, list):
+        data = {"slug": path.stem, "fields": [f for f in data if isinstance(f, dict)]}
+    fields = data.get("fields", [])
+    combos = build_combo_fields(profile)
+    text_keys = _text_keys_answerable(profile)
+
+    buckets: dict[str, list[tuple[str, str]]] = {}
+    for field in fields:
+        bucket, detail = classify(field, combos, text_keys)
+        buckets.setdefault(bucket, []).append(((field.get("label") or "?")[:60], detail))
+
+    n = {k: len(v) for k, v in buckets.items()}
+    filled, missed = n.get("filled", 0), n.get("missed", 0)
+    ruled = filled + missed
+    pct = filled / ruled if ruled else 1.0
+    if n.get("critical"):
+        letter = "F"
+    else:
+        letter = next(g for floor, g in GRADE_BANDS if pct >= floor)
+    return {"slug": data.get("slug", path.stem), "grade": letter, "pct": pct,
+            "counts": n, "buckets": buckets, "field_count": len(fields)}
+
+
+def print_report(result: dict[str, Any], *, verbose: bool = True) -> None:
+    c = result["counts"]
+    print(f"\n{'=' * 70}\n{result['slug']}  -  grade {result['grade']} "
+          f"({result['pct']:.0%} of ruled fields filled, {result['field_count']} fields)")
+    print("  " + "  ".join(f"{k}: {c.get(k, 0)}" for k in
+                           ("filled", "missed", "env_failure", "no_rule",
+                            "deliberate_blank", "upload", "critical")))
+    if not verbose:
+        return
+    for bucket in ("critical", "missed", "env_failure", "no_rule"):
+        for label, detail in result["buckets"].get(bucket, []):
+            print(f"  [{bucket}] {label} - {detail}")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("manifests", nargs="*", type=Path,
+                    help="post.json audit manifests to grade")
+    ap.add_argument("--date", help="grade every post manifest from this date (YYYY-MM-DD)")
+    ap.add_argument("--quiet", action="store_true", help="summary lines only")
+    args = ap.parse_args()
+
+    paths = list(args.manifests)
+    if args.date:
+        paths.extend(sorted(AUDITS_DIR.glob(f"{args.date}_*.post.json")))
+    if not paths:
+        ap.error("pass manifest paths or --date")
+
+    profile = settings.load_profile()
+    results = [grade_manifest(p, profile) for p in paths]
+    for r in results:
+        print_report(r, verbose=not args.quiet)
+
+    if len(results) > 1:
+        total_filled = sum(r["counts"].get("filled", 0) for r in results)
+        total_missed = sum(r["counts"].get("missed", 0) for r in results)
+        ruled = total_filled + total_missed
+        criticals = sum(r["counts"].get("critical", 0) for r in results)
+        pct = total_filled / ruled if ruled else 1.0
+        letter = "F" if criticals else next(g for floor, g in GRADE_BANDS if pct >= floor)
+        print(f"\n{'=' * 70}\nBATCH: {len(results)} forms - grade {letter} "
+              f"({pct:.0%} ruled coverage, {criticals} critical)")
+        print("Per-form: " + "  ".join(f"{r['slug'][:20]}={r['grade']}" for r in results))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

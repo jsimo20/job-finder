@@ -1,8 +1,24 @@
 # Form-fill evals — design
 
-Status: **design agreed 2026-07-27, not yet implemented.** Seed data comes from the
-2026-07-27 batch of 10 (see "Seed batch" below), graded against James's screenshots
-and written feedback.
+Status: **Layer 1 implemented 2026-07-31** as `src/boston_pm_tracker/fill_grader.py`
+(zero LLM tokens; run `python -m boston_pm_tracker.fill_grader --date <date>`).
+Layer 2 (LLM judgment grading) remains unbuilt and local-only by design.
+
+Calibration: James hand-graded the 2026-07-30 batch "C+ — the Greenhouse ones
+had lots of blanks, the Ashby ones were clean, cover letter and resume work is
+rock solid." The grader agrees: Ashby forms grade A, Greenhouse B with misses
+and env failures, Smartsheet F (the sponsorship-inversion critical). Grades
+are computed against the *current* profile rules, so re-grading an old batch
+after adding answers shows what the next batch should score.
+
+Known Layer-1 blind spots, all observed 2026-07-30:
+- **Multi-step wizards** (Phenom/Circle): the manifest only covers the step
+  reached, so a gated form can grade A while steps 4-6 were never seen.
+- **Uploads**: Greenhouse removes the file input after upload; the manifest
+  cannot confirm attachment. The fill report's rendered-filename check is the
+  authority (bucket `upload`).
+- **Async menus** (`env_failure`): options never rendered while the filler had
+  the menu open. Not a matching bug; retrying or slowing the fill is the fix.
 
 ## Why this exists
 

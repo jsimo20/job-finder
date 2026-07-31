@@ -76,6 +76,18 @@ Then edit, in this order:
 7. **`profile/qa_checklist.md`** and **`profile/session_context.md`** — grow
    these over time; the defaults work on day one.
 
+**Do not skip 2–4.** The tailoring, fact-checking, and autofill workflows all
+read those files; with placeholders still in them you'd be submitting
+applications carrying example data. When you think you're done, prove it:
+
+```sh
+python -m boston_pm_tracker.profile_check
+```
+
+It flags every placeholder value and missing driving doc, and exits non-zero
+until your profile is real. Run it again any time; the apply workflow assumes
+it passes.
+
 `profile/` is gitignored. Verify before your first push:
 
 ```sh
@@ -142,11 +154,19 @@ suppress roles you've already applied to.
 
 ```sh
 python -m pytest -q                              # tests
+python -m boston_pm_tracker.profile_check         # is my profile complete?
 boston-pm-tracker review                          # interactive digest review
 boston-pm-tracker applied add --external-id ...   # record an application
 python -m boston_pm_tracker.fill_greenhouse \
     --url <apply url> --folder <per-app folder>   # deterministic form fill
+python -m boston_pm_tracker.fill_grader --date <YYYY-MM-DD>   # grade a fill batch
 ```
+
+After every fill batch, run the grader on that date's audit manifests. It
+letter-grades each form (missed fields, environment failures, critical
+violations like a wrong sponsorship answer) and its `no_rule` list is your
+backlog: each entry becomes a new `[[custom_combos]]` answer in
+`profile/profile.toml`, so coverage compounds batch over batch.
 
 The pipeline itself (`boston-pm-tracker run`) normally only runs in CI — it
 spends real Anthropic tokens, so avoid running it casually on a laptop.
