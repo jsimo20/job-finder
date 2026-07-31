@@ -29,13 +29,6 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           track_progress: true
-          # TEMPORARY, for diagnosis only — revert once the cause is known.
-          # The reviewer has failed every run since 2026-07-27T13:45 with
-          # is_error:true at ~600ms, 1 turn, $0 billed, and the action hides the
-          # SDK output ("full output hidden for security"), so the underlying API
-          # error is invisible. This surfaces it. Full output can include prompt
-          # content, so do not leave it on.
-          show_full_output: true
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
