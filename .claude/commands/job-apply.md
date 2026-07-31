@@ -15,7 +15,7 @@ Argument: `$ARGUMENTS`.
 
 - **A specific external_id** → jump straight to that role.
 - **`all`** → process every role in the pending queue, one at a time, in score order.
-- **Empty, `--top N`, or "what should I apply to"** → **Dispatch the `digest-triager` subagent** (Sonnet) with `top_n` = N (default 5). The agent reads the latest digest in `digests/`, ranks pending roles against the fit profile in `profile/fit_profile.md`, and returns a ranked list with one-sentence reasoning per role. Surface the triager's list verbatim to the user and ask which to work — one external_id, several, or `all`.
+- **Empty, `--top N`, or "what should I apply to"** → **Dispatch the `digest-triager` subagent** (Sonnet) with `top_n` = N (default 5). The agent reads the latest digest in `digests/` (falling back to `job-finder digest-archive show` when the directory is missing or empty — `digests/` is gitignored working output that only exists after a local pipeline run), ranks pending roles against the fit profile in `profile/fit_profile.md`, and returns a ranked list with one-sentence reasoning per role. Surface the triager's list verbatim to the user and ask which to work — one external_id, several, or `all`.
 
   Fallback if the digest subagent dispatch fails: query `data/jobs.db` directly for the top N pending unapplied roles (`applied_at IS NULL` and `dismissed_at IS NULL`), sorted by `total_score DESC`, using the same SQL shape as `review.py:PENDING_SQL`.
 
