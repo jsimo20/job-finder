@@ -1,14 +1,17 @@
-# pm-tracker (job-finder)
+# job-finder
 
-Cron-driven pipeline that tracks senior Product Manager roles at a curated set
-of companies, scores them against a configurable profile, and emails a ranked
-Markdown digest. A second, local-only half tailors application materials and
-autofills forms — always stopping short of Submit.
+Cron-driven pipeline that tracks job postings at a curated set of companies,
+scores them against a configurable profile, and emails a ranked Markdown
+digest. A second, local-only half tailors application materials and autofills
+forms — always stopping short of Submit.
 
-All personal context is configurable:
+Everything that defines "your search" is configuration, not code — target
+titles and industry, metros, weights, identity:
 
-- **`config/pipeline.toml`** (committed) — target metros, commute tiers,
-  domain/stage weights, comp floor. Edit for your own search.
+- **`config/pipeline.toml`** (committed) — target job titles and seniority
+  band, metros, commute tiers, domain/stage weights, comp floor. The shipped
+  defaults target senior product management roles in New England; edit every
+  section for your own market.
 - **`profile/`** (gitignored) — who you are: identity, EEO answers, master
   resume, writing voice. Copied from `profile.example/`.
 
@@ -20,7 +23,7 @@ can hand it to a Claude Code session and let it drive.
 1. **Collect** — hit each seed company's public ATS endpoint (Greenhouse,
    Lever, Ashby) and normalize postings.
 2. **Stage 1 hard filters** — discard wrong title, wrong location, wrong
-   seniority (geography from `config/pipeline.toml`).
+   seniority (title patterns and geography both from `config/pipeline.toml`).
 3. **Extract** — one Claude Haiku call per surviving JD returns structured
    JSON (YOE, comp range, domain tags, company stage, onsite days).
 4. **Stage 3 hard filters** — comp floor, YOE routing to main vs stretch.
@@ -77,7 +80,7 @@ digest; see SETUP.md §6 for the three required secrets.
 pytest
 ```
 
-154 tests, no network, no API keys, no profile required — they must pass on a
+No network, no API keys, no profile required — the suite must pass on a
 fresh clone.
 
 ## Handing this repo to someone else
