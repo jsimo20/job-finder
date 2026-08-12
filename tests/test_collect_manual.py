@@ -73,6 +73,37 @@ def test_collect_enriches_kept_postings_only(tmp_path, monkeypatch):
     assert rows["R2"]["jd_text"] is None
 
 
+def test_collect_keeps_posting_when_detail_fetch_fails(tmp_path, monkeypatch):
+    state_db = tmp_path / "state.db"
+    state.upsert_company({"name": "Example Corp", "ats_provider": "workday",
+                          "ats_slug": "examplecorp/wd1/External"}, state_db)
+    jobs_db = tmp_path / "jobs.db"
+    db.init_db(jobs_db)
+
+    def fake_fetch(slug, *, client=None, timeout=30.0):
+        return [NormalizedPosting(
+            external_id="R1", title="Senior Product Manager, Platform",
+            location="Farport, EX", workplace_type=None,
+            url="https://example.com/R1", jd_text=None, posted_at=None,
+            detail_ref="/job/R1")]
+
+    def boom(slug, ref, *, client=None, timeout=30.0):
+        raise ValueError("interstitial page was not JSON")
+
+    monkeypatch.setitem(collect.REGISTRY, "workday", fake_fetch)
+    monkeypatch.setitem(collect.DETAIL_REGISTRY, "workday", boom)
+
+    stats = collect.run(state_db=state_db, db_path=jobs_db)
+    # The posting survives with jd_text NULL; the failure is counted, not fatal.
+    assert stats["kept"] == 1
+    assert stats["errors"] == 1
+    with db.connect(jobs_db) as conn:
+        row = conn.execute(
+            "SELECT jd_text, hard_filter_verdict FROM postings").fetchone()
+    assert row["jd_text"] is None
+    assert row["hard_filter_verdict"] == "keep"
+
+
 def test_digest_manual_section_empty_when_none(tmp_path):
     state_db = tmp_path / "state.db"
     jobs_db = tmp_path / "jobs.db"

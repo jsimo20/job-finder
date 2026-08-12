@@ -196,7 +196,8 @@ def _cmd_companies(args: argparse.Namespace) -> int:
     if cmd == "list":
         rows = state.list_companies()
         for r in rows:
-            print(f"{r['name']}  [{r['ats_provider']}:{r['ats_slug']}]  "
+            label = r["ats_slug"] or r["careers_url"] or "?"
+            print(f"{r['name']}  [{r['ats_provider']}:{label}]  "
                   f"{','.join(r['sector_tags'])}")
         print(f"{len(rows)} companies tracked")
     elif cmd == "add":

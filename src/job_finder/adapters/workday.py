@@ -26,6 +26,7 @@ from .base import NormalizedPosting
 
 logger = logging.getLogger(__name__)
 
+_BOM = chr(0xfeff)
 _PAGE_LIMIT = 20          # the CXS jobs endpoint caps limit at 20
 _MAX_POSTINGS = 5000      # runaway-pagination backstop
 
@@ -40,7 +41,7 @@ def _parse_slug(slug: str) -> tuple[str, str, str]:
 def _strip_html(content: str | None) -> str | None:
     if not content:
         return None
-    text = html.unescape(content)
+    text = html.unescape(content).replace(_BOM, "")
     return BeautifulSoup(text, "html.parser").get_text(separator="\n").strip()
 
 
@@ -57,6 +58,8 @@ def _infer_workplace(job: dict[str, Any]) -> str | None:
     blob = (job.get("locationsText") or "").lower()
     if "remote" in blob:
         return "remote"
+    if "hybrid" in blob:
+        return "hybrid"
     return None
 
 
@@ -65,7 +68,7 @@ def normalize(job: dict[str, Any], slug: str) -> NormalizedPosting:
     path = job["externalPath"]
     return NormalizedPosting(
         external_id=_external_id(job),
-        title=job["title"],
+        title=job["title"].replace(_BOM, ""),
         location=job.get("locationsText"),
         workplace_type=_infer_workplace(job),
         url=f"https://{tenant}.{instance}.myworkdayjobs.com/{site}{path}",
@@ -94,9 +97,17 @@ def fetch(slug: str, *, client: httpx.Client | None = None,
             page = payload.get("jobPostings", [])
             if not page:
                 break
-            postings.extend(normalize(j, slug) for j in page)
+            for j in page:
+                if not (j.get("externalPath") and j.get("title")):
+                    logger.warning("skipping malformed posting slug=%s entry=%.120s",
+                                   slug, j)
+                    continue
+                postings.append(normalize(j, slug))
             offset += len(page)
-            if offset >= payload.get("total", 0):
+            # The empty-page check above is the real terminator; total is only
+            # an early exit, so a missing key must not truncate the board.
+            total = payload.get("total")
+            if total is not None and offset >= total:
                 break
         return postings
     finally:
