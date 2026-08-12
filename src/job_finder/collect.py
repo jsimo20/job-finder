@@ -8,7 +8,7 @@ from pathlib import Path
 import httpx
 
 from . import db, state
-from .adapters import REGISTRY
+from .adapters import DETAIL_REGISTRY, REGISTRY
 from .filter import stage1
 
 logger = logging.getLogger(__name__)
@@ -27,13 +27,18 @@ def load_companies(state_db: Path = state.DEFAULT_STATE_DB) -> list[dict]:
 
 def run(state_db: Path = state.DEFAULT_STATE_DB, db_path: Path = db.DEFAULT_DB_PATH) -> dict:
     companies = load_companies(state_db)
-    stats = {"companies": 0, "fetched": 0, "kept": 0, "discarded": 0, "errors": 0, "errors_detail": []}
+    stats = {"companies": 0, "fetched": 0, "kept": 0, "discarded": 0, "manual": 0,
+             "errors": 0, "errors_detail": []}
 
     with db.connect(db_path) as conn, httpx.Client(timeout=30.0) as client:
         for company in companies:
             stats["companies"] += 1
             provider = company["ats_provider"]
             slug = company["ats_slug"]
+            if provider == "manual":
+                # No pollable board; the digest lists these for a hand check.
+                stats["manual"] += 1
+                continue
             fetcher = REGISTRY.get(provider)
             if not fetcher:
                 logger.warning("no adapter for provider=%s slug=%s", provider, slug)
@@ -53,12 +58,16 @@ def run(state_db: Path = state.DEFAULT_STATE_DB, db_path: Path = db.DEFAULT_DB_P
 
             try:
                 postings = fetcher(slug, client=client)
-            except httpx.HTTPError as e:
+            # ValueError covers JSONDecodeError: a WAF page or rate-limit
+            # interstitial served with a 200 must skip this company, not
+            # abort the run and roll back every company before it.
+            except (httpx.HTTPError, ValueError) as e:
                 logger.error("fetch failed company=%s err=%s", company["name"], e)
                 stats["errors"] += 1
                 stats["errors_detail"].append(f"{company['name']}: {e}")
                 continue
 
+            detail_fetcher = DETAIL_REGISTRY.get(provider)
             seen_ids: set[str] = set()
             for p in postings:
                 stats["fetched"] += 1
@@ -70,6 +79,22 @@ def run(state_db: Path = state.DEFAULT_STATE_DB, db_path: Path = db.DEFAULT_DB_P
                 )
                 if verdict.keep:
                     stats["kept"] += 1
+                    # Detail-only providers ship the JD separately; fetch it
+                    # for survivors only. On failure the posting stays kept
+                    # with jd_text NULL, which extract counts as skipped.
+                    if detail_fetcher and p.jd_text is None and p.detail_ref:
+                        try:
+                            detail = detail_fetcher(slug, p.detail_ref, client=client)
+                            p.jd_text = detail["jd_text"]
+                            p.posted_at = detail["posted_at"] or p.posted_at
+                        # Any per-posting failure (HTTP, non-JSON body, shape
+                        # change) degrades to jd_text NULL — never a lost run.
+                        except Exception as e:
+                            logger.error("detail fetch failed company=%s ref=%s err=%s",
+                                         company["name"], p.detail_ref, e)
+                            stats["errors"] += 1
+                            stats["errors_detail"].append(
+                                f"{company['name']} detail {p.detail_ref}: {e}")
                 else:
                     stats["discarded"] += 1
                 db.upsert_posting(

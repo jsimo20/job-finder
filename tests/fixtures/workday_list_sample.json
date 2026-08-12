@@ -1,0 +1,26 @@
+{
+  "total": 3,
+  "jobPostings": [
+    {
+      "title": "Senior Product Manager, Connected Devices",
+      "externalPath": "/job/EX-Bigcity/Senior-Product-Manager--Connected-Devices_R100001",
+      "locationsText": "Bigcity, EX",
+      "postedOn": "Posted Today",
+      "bulletFields": ["R100001"]
+    },
+    {
+      "title": "Staff Product Manager",
+      "externalPath": "/job/Remote-US/Staff-Product-Manager_R100002",
+      "locationsText": "Remote - US",
+      "postedOn": "Posted 3 Days Ago",
+      "bulletFields": ["R100002"]
+    },
+    {
+      "title": "Equipment Maintenance Technician",
+      "externalPath": "/job/EX-Farport/Equipment-Maintenance-Technician_R100003",
+      "locationsText": "Farport, EX",
+      "postedOn": "Posted 30+ Days Ago",
+      "bulletFields": []
+    }
+  ]
+}

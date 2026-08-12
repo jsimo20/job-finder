@@ -196,17 +196,27 @@ def _cmd_companies(args: argparse.Namespace) -> int:
     if cmd == "list":
         rows = state.list_companies()
         for r in rows:
-            print(f"{r['name']}  [{r['ats_provider']}:{r['ats_slug']}]  "
+            label = r["ats_slug"] or r["careers_url"] or "?"
+            print(f"{r['name']}  [{r['ats_provider']}:{label}]  "
                   f"{','.join(r['sector_tags'])}")
         print(f"{len(rows)} companies tracked")
     elif cmd == "add":
+        if args.provider == "manual":
+            if not args.careers_url:
+                print("manual companies need --careers-url (that's all the digest can show)",
+                      file=sys.stderr)
+                return 2
+        elif not args.slug:
+            print(f"--slug is required for provider={args.provider}", file=sys.stderr)
+            return 2
         state.upsert_company({
             "name": args.name, "ats_provider": args.provider, "ats_slug": args.slug,
             "careers_url": args.careers_url,
             "sector_tags": [t for t in (args.tags or "").split(",") if t],
             "size_band": args.size_band,
         })
-        print(f"tracked: {args.name} [{args.provider}:{args.slug}]")
+        label = args.slug or args.careers_url
+        print(f"tracked: {args.name} [{args.provider}:{label}]")
     elif cmd == "remove":
         ok = state.remove_company(args.name)
         print(f"removed: {args.name}" if ok else f"no match for {args.name!r}")
@@ -281,8 +291,10 @@ def main(argv: list[str] | None = None) -> int:
     csub.add_parser("list").set_defaults(func=_cmd_companies)
     ca = csub.add_parser("add")
     ca.add_argument("--name", required=True)
-    ca.add_argument("--provider", required=True, choices=["greenhouse", "lever", "ashby"])
-    ca.add_argument("--slug", required=True)
+    ca.add_argument("--provider", required=True,
+                    choices=["greenhouse", "lever", "ashby", "workday", "manual"])
+    ca.add_argument("--slug", default=None,
+                    help="board slug; workday uses tenant/wdN/site; not used for manual")
     ca.add_argument("--careers-url", default=None, dest="careers_url")
     ca.add_argument("--tags", default="", help="comma-separated sector tags")
     ca.add_argument("--size-band", default=None, dest="size_band")

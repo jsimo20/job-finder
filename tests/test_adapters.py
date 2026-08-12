@@ -69,6 +69,80 @@ def test_ashby_normalize_strips_utf8_bom():
     p.jd_text.encode("ascii", errors="strict")
 
 
+def test_workday_normalize():
+    from job_finder.adapters import workday
+
+    payload = json.loads((FIXTURES / "workday_list_sample.json").read_text())
+    normalized = [workday.normalize(j, slug="exampleco/wd1/External")
+                  for j in payload["jobPostings"]]
+    assert len(normalized) == 3
+    senior = normalized[0]
+    assert senior.external_id == "R100001"
+    assert senior.title == "Senior Product Manager, Connected Devices"
+    assert senior.location == "Bigcity, EX"
+    assert senior.url == ("https://exampleco.wd1.myworkdayjobs.com/External"
+                          "/job/EX-Bigcity/Senior-Product-Manager--Connected-Devices_R100001")
+    # The list payload has no JD; the detail_ref is what fetch_detail needs.
+    assert senior.jd_text is None
+    assert senior.detail_ref == "/job/EX-Bigcity/Senior-Product-Manager--Connected-Devices_R100001"
+    assert normalized[1].workplace_type == "remote"
+    # Empty bulletFields falls back to the req id in the path.
+    assert normalized[2].external_id == "R100003"
+
+
+def test_workday_slug_must_have_three_parts():
+    import pytest
+
+    from job_finder.adapters import workday
+
+    with pytest.raises(ValueError, match="tenant/wdN/site"):
+        workday.fetch("exampleco")
+
+
+def test_workday_fetch_paginates(monkeypatch):
+    import httpx
+
+    from job_finder.adapters import workday
+
+    payload = json.loads((FIXTURES / "workday_list_sample.json").read_text())
+    monkeypatch.setattr(workday, "_PAGE_LIMIT", 2)
+    pages = {0: {"total": 3, "jobPostings": payload["jobPostings"][:2]},
+             2: {"total": 3, "jobPostings": payload["jobPostings"][2:]}}
+    calls = []
+
+    def handler(request):
+        body = json.loads(request.content)
+        calls.append(body["offset"])
+        return httpx.Response(200, json=pages[body["offset"]])
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    postings = workday.fetch("exampleco/wd1/External", client=client)
+    assert calls == [0, 2]
+    assert [p.external_id for p in postings] == ["R100001", "R100002", "R100003"]
+
+
+def test_workday_fetch_detail():
+    import httpx
+
+    from job_finder.adapters import workday
+
+    detail_payload = json.loads((FIXTURES / "workday_detail_sample.json").read_text())
+    seen_urls = []
+
+    def handler(request):
+        seen_urls.append(str(request.url))
+        return httpx.Response(200, json=detail_payload)
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    ref = "/job/EX-Bigcity/Senior-Product-Manager--Connected-Devices_R100001"
+    detail = workday.fetch_detail("exampleco/wd1/External", ref, client=client)
+    assert seen_urls == [
+        "https://exampleco.wd1.myworkdayjobs.com/wday/cxs/exampleco/External" + ref]
+    assert "5+ years" in detail["jd_text"]
+    assert "<p>" not in detail["jd_text"]
+    assert detail["posted_at"] == "2026-08-01"
+
+
 def test_lever_normalize_strips_utf8_bom():
     bom = chr(0xfeff)
     posting = {

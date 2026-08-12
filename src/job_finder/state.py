@@ -83,8 +83,15 @@ def list_companies(db_path: Path = DEFAULT_STATE_DB) -> list[dict[str, Any]]:
 
 
 def upsert_company(company: dict[str, Any], db_path: Path = DEFAULT_STATE_DB) -> None:
-    if not company.get("name") or not company.get("ats_provider") or not company.get("ats_slug"):
-        raise ValueError("company needs name, ats_provider, and ats_slug")
+    if not company.get("name") or not company.get("ats_provider"):
+        raise ValueError("company needs name and ats_provider")
+    # Manual-tier companies have no pollable board, so the careers URL is the
+    # only thing the digest can surface — require it instead of a slug.
+    if company["ats_provider"] == "manual":
+        if not company.get("careers_url"):
+            raise ValueError("manual companies need careers_url")
+    elif not company.get("ats_slug"):
+        raise ValueError("company needs ats_slug")
     with connect(db_path) as conn:
         conn.execute(
             """INSERT INTO companies (name, ats_provider, ats_slug, careers_url,
@@ -94,7 +101,7 @@ def upsert_company(company: dict[str, Any], db_path: Path = DEFAULT_STATE_DB) ->
                  ats_provider=excluded.ats_provider, ats_slug=excluded.ats_slug,
                  careers_url=excluded.careers_url, sector_tags=excluded.sector_tags,
                  size_band=excluded.size_band""",
-            (company["name"], company["ats_provider"], company["ats_slug"],
+            (company["name"], company["ats_provider"], company.get("ats_slug") or "",
              company.get("careers_url"), json.dumps(company.get("sector_tags") or []),
              company.get("size_band")),
         )

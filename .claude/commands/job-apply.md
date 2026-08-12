@@ -29,6 +29,7 @@ a. **Load context** (read these files once and keep in memory for the whole sess
    - the session-context file at `[paths].session_context_path` (default `profile/session_context.md`) — anti-overstatement and voice rules
    - the resume generator at `[paths].resume_skill_path` (default `profile/generate_resume.py`); read any SKILL.md or design notes sitting next to it, if present
    - The full row for this posting from `data/jobs.db` — including `jd_text`. If the DB is stale (it's rebuilt by each pipeline run) or `jd_text` is null, fetch the JD via WebFetch on the posting URL.
+   - **Roles with no DB row at all** (a pasted URL, or a company from the digest's Manual check section) are first-class inputs, not errors. Fetch the JD from the live posting page — WebFetch first, the browser if the page is JS-walled — and hand-construct `posting_row` for step g. The ATS behind the URL never gates prep: any posting whose JD you can read gets the full loop below.
 
 b. **Show the user a one-paragraph read of the JD** — what they're hiring for, the 3–5 keywords/frames that genuinely map to the user's resume, anything that risks overstatement. Ask the user for any orientation before you draft (sometimes they'll have a specific angle).
 
@@ -86,7 +87,15 @@ h. **Dispatch the `application-autofiller` subagent** (Sonnet) with `application
 
    The autofiller drives the Playwright MCP through the form, fills every mappable field, uploads the PDFs, and **stops without submitting**. It reports back what was filled and what's blank. Surface that report to the user verbatim.
 
-   **If the Playwright MCP isn't loaded** (the session isn't rooted in `projects/job-finder/`), the autofiller will report this and stop. Tell the user to fill the form by hand using the folder + URL — do not fall back to another browser tool.
+   **If the form can't be autofilled, the package still ships.** Autofill is a convenience layered on top of the deliverable, never a gate on it. When the application is behind an account wall (SuccessFactors, Workday, iCIMS, and Phenom-style portals usually are), requires a login, or presents a CAPTCHA, skip or recall the autofiller and write `APPLY_NOTES.md` into the per-job folder instead:
+   - what exactly is blocked and why (account creation, login, CAPTCHA — the autofiller never creates accounts or enters passwords)
+   - what's ready in the folder (resume, cover letter, `standard_answers.md`, `apply.md`)
+   - the posting URL, req id, and any file-type limits the portal states
+   - a short ordered list of the manual steps left
+
+   Then tell the user directly that this one needs a hand-submit and point them at the folder. Known-walled ATSes can skip the autofill attempt entirely and go straight to `APPLY_NOTES.md`.
+
+   **If the Playwright MCP isn't loaded** (the session isn't rooted in `projects/job-finder/`), the autofiller will report this and stop. Write the same `APPLY_NOTES.md` handoff — do not fall back to another browser tool.
 
 i. **Handoff.** Tell the user:
    - Folder path (markdown link)
@@ -100,6 +109,7 @@ If the user said `all` or multiple ids, process them sequentially. Between roles
 
 ## Rules
 
+- **The ATS never gates prep — only who pushes Submit.** Every role with a readable JD gets the full loop (tailor, fact-check, render). Autofill runs when the form is reachable; when it isn't, the loop ends with a complete package plus an `APPLY_NOTES.md` handoff, never with a skipped role.
 - **Honor the no-auto-apply list.** `job-finder no-auto list` names companies the user handles through their own contacts. Never draft, render, or autofill an application for any role whose company is on that list — surface it for awareness and stop. This gate is non-negotiable even if they pass the role's `external_id` directly.
 - **Never invent facts.** Every claim must be in `resume_master.md` or `personal_statement.md` or something the user said in this conversation.
 - **Anti-overstatement.** Read the session-context file named in `profile/profile.toml [paths]` and apply every rule in it literally (per-claim framing rules, the fixed skill-category count, the skill source pool). The `materials-fact-checker` subagent will also enforce these — they're belt-and-suspenders.
