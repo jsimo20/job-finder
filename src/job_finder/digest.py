@@ -173,6 +173,22 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
     _section("Stretch queue — new", stretch_blurb, stretch_rows)
     _section("Stretch queue — carried forward", stretch_blurb, stretch_carry)
 
+    # Companies the pipeline can't poll (no supported ATS API) still deserve a
+    # weekly nudge — otherwise they exist only in whoever's memory added them.
+    manual_companies = [c for c in state.list_companies(state_db)
+                        if c["ats_provider"] == "manual"]
+    lines.append(f"## Manual check ({len(manual_companies)})")
+    lines.append("Tracked companies with no pollable board — open each careers "
+                 "page by hand.\n")
+    if manual_companies:
+        for c in manual_companies:
+            tags = ", ".join(c["sector_tags"]) if c["sector_tags"] else ""
+            tag_str = f" · {tags}" if tags else ""
+            lines.append(f"- **[{c['name']}]({c['careers_url']})**{tag_str}")
+        lines.append("")
+    else:
+        lines.append("_(none tracked)_\n")
+
     lines.append(f"## Closed ({len(closed_rows)})")
     if closed_rows:
         for r in closed_rows:

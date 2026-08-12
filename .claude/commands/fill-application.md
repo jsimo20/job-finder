@@ -34,6 +34,10 @@ When the subagent returns, present its report verbatim to the user. Add no comme
 
 > Ready for your review — check every answer in the open browser window and click Submit yourself. If this was a tracked role, run `job-finder mark-applied <external_id>` after submitting.
 
+### 4. If the form is unreachable — hand off, don't stop short
+
+An account wall, login requirement, or CAPTCHA is a handoff, not a failure. The autofiller reports the blocker and stops (it never creates accounts or enters passwords). When that happens and a per-job folder was given, write `APPLY_NOTES.md` into it: what's blocked and why, what's ready in the folder, the posting URL and req id, any file-type limits the portal states, and the ordered manual steps left. Then tell the user this one needs a hand-submit and link the folder. The command's job ends with the user knowing exactly what to do, never with a silent dead end.
+
 ## Prerequisite — Playwright MCP must be loaded
 
 The autofiller's tool list includes `mcp__playwright__*`. Those tools only load when the Claude session is rooted in `projects/job-finder/` (the MCP is project-scoped via `.mcp.json`). If the subagent reports the tools aren't available, the parent session was started in the wrong directory. Tell the user to restart `claude` from inside the project directory; do not fall back to another browser tool.

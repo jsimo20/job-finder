@@ -31,6 +31,23 @@ def test_company_requires_core_fields(tmp_path):
         state.upsert_company({"name": "X"}, tmp_path / "s.db")
 
 
+def test_manual_company_needs_url_not_slug(tmp_path):
+    db = tmp_path / "state.db"
+    # No pollable board: a careers URL stands in for the slug.
+    state.upsert_company({"name": "Handmade Widgets", "ats_provider": "manual",
+                          "careers_url": "https://example.com/careers"}, db)
+    row = state.list_companies(db)[0]
+    assert row["ats_provider"] == "manual"
+    assert row["ats_slug"] == ""
+    assert row["careers_url"] == "https://example.com/careers"
+    with pytest.raises(ValueError, match="careers_url"):
+        state.upsert_company({"name": "No URL Co", "ats_provider": "manual"}, db)
+    # Non-manual providers still require the slug.
+    with pytest.raises(ValueError, match="ats_slug"):
+        state.upsert_company({"name": "Slugless", "ats_provider": "greenhouse",
+                              "careers_url": "https://example.com"}, db)
+
+
 def test_import_and_export_companies(tmp_path):
     db = tmp_path / "state.db"
     src = tmp_path / "in.json"

@@ -11,7 +11,7 @@ Local-first pipeline that surfaces target roles and emails a weekly digest. Runs
 ```
 companies table (data/state.db)
     ↓
-collect (adapters/{greenhouse,lever,ashby}.py)  →  postings table
+collect (adapters/{greenhouse,lever,ashby,workday}.py)  →  postings table
     ↓
 Stage 1 filter (filter.py)                       →  hard_filter_verdict
     ↓
@@ -26,6 +26,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 
 - Python 3.12. Deps: httpx, anthropic, jinja2, beautifulsoup4, python-dotenv. Install via `uv pip install --system -e .`.
 - SQLite at `data/jobs.db` — gitignored, ephemeral, rebuilt every pipeline run.
+- Company tiers: `greenhouse`/`lever`/`ashby`/`workday` rows are polled by collect; `manual` rows (no pollable ATS — SuccessFactors, Phenom, iCIMS, Eightfold, custom sites) carry only a careers URL and surface in the digest's **Manual check** section for a weekly hand check.
 - Durable state lives in `data/state.db` (gitignored SQLite; `state.py`): tracked companies, no-auto-apply blocklist, applied ledger, seen ledger, digest archive. `first_seen_at` in jobs.db is always "now" and must never be used to distinguish new from carried — that's the seen table's job. Manage via `job-finder companies|no-auto|applied|digest-archive`; never edit the DB files directly, and never commit anything under `data/` or `digests/`.
 
 ## Key files
@@ -34,7 +35,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 - `config/pipeline.toml` — location scope, weights, filter knobs (committed, per-user)
 - `profile/` / `profile.example/` — identity, EEO, driving docs (gitignored / template)
 - `src/job_finder/cli.py` — entry point (`run` subcommand drives the pipeline)
-- `src/job_finder/adapters/*.py` — one per ATS, each exports `fetch()` and `normalize()`
+- `src/job_finder/adapters/*.py` — one per ATS, each exports `fetch()` and `normalize()`; workday also exports `fetch_detail()` (its list payload has no JD, so collect enriches Stage-1 survivors only; slug format `tenant/wdN/site`)
 - `src/job_finder/extract.py` — Claude Haiku call, system prompt cached, defensive BOM/whitespace strip on `ANTHROPIC_API_KEY`
 - `src/job_finder/filter.py` — hard filter rules (Stage 1 + Stage 3)
 - `src/job_finder/score.py` — deterministic scoring
@@ -89,6 +90,7 @@ Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract), `GMAIL_USER` + `GMAIL_
 ## Apply workflow (slash commands)
 
 - `/job-apply [external_id | --top N]` — tailors resume + cover letter for pending roles, runs the materials fact-checker, renders the per-job folder via `job_apply.render()`, then dispatches autofill. Logic in `.claude/commands/job-apply.md`; deterministic render in `src/job_finder/job_apply.py`.
+- **The ATS never gates prep — only who pushes Submit.** Any posting with a readable JD gets the full tailor→fact-check→render loop, including pasted URLs and manual-tier companies. Autofill runs when the form is reachable; account-walled portals (SuccessFactors, Workday, iCIMS, Phenom) get a complete package plus an `APPLY_NOTES.md` manual-submit handoff instead. A role is never skipped because of its ATS.
 - `/fill-application <url> [folder]` — standalone Playwright autofill via the `application-autofiller` subagent. Stops without submitting; the user reviews and submits by hand. Logic in `.claude/commands/fill-application.md`.
 - **Greenhouse forms: prefer the deterministic script** over the agent — `python -m job_finder.fill_greenhouse --url <url> --folder <per-app folder> [--city <city>]`. Fills the standard section (contact, auth, EEO, uploads) with zero LLM tokens, DOM-verifies every dropdown commit, prints a fill report, holds the browser open for review, never submits. ~2k tokens vs ~63k for the agent. One-time setup: `pip install -e .[apply]` + `playwright install chromium` (local only; CI never needs it). The agent stays as the fallback for unknown ATSes and custom questions.
 - Field values come from `profile/profile.toml` (identity, EEO, work-auth stance) plus `standard_answers.md` in the configured `inputs_dir` (`profile/profile.toml [paths]`; may point at a cloud-synced folder outside the repo).

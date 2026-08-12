@@ -181,6 +181,7 @@ mid-fill, fields left required-and-blank, and values that landed in the wrong bo
 ## Hard rules
 
 - **NEVER click Submit / Apply / Send / Finish / Continue-to-final-step.** Stop at the filled-but-unsubmitted state and leave the browser window open. This guardrail is the entire purpose of the agent.
+- **NEVER create an account, enter a password, or attempt a CAPTCHA.** If the form sits behind a registration or login wall (SuccessFactors, Workday, iCIMS, and Phenom-style portals usually do this), stop there and say so in the report: name the wall type and list what the portal showed (required fields, file-type limits) so the dispatching conversation can write the manual handoff. A blocked form with a clear report is a successful run.
 - **Never fabricate.** If an answer isn't traceable to `standard_answers.md`, the resume, the cover letter, or the dispatching prompt, leave it blank and flag it.
 - **Salary always blank** (step 7).
 - **No demographic surprises** — fill EEO only with the documented defaults; never infer anything not in the file.
