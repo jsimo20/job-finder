@@ -11,7 +11,7 @@ Local-first pipeline that surfaces target roles and emails a weekly digest. Runs
 ```
 companies table (data/state.db)
     ↓
-collect (adapters/{greenhouse,lever,ashby}.py)  →  postings table
+collect (adapters/{greenhouse,lever,ashby,workday}.py)  →  postings table
     ↓
 Stage 1 filter (filter.py)                       →  hard_filter_verdict
     ↓
@@ -35,7 +35,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 - `config/pipeline.toml` — location scope, weights, filter knobs (committed, per-user)
 - `profile/` / `profile.example/` — identity, EEO, driving docs (gitignored / template)
 - `src/job_finder/cli.py` — entry point (`run` subcommand drives the pipeline)
-- `src/job_finder/adapters/*.py` — one per ATS, each exports `fetch()` and `normalize()`
+- `src/job_finder/adapters/*.py` — one per ATS, each exports `fetch()` and `normalize()`; workday also exports `fetch_detail()` (its list payload has no JD, so collect enriches Stage-1 survivors only; slug format `tenant/wdN/site`)
 - `src/job_finder/extract.py` — Claude Haiku call, system prompt cached, defensive BOM/whitespace strip on `ANTHROPIC_API_KEY`
 - `src/job_finder/filter.py` — hard filter rules (Stage 1 + Stage 3)
 - `src/job_finder/score.py` — deterministic scoring

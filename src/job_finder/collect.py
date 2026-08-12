@@ -8,7 +8,7 @@ from pathlib import Path
 import httpx
 
 from . import db, state
-from .adapters import REGISTRY
+from .adapters import DETAIL_REGISTRY, REGISTRY
 from .filter import stage1
 
 logger = logging.getLogger(__name__)
@@ -63,6 +63,7 @@ def run(state_db: Path = state.DEFAULT_STATE_DB, db_path: Path = db.DEFAULT_DB_P
                 stats["errors_detail"].append(f"{company['name']}: {e}")
                 continue
 
+            detail_fetcher = DETAIL_REGISTRY.get(provider)
             seen_ids: set[str] = set()
             for p in postings:
                 stats["fetched"] += 1
@@ -74,6 +75,20 @@ def run(state_db: Path = state.DEFAULT_STATE_DB, db_path: Path = db.DEFAULT_DB_P
                 )
                 if verdict.keep:
                     stats["kept"] += 1
+                    # Detail-only providers ship the JD separately; fetch it
+                    # for survivors only. On failure the posting stays kept
+                    # with jd_text NULL, which extract counts as skipped.
+                    if detail_fetcher and p.jd_text is None and p.detail_ref:
+                        try:
+                            detail = detail_fetcher(slug, p.detail_ref, client=client)
+                            p.jd_text = detail["jd_text"]
+                            p.posted_at = detail["posted_at"] or p.posted_at
+                        except httpx.HTTPError as e:
+                            logger.error("detail fetch failed company=%s ref=%s err=%s",
+                                         company["name"], p.detail_ref, e)
+                            stats["errors"] += 1
+                            stats["errors_detail"].append(
+                                f"{company['name']} detail {p.detail_ref}: {e}")
                 else:
                     stats["discarded"] += 1
                 db.upsert_posting(
