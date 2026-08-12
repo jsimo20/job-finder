@@ -11,14 +11,25 @@ database file directly.
 
 ## The row shape
 
-name, ats_provider (`greenhouse` | `lever` | `ashby` — all three adapters are
-live), ats_slug (the company's identifier inside the ATS URL; often but not
-always the lowercase name), careers_url, sector_tags (match
+name, ats_provider (`greenhouse` | `lever` | `ashby` | `workday` | `manual`),
+ats_slug (the company's identifier inside the ATS URL; often but not always
+the lowercase name), careers_url, sector_tags (match
 `config/pipeline.toml [domains]` keys where possible), size_band (`1-50`,
 `51-200`, `201-500`, `500+`).
 
-Workday/ICIMS/Taleo/SuccessFactors have no public API; companies on those
-cannot be tracked.
+Workday slugs encode the board coordinates as `tenant/wdN/site` — read all
+three from the careers URL, e.g.
+`examplecorp.wd1.myworkdayjobs.com/External` → `examplecorp/wd1/External`.
+Probe with a POST to
+`https://<tenant>.<wdN>.myworkdayjobs.com/wday/cxs/<tenant>/<site>/jobs`
+(body `{"appliedFacets":{},"limit":1,"offset":0,"searchText":""}`); a 200
+with a `total` confirms the coordinates, a 422 means the tenant exists but
+the site name is wrong.
+
+ICIMS/Taleo/SuccessFactors/Phenom/Eightfold have no adapter; track those
+companies with `--provider manual --careers-url <url>` (no slug). They are
+skipped by collect and surface in the digest's **Manual check** section for
+a weekly hand check.
 
 ## Operations
 

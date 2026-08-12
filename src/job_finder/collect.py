@@ -34,6 +34,10 @@ def run(state_db: Path = state.DEFAULT_STATE_DB, db_path: Path = db.DEFAULT_DB_P
             stats["companies"] += 1
             provider = company["ats_provider"]
             slug = company["ats_slug"]
+            if provider == "manual":
+                # No pollable board; the digest lists these for a hand check.
+                stats["manual"] = stats.get("manual", 0) + 1
+                continue
             fetcher = REGISTRY.get(provider)
             if not fetcher:
                 logger.warning("no adapter for provider=%s slug=%s", provider, slug)

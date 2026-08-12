@@ -26,6 +26,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 
 - Python 3.12. Deps: httpx, anthropic, jinja2, beautifulsoup4, python-dotenv. Install via `uv pip install --system -e .`.
 - SQLite at `data/jobs.db` — gitignored, ephemeral, rebuilt every pipeline run.
+- Company tiers: `greenhouse`/`lever`/`ashby`/`workday` rows are polled by collect; `manual` rows (no pollable ATS — SuccessFactors, Phenom, iCIMS, Eightfold, custom sites) carry only a careers URL and surface in the digest's **Manual check** section for a weekly hand check.
 - Durable state lives in `data/state.db` (gitignored SQLite; `state.py`): tracked companies, no-auto-apply blocklist, applied ledger, seen ledger, digest archive. `first_seen_at` in jobs.db is always "now" and must never be used to distinguish new from carried — that's the seen table's job. Manage via `job-finder companies|no-auto|applied|digest-archive`; never edit the DB files directly, and never commit anything under `data/` or `digests/`.
 
 ## Key files
