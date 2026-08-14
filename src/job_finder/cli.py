@@ -197,8 +197,9 @@ def _cmd_companies(args: argparse.Namespace) -> int:
         rows = state.list_companies()
         for r in rows:
             label = r["ats_slug"] or r["careers_url"] or "?"
+            age = f"  (last {r['max_age_days']}d only)" if r.get("max_age_days") else ""
             print(f"{r['name']}  [{r['ats_provider']}:{label}]  "
-                  f"{','.join(r['sector_tags'])}")
+                  f"{','.join(r['sector_tags'])}{age}")
         print(f"{len(rows)} companies tracked")
     elif cmd == "add":
         if args.provider == "manual":
@@ -214,9 +215,11 @@ def _cmd_companies(args: argparse.Namespace) -> int:
             "careers_url": args.careers_url,
             "sector_tags": [t for t in (args.tags or "").split(",") if t],
             "size_band": args.size_band,
+            "max_age_days": args.max_age_days,
         })
         label = args.slug or args.careers_url
-        print(f"tracked: {args.name} [{args.provider}:{label}]")
+        age = f" (digest: last {args.max_age_days}d only)" if args.max_age_days else ""
+        print(f"tracked: {args.name} [{args.provider}:{label}]{age}")
     elif cmd == "remove":
         ok = state.remove_company(args.name)
         print(f"removed: {args.name}" if ok else f"no match for {args.name!r}")
@@ -298,6 +301,9 @@ def main(argv: list[str] | None = None) -> int:
     ca.add_argument("--careers-url", default=None, dest="careers_url")
     ca.add_argument("--tags", default="", help="comma-separated sector tags")
     ca.add_argument("--size-band", default=None, dest="size_band")
+    ca.add_argument("--max-age-days", type=int, default=None, dest="max_age_days",
+                    help="digest shows this company's roles only if posted within N days "
+                         "(for high-volume boards; undated postings are hidden)")
     ca.set_defaults(func=_cmd_companies)
     cr = csub.add_parser("remove")
     cr.add_argument("--name", required=True)
