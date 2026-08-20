@@ -89,6 +89,17 @@ def load_config(profile: Mapping[str, Any] | None = None) -> Config:
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
+# A bare "&" is invalid in ReportLab's markup, but callers reuse RESUME_DATA
+# strings that are already escaped ("AI &amp; Platforms"). Escaping blindly
+# double-escapes those into a literal "&amp;" on the page, so skip ampersands
+# that already open a character entity.
+_BARE_AMP_RE = re.compile(r"&(?!(?:[A-Za-z][A-Za-z0-9]*|#\d+|#[xX][0-9A-Fa-f]+);)")
+
+
+def esc_amp(text: str) -> str:
+    """Escape bare ampersands for ReportLab, leaving existing entities alone."""
+    return _BARE_AMP_RE.sub("&amp;", text)
+
 
 def slugify(value: str, *, max_len: int = 40) -> str:
     s = _SLUG_RE.sub("-", value.lower()).strip("-")
@@ -235,7 +246,7 @@ def _render_cover_letter(identity: Mapping[str, str], cover_letter: dict,
     title_subtitle = cover_letter.get("title_subtitle") or identity.get("title_subtitle", "")
     story.append(Paragraph(name, s["name_header"]))
     if title_subtitle:
-        story.append(Paragraph(title_subtitle.replace("&", "&amp;"), s["title_header"]))
+        story.append(Paragraph(esc_amp(title_subtitle), s["title_header"]))
     contact_bits = [
         phone,
         f'<a href="mailto:{email}" color="#2C5F8A">{email}</a>',
@@ -245,18 +256,18 @@ def _render_cover_letter(identity: Mapping[str, str], cover_letter: dict,
     story.append(Paragraph("  &middot;  ".join(contact_bits), s["contact_header"]))
     story.append(HRFlowable(width="100%", thickness=0.5, color=LIGHT, spaceBefore=3, spaceAfter=8))
 
-    story.append(Paragraph(cover_letter["date"], s["date"]))
+    story.append(Paragraph(esc_amp(cover_letter["date"]), s["date"]))
     recipient_lines = cover_letter["recipient"].split("\n")
     for i, line in enumerate(recipient_lines):
         style = s["recipient_last"] if i == len(recipient_lines) - 1 else s["recipient"]
-        story.append(Paragraph(line, style))
+        story.append(Paragraph(esc_amp(line), style))
 
-    story.append(Paragraph(cover_letter["salutation"], s["salutation"]))
+    story.append(Paragraph(esc_amp(cover_letter["salutation"]), s["salutation"]))
     for para in cover_letter["paragraphs"]:
-        story.append(Paragraph(para, s["body"]))
+        story.append(Paragraph(esc_amp(para), s["body"]))
 
     story.append(Spacer(1, 4))
-    story.append(Paragraph(cover_letter.get("closing", "Looking forward,"), s["closing"]))
+    story.append(Paragraph(esc_amp(cover_letter.get("closing", "Looking forward,")), s["closing"]))
     story.append(Paragraph(name, s["sig_name"]))
     story.append(Paragraph(
         f'<a href="mailto:{email}" color="#2C5F8A">{email}</a>  ·  {phone}',
