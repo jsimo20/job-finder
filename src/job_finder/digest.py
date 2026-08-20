@@ -54,7 +54,7 @@ def _row_md(row) -> str:
 
 
 _BASE_COLS = """
-    p.id, p.external_id, p.title, p.location, p.workplace_type, p.url,
+    p.id, p.external_id, p.title, p.location, p.workplace_type, p.url, p.posted_at,
     c.name AS company_name,
     e.yoe_required, e.comp_base_min, e.comp_base_max, e.comp_source,
     e.domain_tags, e.company_stage, e.stretch_reason,
@@ -90,6 +90,35 @@ def _pending_sql(queue: str) -> str:
     """
 
 
+def drop_stale_for_company(rows, overrides: dict[str, int], target: str):
+    """Apply per-company staleness overrides tighter than the global STALE_DAYS.
+
+    Fails closed: a posting from an override company with no posted_at is
+    dropped rather than kept. first_seen_at is always "now" (the working DB is
+    rebuilt every run), so it cannot stand in for a real post date here, and
+    keeping undated rows would silently defeat the whole filter.
+    """
+    if not overrides:
+        return list(rows)
+    target_day = datetime.fromisoformat(target).date()
+    kept = []
+    for r in rows:
+        limit = overrides.get((r["company_name"] or "").strip().lower())
+        if limit is None:
+            kept.append(r)
+            continue
+        posted = r["posted_at"]
+        if not posted:
+            continue
+        try:
+            posted_day = datetime.fromisoformat(str(posted).replace("Z", "+00:00")).date()
+        except ValueError:
+            continue
+        if (target_day - posted_day).days <= limit:
+            kept.append(r)
+    return kept
+
+
 def split_new_carry(rows, seen: dict[str, str], target: str):
     """(new, carried) by the seen-ledger. A row first seen on the target date
     itself counts as new, so re-rendering the same day is stable."""
@@ -121,10 +150,15 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
         ]
 
     seen_map = seen.load_seen(state_db)
+    overrides = state.max_age_overrides(state_db)
 
     with db.connect(db_path) as conn:
-        main_pending = _drop_applied(conn.execute(_pending_sql("main"), (target,)).fetchall())
-        stretch_pending = _drop_applied(conn.execute(_pending_sql("stretch"), (target,)).fetchall())
+        main_pending = drop_stale_for_company(
+            _drop_applied(conn.execute(_pending_sql("main"), (target,)).fetchall()),
+            overrides, target)
+        stretch_pending = drop_stale_for_company(
+            _drop_applied(conn.execute(_pending_sql("stretch"), (target,)).fetchall()),
+            overrides, target)
         main_rows, main_carry = split_new_carry(main_pending, seen_map, target)
         stretch_rows, stretch_carry = split_new_carry(stretch_pending, seen_map, target)
         closed_rows = conn.execute(
