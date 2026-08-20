@@ -68,6 +68,20 @@ a weekly hand check.
   every row with discover_companies and report 200s vs 4xxs — catches
   companies that switched ATSes.
 
+### Quiet down a noisy board
+
+A company with hundreds of open reqs can dominate the digest without ever
+producing a fresh match. Rather than dropping it, narrow its window:
+
+`job-finder companies add --name "..." --provider greenhouse --slug "..." --max-age-days 14`
+
+The digest then shows only that company's postings made within N days; every
+other company stays on the global `STALE_DAYS`. Re-running `companies add`
+without the flag clears the override. Postings with no post date are hidden
+while an override is active, so verify the ATS supplies dates before relying
+on it (Greenhouse `first_published`, Ashby `publishedDate`, Lever `createdAt`,
+Workday `startDate`).
+
 ### No-auto-apply blocklist
 
 Companies that stay in the digest but must never be auto-applied to (e.g.

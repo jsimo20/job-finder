@@ -25,7 +25,11 @@ CREATE TABLE IF NOT EXISTS companies (
   ats_slug TEXT NOT NULL,
   careers_url TEXT,
   sector_tags TEXT,          -- JSON list
-  size_band TEXT
+  size_band TEXT,
+  -- Per-company staleness override, tighter than the global STALE_DAYS.
+  -- Set it for high-volume boards worth watching but not worth re-reading:
+  -- the digest then shows only postings newer than this many days.
+  max_age_days INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS no_auto_apply (
@@ -56,12 +60,22 @@ CREATE TABLE IF NOT EXISTS digests (
 """
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Add columns introduced after a database was first created.
+    CREATE TABLE IF NOT EXISTS is a no-op on an existing table, so new
+    columns need an explicit ALTER."""
+    have = {r["name"] for r in conn.execute("PRAGMA table_info(companies)")}
+    if "max_age_days" not in have:
+        conn.execute("ALTER TABLE companies ADD COLUMN max_age_days INTEGER")
+
+
 @contextmanager
 def connect(db_path: Path = DEFAULT_STATE_DB) -> Iterator[sqlite3.Connection]:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    _migrate(conn)
     try:
         yield conn
         conn.commit()
@@ -95,16 +109,25 @@ def upsert_company(company: dict[str, Any], db_path: Path = DEFAULT_STATE_DB) ->
     with connect(db_path) as conn:
         conn.execute(
             """INSERT INTO companies (name, ats_provider, ats_slug, careers_url,
-                                      sector_tags, size_band)
-               VALUES (?, ?, ?, ?, ?, ?)
+                                      sector_tags, size_band, max_age_days)
+               VALUES (?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(name) DO UPDATE SET
                  ats_provider=excluded.ats_provider, ats_slug=excluded.ats_slug,
                  careers_url=excluded.careers_url, sector_tags=excluded.sector_tags,
-                 size_band=excluded.size_band""",
+                 size_band=excluded.size_band, max_age_days=excluded.max_age_days""",
             (company["name"], company["ats_provider"], company.get("ats_slug") or "",
              company.get("careers_url"), json.dumps(company.get("sector_tags") or []),
-             company.get("size_band")),
+             company.get("size_band"), company.get("max_age_days")),
         )
+
+
+def max_age_overrides(db_path: Path = DEFAULT_STATE_DB) -> dict[str, int]:
+    """{lowercased company name: max_age_days} for companies that set one."""
+    with connect(db_path) as conn:
+        rows = conn.execute(
+            "SELECT name, max_age_days FROM companies WHERE max_age_days IS NOT NULL"
+        ).fetchall()
+    return {r["name"].strip().lower(): int(r["max_age_days"]) for r in rows}
 
 
 def remove_company(name: str, db_path: Path = DEFAULT_STATE_DB) -> bool:
