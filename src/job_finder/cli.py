@@ -12,7 +12,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from . import applied, collect, db, digest, emailer, extract, outreach, review, score, state
+from . import (applied, collect, db, digest, emailer, extract, job_apply, outreach,
+               review, score, state)
 
 load_dotenv(override=True)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -249,6 +250,26 @@ def _cmd_no_auto(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_applications(args: argparse.Namespace) -> int:
+    if args.applications_cmd != "archive":
+        return 1
+    try:
+        result = job_apply.archive_applications(dry_run=args.dry_run)
+    except (ValueError, FileNotFoundError) as exc:
+        print(exc)
+        return 1
+    verb = "would move" if args.dry_run else "moved"
+    for name in result["moved"]:
+        print(f"{verb}: {name}")
+    for name in result["skipped"]:
+        print(f"skipped (already there): {name}")
+    if not result["moved"] and not result["skipped"]:
+        print("nothing to archive")
+    else:
+        print(f"{verb} {len(result['moved'])} folder(s) to {result['dest']}")
+    return 0
+
+
 def _cmd_digest_archive(args: argparse.Namespace) -> int:
     if args.archive_cmd == "list":
         dates = state.list_digests()
@@ -325,6 +346,15 @@ def main(argv: list[str] | None = None) -> int:
     nr = nsub.add_parser("remove")
     nr.add_argument("--name", required=True)
     nr.set_defaults(func=_cmd_no_auto)
+
+    p = sub.add_parser("applications", help="rendered per-job application folders")
+    apsub = p.add_subparsers(dest="applications_cmd", required=True)
+    ap = apsub.add_parser(
+        "archive",
+        help="move finished folders to applications_archive_dir; run from a "
+             "machine that can see it")
+    ap.add_argument("--dry-run", action="store_true", help="list without moving")
+    ap.set_defaults(func=_cmd_applications)
 
     p = sub.add_parser("digest-archive", help="digests stored in data/state.db")
     dsub = p.add_subparsers(dest="archive_cmd", required=True)

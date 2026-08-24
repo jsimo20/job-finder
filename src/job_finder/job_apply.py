@@ -38,11 +38,15 @@ class Config:
     """Resolved paths for apply-prep, read from profile/profile.toml [paths]."""
 
     def __init__(self, *, inputs_dir: Path, applications_dir: Path,
-                 claims_ground_truth: Path, resume_skill: Path) -> None:
+                 claims_ground_truth: Path, resume_skill: Path,
+                 applications_archive_dir: Path | None = None) -> None:
         self.inputs_dir = inputs_dir
         self.applications_dir = applications_dir
         self.claims_ground_truth = claims_ground_truth
         self.resume_skill = resume_skill
+        # Where finished folders are kept for good, when that is somewhere the
+        # renderer cannot reliably write. See archive_applications().
+        self.applications_archive_dir = applications_archive_dir
 
     @property
     def resume_master_md(self) -> Path:
@@ -87,13 +91,54 @@ def load_config(profile: Mapping[str, Any] | None = None) -> Config:
         path = Path(raw).expanduser()
         return path if path.is_absolute() else (repo_root / path)
 
+    archive = paths.get("applications_archive_dir")
     return Config(
         inputs_dir=_resolve("inputs_dir", base),
         applications_dir=_resolve("applications_dir", base / "applications"),
         claims_ground_truth=_resolve("claims_ground_truth_path",
                                     base / "claims_ground_truth.md"),
         resume_skill=_resolve("resume_skill_path", base / "generate_resume.py"),
+        applications_archive_dir=(
+            _resolve("applications_archive_dir", base) if archive else None),
     )
+
+
+def archive_applications(config: Config | None = None, *, dry_run: bool = False
+                         ) -> dict[str, Any]:
+    """Move finished per-job folders from the render target to the archive.
+
+    render() writes inside the repo because that is the one location every
+    surface can write to: a Cowork session sees a Linux VM with the repo
+    mounted, where an absolute Windows path to a synced documents folder does
+    not exist at all. The durable home for finished folders is that synced
+    directory, so moving them is a separate step run from a machine that can
+    see it, rather than a render target that only works from one surface.
+
+    Folders already present at the destination are left alone rather than
+    merged: a re-render is the caller's to reconcile, and silently overwriting
+    a submitted application's files would be worse than stopping.
+    """
+    config = config or load_config()
+    dest = config.applications_archive_dir
+    if dest is None:
+        raise ValueError(
+            "no applications_archive_dir in profile.toml [paths]; nothing to archive to")
+    if not dest.exists():
+        raise FileNotFoundError(
+            f"archive directory not reachable from this machine: {dest}. "
+            "Run this from a machine that can see it.")
+
+    moved: list[str] = []
+    skipped: list[str] = []
+    for folder in sorted(p for p in config.applications_dir.iterdir() if p.is_dir()):
+        target = dest / folder.name
+        if target.exists():
+            skipped.append(folder.name)
+            continue
+        if not dry_run:
+            shutil.move(str(folder), str(target))
+        moved.append(folder.name)
+    return {"moved": moved, "skipped": skipped, "dest": dest}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

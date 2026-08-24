@@ -11,7 +11,10 @@ template a new user copies to profile/ and fills in.
 """
 from __future__ import annotations
 
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
 from functools import cache
 from pathlib import Path
 
