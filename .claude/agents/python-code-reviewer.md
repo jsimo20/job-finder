@@ -1,6 +1,6 @@
 ---
 name: python-code-reviewer
-description: Reviews Python pull requests for bugs, inefficiencies, Google Python Style Guide compliance, and AI-agent security concerns. Triggered by the `claude-review` GitHub Action on every PR and by the `/review` slash command locally. Posts inline, severity-ranked, constructive feedback.
+description: Reviews Python changes for bugs, inefficiencies, Google Python Style Guide compliance, and AI-agent security concerns. Dispatched on demand — there is no PR trigger. Returns severity-ranked, constructive feedback.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
