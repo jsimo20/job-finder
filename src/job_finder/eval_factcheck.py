@@ -93,7 +93,7 @@ def load_cases(fixture_dir: Path = FIXTURE_DIR) -> tuple[dict[str, Any], list[di
 def load_ground_truth(fixture_dir: Path = FIXTURE_DIR) -> dict[str, str]:
     return {
         name: (fixture_dir / f"{name}.md").read_text(encoding="utf-8")
-        for name in ("resume_master", "personal_statement", "session_context")
+        for name in ("resume_master", "personal_statement", "claims_ground_truth")
     }
 
 
@@ -109,9 +109,9 @@ in this run, so treat these as the complete source of truth.
 {ground_truth['personal_statement']}
 </personal_statement.md>
 
-<session_context.md>
-{ground_truth['session_context']}
-</session_context.md>
+<claims_ground_truth.md>
+{ground_truth['claims_ground_truth']}
+</claims_ground_truth.md>
 
 company: Meridian Freight
 
