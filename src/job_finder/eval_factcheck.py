@@ -160,15 +160,19 @@ def grade_case(case: dict[str, Any], report: str) -> dict[str, Any]:
     lowered = report.lower()
     hit = next((kw for kw in expect["keywords"] if kw.lower() in lowered), None)
     severe_enough = severity_at_least(report, expect["min_severity"])
-    passed = bool(hit) and severe_enough
 
+    # Detection and severity are reported apart because they fail differently.
+    # A defect nobody mentioned can reach an employer. One that was mentioned
+    # but filed a rung too low still reaches the report the caller reads, and
+    # is a calibration disagreement rather than a hole.
     if not hit:
         detail = "defect not mentioned"
     elif not severe_enough:
-        detail = f"found it but below {expect['min_severity']}"
+        detail = f"found, but filed below {expect['min_severity']}"
     else:
         detail = f"matched on '{hit}'"
-    return {"id": case["id"], "kind": "defect", "passed": passed, "detail": detail}
+    return {"id": case["id"], "kind": "defect", "detected": bool(hit),
+            "passed": bool(hit) and severe_enough, "detail": detail}
 
 
 def run_case(client: anthropic.Anthropic, system_prompt: str, document: dict[str, Any],
@@ -220,6 +224,7 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
     defects = [r for r in results if r["kind"] == "defect"]
     controls = [r for r in results if r["kind"] == "control"]
     caught = sum(1 for r in defects if r["passed"])
+    detected = sum(1 for r in defects if r.get("detected"))
     clean = sum(1 for r in controls if r["passed"])
 
     recall = caught / len(defects) if defects else 0.0
@@ -232,7 +237,11 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
         "results": results,
         "recall": recall, "caught": caught, "defects": len(defects),
         "precision": precision, "clean": clean, "controls": len(controls),
-        "missed": [r["id"] for r in defects if not r["passed"]],
+        "detected": detected,
+        "detection_rate": detected / len(defects) if defects else 0.0,
+        "missed": [r["id"] for r in defects if not r.get("detected")],
+        "under_severity": [r["id"] for r in defects
+                           if r.get("detected") and not r["passed"]],
         "false_positives": [r["id"] for r in controls if not r["passed"]],
         "grade": next(g for floor, g in GRADE_BANDS if combined >= floor),
     }
@@ -241,17 +250,24 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
 def print_summary(summary: dict[str, Any]) -> None:
     print(f"\n{'=' * 70}")
     print(f"FACT-CHECKER  -  grade {summary['grade']}")
-    print(f"  recall    {summary['caught']}/{summary['defects']} planted defects caught "
-          f"({summary['recall']:.0%})")
+    print(f"  detection {summary['detected']}/{summary['defects']} planted defects "
+          f"noticed at all ({summary['detection_rate']:.0%})")
+    print(f"  recall    {summary['caught']}/{summary['defects']} of those filed at the "
+          f"expected severity ({summary['recall']:.0%})")
     print(f"  precision {summary['clean']}/{summary['controls']} clean drafts left alone "
           f"({summary['precision']:.0%})")
     if summary["missed"]:
-        print(f"\n  MISSED (a defect reached render): {', '.join(summary['missed'])}")
+        print(f"\n  NOT DETECTED (could reach an employer): "
+              f"{', '.join(summary['missed'])}")
+    if summary["under_severity"]:
+        print(f"\n  UNDER-SEVERITY: {', '.join(summary['under_severity'])}")
+        print("  Caught, filed lower than expected. The finding still reaches the report,")
+        print("  so this is a calibration disagreement, not a hole.")
     if summary["false_positives"]:
-        print(f"  FALSE POSITIVES (noise on clean drafts): "
+        print(f"\n  FALSE POSITIVES (noise on clean drafts): "
               f"{', '.join(summary['false_positives'])}")
     if not summary["missed"] and not summary["false_positives"]:
-        print("\n  Every planted defect caught, no clean draft flagged.")
+        print("\n  Nothing planted went unnoticed, and no clean draft was flagged.")
 
 
 def main() -> int:
@@ -266,6 +282,7 @@ def main() -> int:
     print(f"Running fact-checker eval against {AGENT_PATH.name} on {MODEL}\n")
     summary = evaluate(args.case, args.fixtures, args.show_report)
     print_summary(summary)
+    # Under-severity does not fail the run; an undetected defect does.
     return 0 if not summary["missed"] else 1
 
 
