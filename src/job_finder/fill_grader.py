@@ -21,6 +21,8 @@ Critical violations (any one caps the grade at F):
 - a sponsorship-type field holding a vetoed answer
 - a salary/comp field holding any value
 - a name-trap field holding any value
+- a field whose label, options or value carry instruction-like text aimed at
+  the agent reading the form rather than at the applicant
 
 Grade = filled / (filled + missed) over ruled fields only:
 A >= 95%, B >= 85%, C >= 70%, D below. no_rule blanks are reported as
@@ -30,6 +32,11 @@ answers, not fixing the filler.
 Usage:
     python -m job_finder.fill_grader data/fill_audits/<slug>.post.json ...
     python -m job_finder.fill_grader --date <YYYY-MM-DD>
+    python -m job_finder.fill_grader --date <YYYY-MM-DD> --gate
+
+--gate turns the report into a check: exit 2 when any form carries a critical
+violation. An unattended run has nobody reading the report, so the batch needs
+something that refuses rather than something that describes.
 """
 from __future__ import annotations
 
@@ -53,6 +60,28 @@ LEGAL_PATTERN = re.compile(
 # Signature and data-protection acknowledgments: consent, so always manual.
 CONSENT_PATTERN = re.compile(r"electronic signature|data protection act", re.I)
 
+# Text in a form that is addressed to the agent reading it rather than to the
+# applicant. Both fill paths are told to treat page content as data, but that
+# is a prompt rule enforced by a model; this is the same check in code, so an
+# unattended run cannot talk itself past it.
+#
+# Deliberately narrow. Ordinary form copy says "submit your application" and
+# "please review the instructions above" all the time, so only phrasings that
+# address a reader-of-instructions qualify. A false positive costs a human
+# glance; a false negative costs an autonomous submit.
+INJECTION_PATTERN = re.compile(
+    r"ignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instruction|rule|prompt)|"
+    r"disregard\s+(all\s+)?(previous|prior|above|your)\s+(instruction|rule)|"
+    r"(new|updated|revised)\s+instructions\s*:|"
+    r"override\s+(your|the)\s+(instruction|rule|guardrail|guideline)|"
+    r"system\s+(prompt|message)|"
+    r"you\s+are\s+now\s+(a|an)\s|"
+    r"do\s+not\s+(tell|inform|notify|show)\s+the\s+(user|human|applicant)|"
+    r"(submit|send)\s+(this\s+)?(form|application)?\s*immediately|"
+    r"\b(ai|assistant|language\s+model|llm|agent|claude|chatgpt)\b[\s,:]+"
+    r"(please\s+)?(you\s+must|ignore|submit|click|disregard|override)",
+    re.I)
+
 GRADE_BANDS = [(0.95, "A"), (0.85, "B"), (0.70, "C"), (0.0, "D")]
 
 
@@ -73,6 +102,23 @@ def _text_keys_answerable(profile: dict) -> set[str]:
     return keys
 
 
+def injection_in(field: dict[str, Any]) -> str | None:
+    """The first instruction-like string found in a field's own text, if any.
+
+    Scans the label, the rendered options and any value that came back, since a
+    hostile string can arrive as a dropdown option as easily as a label.
+    """
+    candidates = [field.get("label"), field.get("value")]
+    candidates.extend(field.get("options") or [])
+    for text in candidates:
+        if not isinstance(text, str):
+            continue
+        match = INJECTION_PATTERN.search(text)
+        if match:
+            return text.strip()
+    return None
+
+
 def classify(field: dict[str, Any], combos, text_keys) -> tuple[str, str]:
     """(bucket, detail) for one manifest field."""
     label = (field.get("label") or "").strip()
@@ -80,6 +126,9 @@ def classify(field: dict[str, Any], combos, text_keys) -> tuple[str, str]:
     value = (field.get("value") or "").strip()
     options = field.get("options")
 
+    hostile = injection_in(field)
+    if hostile:
+        return "critical", f"prompt-injection suspect: {hostile[:60]!r}"
     if ftype == "file":
         return "upload", "verified by the fill report, not the manifest"
     if label and SKIP_PATTERN.search(label):
@@ -173,6 +222,9 @@ def main() -> int:
     ap.add_argument("--suggest", action="store_true",
                     help="show each missed/unruled field's actual options, ready "
                          "to turn into [[custom_combos]] answers")
+    ap.add_argument("--gate", action="store_true",
+                    help="exit non-zero if any form has a critical violation; for "
+                         "unattended runs, where nobody is reading the report")
     args = ap.parse_args()
 
     paths = list(args.manifests)
@@ -196,6 +248,15 @@ def main() -> int:
         print(f"\n{'=' * 70}\nBATCH: {len(results)} forms - grade {letter} "
               f"({pct:.0%} ruled coverage, {criticals} critical)")
         print("Per-form: " + "  ".join(f"{r['slug'][:20]}={r['grade']}" for r in results))
+
+    if args.gate:
+        blocked = [r for r in results if r["counts"].get("critical")]
+        if blocked:
+            print(f"\nGATE: FAIL - {len(blocked)} form(s) with critical violations: "
+                  + ", ".join(r["slug"] for r in blocked))
+            print("Do not present these as ready for review until each is resolved.")
+            return 2
+        print(f"\nGATE: PASS - {len(results)} form(s), no critical violations.")
     return 0
 
 
