@@ -165,14 +165,14 @@ def test_every_defect_case_actually_changes_the_document():
 
 def test_ground_truth_files_load():
     truth = ef.load_ground_truth()
-    assert set(truth) == {"resume_master", "personal_statement", "session_context"}
+    assert set(truth) == {"resume_master", "personal_statement", "claims_ground_truth"}
     assert "Northwind Logistics" in truth["resume_master"]
 
 
 def test_prompt_inlines_every_ground_truth_file():
     base, _ = ef.load_cases()
     prompt = ef.build_prompt(base, ef.load_ground_truth())
-    for marker in ("resume_master.md", "personal_statement.md", "session_context.md"):
+    for marker in ("resume_master.md", "personal_statement.md", "claims_ground_truth.md"):
         assert marker in prompt
     assert "Northwind Logistics" in prompt
 

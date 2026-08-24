@@ -38,10 +38,10 @@ class Config:
     """Resolved paths for apply-prep, read from profile/profile.toml [paths]."""
 
     def __init__(self, *, inputs_dir: Path, applications_dir: Path,
-                 session_context_path: Path, resume_skill: Path) -> None:
+                 claims_ground_truth: Path, resume_skill: Path) -> None:
         self.inputs_dir = inputs_dir
         self.applications_dir = applications_dir
-        self.session_context_path = session_context_path
+        self.claims_ground_truth = claims_ground_truth
         self.resume_skill = resume_skill
 
     @property
@@ -90,7 +90,8 @@ def load_config(profile: Mapping[str, Any] | None = None) -> Config:
     return Config(
         inputs_dir=_resolve("inputs_dir", base),
         applications_dir=_resolve("applications_dir", base / "applications"),
-        session_context_path=_resolve("session_context_path", base / "session_context.md"),
+        claims_ground_truth=_resolve("claims_ground_truth_path",
+                                    base / "claims_ground_truth.md"),
         resume_skill=_resolve("resume_skill_path", base / "generate_resume.py"),
     )
 
@@ -434,8 +435,8 @@ def tailor(posting_row: Mapping[str, Any], *, config: Config | None = None,
     resume_master = config.resume_master_md.read_text(encoding="utf-8")
     personal_statement = config.personal_statement_md.read_text(encoding="utf-8")
     session_ctx = (
-        config.session_context_path.read_text(encoding="utf-8")
-        if config.session_context_path.exists() else "(session context file not found)"
+        config.claims_ground_truth.read_text(encoding="utf-8")
+        if config.claims_ground_truth.exists() else "(claims ground truth not found)"
     )
 
     user_prompt = (
