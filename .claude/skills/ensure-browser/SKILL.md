@@ -35,17 +35,40 @@ all if an earlier option already applies.
 `select_browser` with that `deviceId` and stop. Prefer an entry whose
 `isLocal` is true.
 
-### 2. Is Chrome running?
+### 2. Can this surface start Chrome at all?
+
+```sh
+uname -s 2>/dev/null; ls -d "$HOME"/mnt 2>/dev/null
+```
+
+**Linux plus a `$HOME/mnt/` mount means you are on the Cowork workspace VM, not
+the user's desktop.** The repo is mounted there; Chrome is not installed there
+and never will be. There is no `chrome.exe` to start, and the extension runs on
+the Windows machine this VM cannot reach.
+
+Stop here and say so:
+
+> This surface cannot start Chrome. The workspace VM is a Linux container with
+> the repo mounted; Chrome and the extension live on the Windows desktop. Open
+> Chrome there and I will pick it up, or I can prepare the applications for
+> manual submission instead.
+
+Do **not** continue to step 3. Shelling out to PowerShell from this VM fails
+with a confusing error that reads like a missing browser rather than a missing
+surface, which is how a whole run got to its final report before discovering it
+could never have filled anything.
+
+### 3. Is Chrome running? (Windows only)
 
 ```powershell
 Get-Process chrome -ErrorAction SilentlyContinue | Measure-Object | Select-Object -ExpandProperty Count
 ```
 
 A count above zero with an empty browser list means Chrome is up but the
-extension has not connected. Skip to step 4; starting a second Chrome will not
+extension has not connected. Skip to step 5; starting a second Chrome will not
 help.
 
-### 3. Start Chrome
+### 4. Start Chrome
 
 ```powershell
 $chrome = @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
@@ -61,19 +84,19 @@ profile and connects on its own; a custom `--user-data-dir` gets a clean
 profile with no extension in it, which looks exactly like a failure and is not
 one.
 
-### 4. Wait for the extension to connect
+### 5. Wait for the extension to connect
 
 Poll `list_connected_browsers` a few times, a couple of seconds apart, for
 about 20 seconds total. Connection lags process start.
 
-### 5. Select it
+### 6. Select it
 
 `select_browser` with the `deviceId`, then `tabs_context_mcp` once before any
 other browser call. The Chrome tools require the tab-group context to exist.
 
 ## When this cannot help, and what to say
 
-If Chrome is running and the list is still empty after step 4, the extension is
+If Chrome is running and the list is still empty after step 5, the extension is
 not installed or not signed in. **No skill can fix that**; it is a one-time
 setup in the browser, by the user, in the extension's own interface.
 

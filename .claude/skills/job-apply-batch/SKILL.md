@@ -37,10 +37,30 @@ Run the `ensure-browser` skill now, not after a fill agent fails. It checks the
 cheap surfaces first: `fill_greenhouse` needs no browser at all, and Playwright
 launches its own.
 
-If it reports the extension is genuinely unconnected, that is one-time human
-setup. Do not retry and do not start more Chrome processes. Carry on with
+**Say in your first message whether autofill will happen at all.** A Cowork
+session reaches filled-but-unsubmitted only if Chrome is already open on the
+Windows desktop, because the workspace VM is a Linux container that cannot start
+it. Set that expectation now rather than in the final report; a run once got all
+the way to the end before reporting it could never have filled anything.
+
+If no browser is available, that is not a reason to stop. Carry on with
 tailoring, fact-checking and rendering for every role, write `APPLY_NOTES.md`
-into each folder, and report the browser as unavailable.
+into each folder, and say plainly in the report that every role is prepped and
+waiting on a hand-submit. Do not retry and do not start more Chrome processes.
+
+### 2b. Archive the rendered folders
+
+`render()` writes into `profile/applications` because that is the one location
+every surface can write to. The durable home is the archive directory in
+`[paths]`, so after the last render:
+
+```sh
+job-finder applications archive
+```
+
+From the Cowork VM this fails cleanly, because the archive is a Windows path the
+container cannot see. Report it as pending rather than retrying, and include the
+command in the final report so the user can run it.
 
 ## 3. Pick the roles
 
