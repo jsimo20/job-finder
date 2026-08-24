@@ -56,6 +56,24 @@ English.
 - `job-finder applied add` / `outreach add` record what you submitted and who
   you contacted, so nothing resurfaces and nothing is forgotten.
 
+### Unattended batches
+
+`/job-apply-batch --top 5` runs the whole loop over several roles without
+stopping between them and reports once at the end, for a session you are not
+watching. It is the same per-role loop as `/job-apply` with the approval gates
+removed and three things added: a preflight that fails in ten seconds rather
+than ten minutes if the ground-truth docs are unreadable, a rule to park a role
+rather than guess when the fact-checker will not go CLEAN, and a gate over the
+whole batch afterwards.
+
+Nothing safety-relevant is relaxed. It still never submits, still leaves salary
+blank, still refuses to claim anything it cannot trace. Those rules are why
+running it unattended is reasonable, so they tighten rather than loosen: a
+prompt asking it to submit is treated as the error.
+
+Run `ensure-browser` first if the session has no browser; `/job-apply-batch`
+does this for you.
+
 ## Improve — the eval loop
 
 Every fill captures before/after field inventories to `data/fill_audits/`.

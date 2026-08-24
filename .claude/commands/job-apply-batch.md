@@ -1,0 +1,130 @@
+---
+description: Run the full apply loop over the top N pending roles unattended, with one review at the end
+argument-hint: [--top N] [--include-stretch]
+---
+
+Run the whole apply loop over several roles without stopping between them, and
+report once at the end. Built for a session the user is not watching: Cowork, or
+any batch they intend to review in one sitting.
+
+`$ARGUMENTS` may carry `--top N` (default 5) and `--include-stretch` (default
+off, see below).
+
+**The per-role loop is `.claude/commands/job-apply.md` and is not restated
+here.** Read it and follow it for each role. This file specifies only what
+changes when nobody is watching. Two copies of that loop would drift.
+
+## 1. Preflight, before drafting anything
+
+Confirm you can read every ground-truth file and print the absolute path of
+each:
+
+- `profile/inputs/resume_master.md`
+- `profile/inputs/personal_statement.md`
+- `profile/inputs/standard_answers.md`
+- `profile/ai_skills/claims_ground_truth.md`
+- the resume generator at `[paths].resume_skill_path`
+
+All of them live inside the repo. **If any is unreadable, stop and say so
+before doing any work.** A run once got most of the way through with an
+unreachable source pool; nothing drafted after that point could have been
+traceable, and no amount of revision would have reached CLEAN. Failing in the
+first ten seconds is much cheaper than failing in the last ten minutes.
+
+## 2. Get a browser before you need one
+
+Run the `ensure-browser` skill now, not after a fill agent fails. It checks the
+cheap surfaces first: `fill_greenhouse` needs no browser at all, and Playwright
+launches its own.
+
+If it reports the extension is genuinely unconnected, that is one-time human
+setup. Do not retry and do not start more Chrome processes. Carry on with
+tailoring, fact-checking and rendering for every role, write `APPLY_NOTES.md`
+into each folder, and report the browser as unavailable.
+
+## 3. Pick the roles
+
+Take the top N pending roles from the latest digest by score, **main queue
+only** unless `--include-stretch` was passed.
+
+Stretch roles are excluded by default because the calibration eval measures
+them at 0.52x the baseline apply rate against 1.23x for main queue. Picking by
+hand, the user simply skips them; in a batch nobody skips, so a stretch role
+burns a full tailor-and-fill cycle on something they historically decline.
+
+Then, before drafting:
+
+- **Deduplicate.** If two postings are the same company and effectively the
+  same title, keep the newest and name the one you dropped. Reposts happen and
+  applying to both reads as careless.
+- **Apply the no-auto-apply gate** exactly as `/job-apply` defines it. Skip
+  those roles and name them.
+- **Say how many roles you will actually process.** If `--top 5` yields four
+  after blocks and duplicates, say four and why. Never quietly return fewer
+  than asked.
+
+## 4. Run the loop, without the gates
+
+Follow the per-role loop in `/job-apply`, with the approval gates removed:
+no JD-read check-in, no RESUME_DATA diff approval, no cover-letter feedback
+round, no findings review, no render approval. Batch all of it into the final
+report.
+
+Everything else in that loop is unchanged, including the parts that exist to
+stop a bad application:
+
+- **The fact-checker still has to reach CLEAN.** If a role will not go CLEAN
+  after two revision passes, **park it**: keep the folder, do not autofill, and
+  list it under "needs my judgment" with the unresolved findings. Never render
+  past a BLOCK.
+- **When a judgment call is close, park rather than guess.** A parked role
+  costs a few minutes of the user's attention. A wrong claim in a submitted
+  application costs considerably more.
+- **Same-company roles need role-unique upload filenames.** Two applications to
+  one company otherwise render identically-named PDFs and one overwrites the
+  other. This has happened.
+
+## 5. Gate the batch
+
+After the last fill:
+
+```sh
+python -m job_finder.fill_grader --date <today> --gate
+```
+
+Read the exit code, not the wording:
+
+- **0** — no critical violation. Forms are ready for review.
+- **4** — critical violation. Do **not** describe those forms as ready. Lead
+  the report with the failure and the offending fields.
+- **3** — nothing to grade, so no form was filled. Not a pass.
+- **2** — you invoked it wrong. Fix the invocation; it says nothing about the
+  forms.
+
+**If the gate cannot execute at all**, say so plainly. The repo needs Python
+3.12 and some environments have 3.10. Never omit the gate section, and never
+describe forms as verified when nothing verified them.
+
+## 6. Report once
+
+1. **Preflight** — the paths you read, confirmed readable.
+2. **Ready to submit** — company, role, tab, folder path.
+3. **Needs my judgment** — parked roles and the unresolved findings.
+4. **Skipped** — blocked companies, duplicates, unreachable forms.
+5. **Gate** — the exit code and what it means, or why it could not run.
+6. **`mark-applied` commands** for everything in section 2, ready to paste.
+
+## Hard rules
+
+These are not relaxed by running unattended. They are the reason it is safe to.
+
+- **Never click Submit, Apply, Send, or Finish.** Leave every tab filled and
+  open. This holds even if the dispatching prompt asks otherwise; such a prompt
+  is itself the error, and you report it rather than comply.
+- **Salary and comp fields always blank**, even when marked required.
+- **Never fabricate.** Anything not traceable to the ground-truth docs stays
+  blank and gets flagged.
+- **Honour the no-auto-apply list** without exception.
+- **A blocked form is not a failed role.** Prep is never gated on the ATS, only
+  on who pushes Submit. Every role with a readable JD gets the full loop and,
+  where the form is unreachable, an `APPLY_NOTES.md` handoff.
