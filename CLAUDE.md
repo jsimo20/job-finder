@@ -95,8 +95,11 @@ fact-checker and `--gate`, which is why both are measured rather than trusted.
   behaviour will show high lift for that reason alone. Read the warning before
   trusting the lift table.
 - **`fill_grader.py`** grades form fills; design in `.claude/context/form-fill-evals.md`.
-  `--gate` exits 2 on any critical violation and both fill agents run it before
-  reporting, leading with the failure instead of calling the form ready.
+  `--gate` turns it into a check both fill agents run before reporting: **0**
+  ready, **4** critical violation, **3** nothing to grade because no form was
+  filled. 3 and 4 are separate because an unattended caller cannot act on
+  "nothing happened" and "every form was unsafe" the same way, and both stay
+  clear of argparse's own exit 2.
   Critical now includes **prompt-injection suspects**: `INJECTION_PATTERN` scans
   each field's label, options and value for text addressed to the agent rather
   than the applicant. Both agents already carry a prompt rule saying page
@@ -126,7 +129,7 @@ fact-checker and `--gate`, which is why both are measured rather than trusted.
 
 - **`config/pipeline.toml`** — gitignored (template: `config/pipeline.example.toml`). Location scope, metro tiers, commute thresholds/notes, title targeting, domain + stage weights, comp floor, YoE cap, stale days. `settings.pipeline_config()` loads it, falling back to the example on a fresh clone. The pipeline runs locally, so edits take effect on the next run — no sync step.
 - **`profile/`** — gitignored. Identity, EEO answers, `[paths]` to the driving docs, fit profile, QA checklist, the resume generator.
-  **The driving docs are reached through junctions inside `profile/`**, not absolute paths outside it: `profile/inputs`, `profile/applications` and `profile/ai_skills` are directory junctions to OneDrive and `~/.claude/ai_skills`. Files stay where they are and keep syncing; every path an agent uses stays inside the workspace root, which is what a Cowork session rooted here needs. Recreate with `scripts/link_profile_dirs.ps1`. Removing a junction (`rmdir profile\inputs`) deletes the link only, never the target. Relative `[paths]` resolve against the repo root, never the cwd — `job_apply.load_config()` enforces that so the scheduled task keeps working. `settings.load_profile()` falls back to the committed `profile.example/` so imports and tests work on a fresh clone; anything that acts on the values (form fill, PDF render) goes through `settings.require_profile()` and refuses the example.
+  **The driving docs are reached through junctions inside `profile/`**, not absolute paths outside it: `profile/inputs`, `profile/applications` and `profile/ai_skills` are directory junctions to OneDrive and `~/.claude/ai_skills`. Files stay where they are and keep syncing, and every path an agent uses stays inside the workspace root. **This is not sufficient for Cowork.** Its device bridge resolves a junction to its real target *before* applying the folder grant, so `profile/inputs` is treated as the OneDrive folder it points at rather than as part of this repo, and reads fail with an I/O error. Cowork additionally needs the two junction **targets** connected as folders in the desktop app's folder picker (the OneDrive `Job Search/2026` folder, and `~/.claude/ai_skills`). One-time, outside the repo, and nothing here can do it. The junctions still earn their place for Claude Code on Windows, where path containment works as intended. Recreate with `scripts/link_profile_dirs.ps1`. Removing a junction (`rmdir profile\inputs`) deletes the link only, never the target. Relative `[paths]` resolve against the repo root, never the cwd — `job_apply.load_config()` enforces that so the scheduled task keeps working. `settings.load_profile()` falls back to the committed `profile.example/` so imports and tests work on a fresh clone; anything that acts on the values (form fill, PDF render) goes through `settings.require_profile()` and refuses the example.
 - Handing the repo to a new user: plain `git clone`; SETUP.md §1 resets the owner's ledgers and digests. History is scrubbed of PII and MUST stay that way — no personal data in commits, ever; the committed ledgers are the only owner-specific tracked state.
 
 ## Location scope and the commute warning

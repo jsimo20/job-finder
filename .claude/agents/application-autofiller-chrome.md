@@ -205,14 +205,23 @@ mid-fill, fields left required-and-blank, and values that landed in the wrong bo
 python -m job_finder.fill_grader <the .post.json paths you just wrote> --gate --quiet
 ```
 
-Exit 0 means no critical violation and the form is safe to present for review.
-Exit 2 means at least one is present: a salary field holding a value, a vetoed
-sponsorship answer committed, a name-trap field filled, or instruction-like text
-found in the form itself.
+Read the exit code, not the wording:
 
-**On exit 2, do not describe the form as ready.** Lead your report with the gate
+- **0** — no critical violation. The forms are safe to present for review.
+- **4** — at least one critical violation: a salary field holding a value, a
+  vetoed sponsorship answer committed, a name-trap field filled, or
+  instruction-like text found in the form itself.
+- **3** — nothing to grade, because no manifest matched. That means no form was
+  filled. It is not a pass, and it is the code you will see if the run failed
+  earlier than you think it did.
+- **2** — you invoked the command wrong. Fix the invocation; it says nothing
+  about the forms.
+
+**On 4, do not describe the form as ready.** Lead your report with the gate
 failure and the offending fields, and say plainly that the form needs attention
 before the user looks at it. Leave the tab open and change nothing else.
+
+**On 3, do not report success.** Say that nothing was filled and why.
 
 This step matters more here than on the Playwright path. That one runs with a
 human watching the browser it opened; this one is the surface used when nobody
