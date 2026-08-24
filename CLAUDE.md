@@ -43,7 +43,6 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 - `src/job_finder/review.py` — interactive picker for the CLI `review` subcommand
 - `src/job_finder/form_inventory.py` — ATS-agnostic form field inventory (label/type/required/value/options per control) plus the audit-manifest writer; shared by the deterministic filler and the autofill agent
 - `data/state.db` — all durable personal state (see above); `config/companies.example.json` is the neutral starter list
-- `.github/workflows/claude-review.yml` — Claude PR reviewer, fires on `.py` / `.claude/**` / `claude-review.yml` PRs
 
 ## Commands
 
@@ -62,16 +61,25 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 
 ## Evals
 
-Two deterministic, zero-token graders. Both read artifacts the system already
-produces rather than running a parallel harness, and both have a bucket that is
-a backlog rather than a failure.
+Two deterministic zero-token graders plus one that spends tokens. They read
+artifacts the system already produces rather than running a parallel harness,
+and each has a bucket that is a backlog rather than a failure.
 
 ```sh
 # Does the score predict what actually gets applied to?
 .venv/Scripts/python.exe -m job_finder.eval_calibration
 # Did the last fill batch fill everything it had a rule for?
 .venv/Scripts/python.exe -m job_finder.fill_grader --date <YYYY-MM-DD>
+# Refuse the batch instead of describing it (unattended runs)
+.venv/Scripts/python.exe -m job_finder.fill_grader --date <YYYY-MM-DD> --gate
+# Does the fact-checker catch a defect planted on purpose? (spends tokens)
+.venv/Scripts/python.exe -m job_finder.eval_factcheck
 ```
+
+**Interactive runs are graded after the fact; unattended runs have to be able
+to refuse.** `/job-apply` puts five human approval gates between a defect and a
+submitted application. Remove those and the only things left are the
+fact-checker and `--gate`, which is why both are measured rather than trusted.
 
 - **`eval_calibration.py`** grades the scorer against the applied ledger. The
   digest archive in `state.db` is the only durable record of what a role scored
@@ -87,12 +95,28 @@ a backlog rather than a failure.
   behaviour will show high lift for that reason alone. Read the warning before
   trusting the lift table.
 - **`fill_grader.py`** grades form fills; design in `.claude/context/form-fill-evals.md`.
+  `--gate` exits 2 on any critical violation and both fill agents run it before
+  reporting, leading with the failure instead of calling the form ready.
+  Critical now includes **prompt-injection suspects**: `INJECTION_PATTERN` scans
+  each field's label, options and value for text addressed to the agent rather
+  than the applicant. Both agents already carry a prompt rule saying page
+  content is data — this is the same rule in code, so an unattended run cannot
+  reason past it. Nine benign labels are pinned as a false-positive guard.
+- **`eval_factcheck.py`** measures the `materials-fact-checker`, the last
+  automated step before a claim reaches an employer. Each case is a clean draft
+  plus one planted defect (invented metric, rounded metric, claimed direct
+  reports, banned Phase-1 framing, unsourced skill, em-dash, AI trope). It reads
+  the system prompt straight from the agent definition, so it grades the shipped
+  prompt, not a copy. **Half the suite is clean controls** — a checker that
+  flags everything has perfect recall and is useless, so the grade is the
+  harmonic mean of recall and precision. Ground truth is a synthetic person in
+  `tests/fixtures/factcheck/`; the real profile is never read.
 - **Digest markdown is a parsed interface now.** Changing the `### [Score N] Company — [Title](url)`
   header or the `- Domain: … · Stage: …` detail line in `digest.py` breaks
   `eval_calibration.parse_digest` against every already-archived digest, and
   archived bodies cannot be re-rendered. Change the format only additively.
-- Unmeasured: `extract.py` (no golden set), the tailoring loop, and
-  `digest-triager` ranking.
+- Unmeasured: `extract.py` (no golden set of JD to expected extraction, so Haiku
+  drift is invisible) and `digest-triager` ranking.
 
 ## Per-user configuration (two layers)
 
@@ -111,7 +135,7 @@ The committed config encodes the owner's home base and a deliberately different 
 
 ## Credentials
 
-Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract), `GMAIL_USER` + `GMAIL_APP_PASSWORD` (digest email via `emailer.py`; user is both sender and recipient). One GitHub Actions secret remains: `ANTHROPIC_API_KEY` for `claude-review.yml`. Paste keys via a plain-text editor to avoid BOM corruption (see Gotchas).
+Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract, `eval_factcheck`), `GMAIL_USER` + `GMAIL_APP_PASSWORD` (digest email via `emailer.py`; user is both sender and recipient). No GitHub Actions secrets are needed — the repo runs no workflows. Paste keys via a plain-text editor to avoid BOM corruption (see Gotchas).
 
 ## Gotchas
 
@@ -119,8 +143,7 @@ Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract), `GMAIL_USER` + `GMAIL_
 - **Defensive `.strip().replace(_BOM, "")` on env-var reads** in `extract.py` — pasted secrets can carry invisible BOMs that crash SDK header construction. Already in place.
 - **Don't auto-run the pipeline** to test changes — it spends real Anthropic tokens (~$$). The scheduled task owns the weekly run; prefer targeted unit tests via pytest.
 - **Commit subjects and PR titles are one plain sentence stating what the change does** — imperative, lowercase start, no `type(scope):` prefixes, no "Type of change" checklists. The body (optional) explains why.
-- **PRs are the norm**, not direct-to-main. The reviewer fires on `.py` / `.claude/**` paths. Non-Python YAML/Markdown changes bypass the path filter — still PR them for the audit trail, expect the reviewer to no-op.
-- **Reviewer can't review changes to its own workflow file** (`claude-review.yml`) due to `anthropics/claude-code-action@v1`'s self-modification guard. Self-merge those after careful local review.
+- **PRs are the norm**, not direct-to-main — for the audit trail, not for review gating. Nothing reviews them automatically. When a change is worth a second pass, dispatch the `python-code-reviewer` agent, or use the built-in `/code-review`.
 
 ## Apply workflow (slash commands)
 
@@ -147,7 +170,7 @@ Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract), `GMAIL_USER` + `GMAIL_
 | `digest-triager` | Reads latest digest, ranks pending roles against fit profile, returns ranked picks | Sonnet |
 | `materials-fact-checker` | Cross-checks drafted RESUME_DATA + cover letter against ground-truth files; severity-tagged findings | Sonnet |
 | `application-autofiller` | Drives Playwright MCP through the application form; stops before submit | Sonnet |
-| `python-code-reviewer` | PR review on `.py` / `.claude/**` changes; fires via `claude-review.yml` and `/review` | Opus |
+| `python-code-reviewer` | Code review on demand; dispatched by hand, not wired to any trigger | Opus |
 
 ## Outreach log
 
@@ -184,7 +207,7 @@ Durable record of roles applied to, keyed by `external_id`. Fixes the fact that 
 
 ## Reviewer rubric
 
-`.claude/agents/python-code-reviewer.md` defines what the PR reviewer looks for. Severity-tagged findings (CRITICAL/HIGH/MEDIUM/LOW/NIT). On-demand context files in `.claude/context/`:
+`.claude/agents/python-code-reviewer.md` defines what the reviewer looks for when you dispatch it. Severity-tagged findings (CRITICAL/HIGH/MEDIUM/LOW/NIT). On-demand context files in `.claude/context/`:
 - `google-python-style.md` — loaded for `.py` reviews
 - `ai-agent-security.md` — loaded for files under `agents/`, `tools/`, `mcp/`, `prompts/` or importing `anthropic`/`openai`/`langchain`
 - `pr-review-checklist.md` — the working checklist

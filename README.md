@@ -79,8 +79,8 @@ pytest                                    # no network, keys, or profile needed
 ```
 
 Credentials live in a local `.env` (`ANTHROPIC_API_KEY`, `GMAIL_USER`,
-`GMAIL_APP_PASSWORD`) — see SETUP.md §2. The only GitHub secret is
-`ANTHROPIC_API_KEY` for the optional PR reviewer.
+`GMAIL_APP_PASSWORD`) — see SETUP.md §2. No GitHub secrets are needed; the
+repo runs no CI workflows.
 
 ## Handing this repo to someone else
 
