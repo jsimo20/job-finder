@@ -43,6 +43,7 @@ from pathlib import Path
 from typing import Any
 
 import anthropic
+from dotenv import load_dotenv
 
 MODEL = "claude-sonnet-4-5"
 MAX_TOKENS = 2000
@@ -185,9 +186,12 @@ def run_case(client: anthropic.Anthropic, system_prompt: str, document: dict[str
 
 def evaluate(case_filter: str | None = None, fixture_dir: Path = FIXTURE_DIR,
              show_report: bool = False) -> dict[str, Any]:
+    # The key lives in the repo's .env, same as the pipeline; only cli.py loaded
+    # it before, so a module run straight from the command line saw nothing.
+    load_dotenv(override=True)
     api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip().replace(_BOM, "")
     if not api_key:
-        raise SystemExit("ANTHROPIC_API_KEY is not set")
+        raise SystemExit("ANTHROPIC_API_KEY is not set (checked the environment and .env)")
 
     system_prompt = strip_frontmatter(AGENT_PATH.read_text(encoding="utf-8"))
     base, cases = load_cases(fixture_dir)
