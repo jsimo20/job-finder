@@ -166,6 +166,23 @@ Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract, `eval_factcheck`), `GMA
 - **Playwright MCP is project-scoped** (`.mcp.json`). Its `mcp__playwright__*` tools only load when the Claude session is rooted in this directory — autofill won't work from a session started in the parent `dev/` directory.
 - **Batch autofill = one Chrome instance, one tab per app** (never a separate browser per app). Dispatch a single `application-autofiller` with the full list of `(url, folder)` pairs; it opens each app in a new tab and leaves them all open, unsubmitted, for review. Rule lives in the Batch mode section of `.claude/agents/application-autofiller.md`.
 
+## Running an unattended batch (Cowork, or any session that will not be watched)
+
+**Invoke it by file path, not by slash command:**
+
+> Read `.claude/skills/job-apply-batch/SKILL.md` and follow it for the top 1 role.
+
+A file read works on every surface. Slash-command and skill registration does
+not: Cowork rejected `/job-apply-batch` as an unknown skill both while it lived
+in `.claude/commands/` and after it moved to `.claude/skills/` with a `name:`
+field matching the skills Cowork is expected to know, across full restarts. The
+file itself is clean — no BOM, same frontmatter shape as the others — so the
+difference is in what that surface indexes, not in the file.
+
+The rule that follows: **anything an unattended session must run should be
+invocable by path.** Keep the skills and commands for the surfaces that resolve
+them, and point at the file when you cannot rely on that.
+
 ## Project-level skills
 
 - `.claude/skills/job-apply-batch/SKILL.md` — the unattended apply loop. **Lives in `skills/`, not `commands/`, on purpose:** Cowork rejected it as an unknown skill while it sat in `.claude/commands/`, and its frontmatter only parsed once it carried a `name:` field. Skills register on both surfaces; commands appear not to. Prefer `skills/` for anything an unattended session must invoke.
