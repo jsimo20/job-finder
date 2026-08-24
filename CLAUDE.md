@@ -168,6 +168,7 @@ Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract, `eval_factcheck`), `GMA
 
 ## Project-level skills
 
+- `.claude/skills/job-apply-batch/SKILL.md` — the unattended apply loop. **Lives in `skills/`, not `commands/`, on purpose:** Cowork rejected it as an unknown skill while it sat in `.claude/commands/`, and its frontmatter only parsed once it carried a `name:` field. Skills register on both surfaces; commands appear not to. Prefer `skills/` for anything an unattended session must invoke.
 - `.claude/skills/manage-companies/SKILL.md` — add/remove/probe tracked companies in `data/state.db` from plain-English instructions, via the `job-finder companies` CLI.
 - `.claude/skills/ensure-browser/SKILL.md` — get a usable browser before dispatching a fill agent. The Claude in Chrome tools attach to a running Chrome, they never launch one, and `list_connected_browsers` reflects live state: it empties when the browser closes and repopulates within seconds of it starting. So an empty list usually means Chrome is shut, not that the extension is missing. The skill checks the cheaper surfaces first (`fill_greenhouse` needs no browser at all; Playwright launches its own), and is honest that a genuinely unconnected extension is one-time human setup it cannot do.
 
