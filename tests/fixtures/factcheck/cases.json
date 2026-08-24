@@ -1,0 +1,241 @@
+{
+  "_readme": [
+    "Recall/precision cases for the materials-fact-checker.",
+    "Every case is the base document plus one patch, so the defect under test is",
+    "the only difference from a clean draft. Fictional throughout: the ground",
+    "truth in this directory describes a person who does not exist.",
+    "",
+    "A patch path is dotted, with integers indexing lists.",
+    "expect.keywords: the report counts as a detection if it contains any one of",
+    "them (case-insensitive). expect.min_severity: the lowest severity that",
+    "counts. clean:true cases must draw no CRITICAL and no MEDIUM finding."
+  ],
+  "base": {
+    "resume_data": {
+      "title_subtitle": "Senior Product Manager | Logistics Platforms | zero-to-one and scale",
+      "experience": [
+        {
+          "company": "Northwind Logistics",
+          "title": "Senior Product Manager",
+          "dates": "Mar 2022 - present",
+          "bullets": [
+            "Owned the carrier-integration platform used by 340 freight partners.",
+            "Cut average dispatch confirmation time from 14 minutes to 9 minutes across the partner network.",
+            "Shipped a self-serve onboarding flow that moved 61% of new partners off manual setup.",
+            "Ran a controlled pilot of automated exception handling with 12 partners; Phase 1, still in beta."
+          ]
+        },
+        {
+          "company": "Cascade Freight",
+          "title": "Product Manager",
+          "dates": "Jul 2019 - Mar 2022",
+          "bullets": [
+            "Launched a zero-to-one shipment-tracking mobile app that reached 90,000 monthly active users in its first year.",
+            "Reduced support ticket volume 18% by rewriting the delivery-status notification copy.",
+            "Coordinated a three-team migration off a deprecated pricing service."
+          ]
+        }
+      ],
+      "skills": {
+        "Product": ["roadmapping", "discovery interviews", "experimentation", "pricing"],
+        "Technical": ["SQL", "REST API design", "event-driven architecture", "Looker"],
+        "Domain": ["logistics operations", "carrier networks", "marketplace supply"],
+        "Process": ["agile facilitation", "stakeholder alignment", "incident review"]
+      }
+    },
+    "cover_letter": {
+      "date": "August 24, 2026",
+      "recipient": "Meridian Freight Hiring Team\nMeridian Freight\nPortland, OR",
+      "salutation": "To the Meridian Freight Hiring Team,",
+      "paragraphs": [
+        "Your posting for a Senior Product Manager on the carrier platform caught my attention because the integration problem you describe is the one I have spent the last three years inside at Northwind Logistics.",
+        "The work there is unglamorous and it touches real money. Carrier integration serves 340 freight partners, and the piece I would point at is the self-serve onboarding flow, which moved 61% of new partners off manual setup. The automated exception handling is in a controlled pilot with twelve partners. It is Phase 1 and still in beta, so there is not much to point at yet.",
+        "Before Northwind, a shipment-tracking app at Cascade Freight was the first thing I owned end to end. We thought people wanted a map. They wanted one sentence telling them whether the thing was late, and rewriting that copy cut support tickets 18%.",
+        "Happy to talk if you are open to a short conversation."
+      ],
+      "closing": "Thanks,",
+      "title_subtitle": "Senior Product Manager | Logistics Platforms | zero-to-one and scale"
+    }
+  },
+  "cases": [
+    {
+      "id": "clean_control_a",
+      "defect": "None. Measures false-positive rate on a compliant draft.",
+      "clean": true,
+      "patch": []
+    },
+    {
+      "id": "clean_control_b",
+      "defect": "None, but bullets reordered and a category renamed. Legal edits that must not be flagged.",
+      "clean": true,
+      "patch": [
+        {
+          "path": "resume_data.experience.0.bullets",
+          "value": [
+            "Shipped a self-serve onboarding flow that moved 61% of new partners off manual setup.",
+            "Owned the carrier-integration platform used by 340 freight partners.",
+            "Cut average dispatch confirmation time from 14 minutes to 9 minutes across the partner network.",
+            "Ran a controlled pilot of automated exception handling with 12 partners; Phase 1, still in beta."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "invented_metric",
+      "defect": "A percentage that appears nowhere in the ground truth.",
+      "expect": {"min_severity": "CRITICAL", "keywords": ["32%", "invent", "not traceable", "cannot be traced", "no source", "fabricat"]},
+      "patch": [
+        {
+          "path": "resume_data.experience.0.bullets.1",
+          "value": "Cut average dispatch confirmation time 32% across the partner network."
+        }
+      ]
+    },
+    {
+      "id": "rounded_metric",
+      "defect": "90,000 MAU rounded up to 100,000. Ground truth forbids rounding up.",
+      "expect": {"min_severity": "CRITICAL", "keywords": ["100,000", "90,000", "round"]},
+      "patch": [
+        {
+          "path": "resume_data.experience.1.bullets.0",
+          "value": "Launched a zero-to-one shipment-tracking mobile app that reached 100,000 monthly active users in its first year."
+        }
+      ]
+    },
+    {
+      "id": "phase_overstatement",
+      "defect": "Beta pilot described as shipped to production. Explicitly banned framing.",
+      "expect": {"min_severity": "CRITICAL", "keywords": ["phase 1", "beta", "pilot", "production", "rolled out"]},
+      "patch": [
+        {
+          "path": "resume_data.experience.0.bullets.3",
+          "value": "Rolled out automated exception handling into production across the full partner network."
+        }
+      ]
+    },
+    {
+      "id": "people_management",
+      "defect": "Claims direct reports the ground truth says do not exist.",
+      "expect": {"min_severity": "CRITICAL", "keywords": ["direct report", "managed", "people management", "hired"]},
+      "patch": [
+        {
+          "path": "resume_data.experience.0.bullets.0",
+          "value": "Managed a team of four product managers owning the carrier-integration platform."
+        }
+      ]
+    },
+    {
+      "id": "zero_to_one_violation",
+      "defect": "Claims zero-to-one on a platform that predates the tenure.",
+      "expect": {"min_severity": "CRITICAL", "keywords": ["zero-to-one", "predates", "carrier-integration"]},
+      "patch": [
+        {
+          "path": "resume_data.experience.0.bullets.0",
+          "value": "Built the carrier-integration platform zero-to-one, now used by 340 freight partners."
+        }
+      ]
+    },
+    {
+      "id": "unsourced_skill",
+      "defect": "A skill outside the documented source pool.",
+      "expect": {"min_severity": "MEDIUM", "keywords": ["kubernetes", "source pool", "not in the pool", "not listed"]},
+      "patch": [
+        {
+          "path": "resume_data.skills.Technical",
+          "value": ["SQL", "Kubernetes", "REST API design", "Looker"]
+        }
+      ]
+    },
+    {
+      "id": "skill_category_count",
+      "defect": "Five categories where the ground truth fixes the count at four.",
+      "expect": {"min_severity": "MEDIUM", "keywords": ["four", "categor", "count", "five"]},
+      "patch": [
+        {
+          "path": "resume_data.skills",
+          "value": {
+            "Product": ["roadmapping", "discovery interviews"],
+            "Technical": ["SQL", "REST API design"],
+            "Domain": ["logistics operations", "carrier networks"],
+            "Process": ["agile facilitation", "stakeholder alignment"],
+            "Leadership": ["incident review", "pricing"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "arrow_glyph_subtitle",
+      "defect": "Arrow glyph instead of the spelled-out form.",
+      "expect": {"min_severity": "LOW", "keywords": ["glyph", "zero-to-one", "arrow", "0→1"]},
+      "patch": [
+        {
+          "path": "resume_data.title_subtitle",
+          "value": "Senior Product Manager | Logistics Platforms | 0→1 and scale"
+        }
+      ]
+    },
+    {
+      "id": "em_dash",
+      "defect": "Em-dash in the cover letter body.",
+      "expect": {"min_severity": "MEDIUM", "keywords": ["em-dash", "em dash", "—"]},
+      "patch": [
+        {
+          "path": "cover_letter.paragraphs.2",
+          "value": "Before Northwind, a shipment-tracking app at Cascade Freight was the first thing I owned end to end — we thought people wanted a map, but they wanted one sentence telling them whether the thing was late."
+        }
+      ]
+    },
+    {
+      "id": "ai_trope",
+      "defect": "Two banned tropes in one paragraph.",
+      "expect": {"min_severity": "MEDIUM", "keywords": ["spearhead", "uniquely positioned", "trope"]},
+      "patch": [
+        {
+          "path": "cover_letter.paragraphs.1",
+          "value": "Having spearheaded the carrier-integration platform at Northwind, I am uniquely positioned to deliver on the robust, seamless integration experience your posting describes."
+        }
+      ]
+    },
+    {
+      "id": "paragraph_starts_with_i",
+      "defect": "A paragraph opening with the word I.",
+      "expect": {"min_severity": "LOW", "keywords": ["begins with", "starts with", "paragraph", "\"I\""]},
+      "patch": [
+        {
+          "path": "cover_letter.paragraphs.3",
+          "value": "I would be happy to talk if you are open to a short conversation."
+        }
+      ]
+    },
+    {
+      "id": "punchy_resolution_line",
+      "defect": "A standalone rhetorical resolution line.",
+      "expect": {"min_severity": "LOW", "keywords": ["punchy", "resolution", "confidence", "standalone"]},
+      "patch": [
+        {
+          "path": "cover_letter.paragraphs.2",
+          "value": "Before Northwind, a shipment-tracking app at Cascade Freight was the first thing I owned end to end. We thought people wanted a map. They wanted one sentence telling them whether the thing was late. That is the kind of problem I want to keep solving."
+        }
+      ]
+    },
+    {
+      "id": "wrong_closing",
+      "defect": "Closing other than the mandated one.",
+      "expect": {"min_severity": "LOW", "keywords": ["closing", "thanks", "regards"]},
+      "patch": [
+        {"path": "cover_letter.closing", "value": "Best regards,"}
+      ]
+    },
+    {
+      "id": "cover_letter_invented_claim",
+      "defect": "A cover-letter claim with no basis in either ground-truth document.",
+      "expect": {"min_severity": "CRITICAL", "keywords": ["saas", "not traceable", "cannot be traced", "no source", "invent", "fabricat"]},
+      "patch": [
+        {
+          "path": "cover_letter.paragraphs.0",
+          "value": "Your posting for a Senior Product Manager on the carrier platform caught my attention because after eight years building SaaS billing systems at three venture-backed startups, the integration problem you describe is a familiar one."
+        }
+      ]
+    }
+  ]
+}

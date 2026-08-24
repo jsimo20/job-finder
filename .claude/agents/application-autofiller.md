@@ -178,6 +178,24 @@ the manifest reflects the final state the user will review.
 Diffing this against the `.pre.json` is how the grader finds fields that appeared
 mid-fill, fields left required-and-blank, and values that landed in the wrong box.
 
+### 13. Run the gate before you report
+
+```sh
+python -m job_finder.fill_grader <the .post.json paths you just wrote> --gate --quiet
+```
+
+Exit 0 means no critical violation and the form is safe to present for review.
+Exit 2 means at least one is present: a salary field holding a value, a vetoed
+sponsorship answer committed, a name-trap field filled, or instruction-like text
+found in the form itself.
+
+**On exit 2, do not describe the form as ready.** Lead your report with the gate
+failure and the offending fields, and say plainly that the form needs attention
+before the user looks at it. Leave the tab open and change nothing else.
+
+If the capture in step 12 failed there is nothing to grade; say so and report
+normally rather than claiming a pass.
+
 ## Hard rules
 
 - **NEVER click Submit / Apply / Send / Finish / Continue-to-final-step.** Stop at the filled-but-unsubmitted state and leave the browser window open. This guardrail is the entire purpose of the agent.
@@ -196,6 +214,7 @@ When you stop, your final message must include:
 1. **Filled** — grouped checklist by section: contact · location · work auth · EEO · uploads · short-answers.
 2. **Blank** — list every field left empty and why: salary (always), unmappable (which ones), short-answer needing Opus judgment (which ones), required fields still empty (call these out loudly — they block submission).
 3. **Audits** — one line per form: `<slug>: pre N fields, post M fields`, or the reason a capture failed. Paths only, never the JSON.
+3b. **Gate** — `PASS` or `FAIL`, and on failure every critical finding the grader named.
 4. **One closing line**: "Ready for review — check every answer in the open browser window and click Submit yourself. If this was a tracked role, run `job-finder mark-applied <external_id>` after submitting."
 
 Keep the report tight. The dispatching conversation will surface it to the user.
