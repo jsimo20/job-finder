@@ -226,3 +226,29 @@ def test_render_handles_invalid_resume_data(
     raw = outdir / "_resume_call_raw.json"
     assert raw.exists()
     assert json.loads(raw.read_text(encoding="utf-8")) == broken
+
+
+def test_relative_profile_paths_resolve_against_the_repo_not_the_cwd(monkeypatch, tmp_path):
+    """The profile may point at junctions inside the workspace; those are relative.
+
+    Resolving them against the working directory would break the scheduled task
+    and any session started elsewhere.
+    """
+    monkeypatch.chdir(tmp_path)
+    config = job_apply.load_config({"paths": {
+        "inputs_dir": "profile/inputs",
+        "session_context_path": "profile/ai_skills/SESSION_CONTEXT.md",
+    }})
+    repo_root = Path(job_apply.__file__).resolve().parents[2]
+    assert config.inputs_dir == repo_root / "profile" / "inputs"
+    assert config.session_context_path == repo_root / "profile" / "ai_skills" / "SESSION_CONTEXT.md"
+
+
+def test_absolute_profile_paths_are_left_alone(tmp_path):
+    config = job_apply.load_config({"paths": {"inputs_dir": str(tmp_path)}})
+    assert config.inputs_dir == tmp_path
+
+
+def test_tilde_profile_paths_still_expand():
+    config = job_apply.load_config({"paths": {"inputs_dir": "~/some-inputs"}})
+    assert config.inputs_dir == Path.home() / "some-inputs"
