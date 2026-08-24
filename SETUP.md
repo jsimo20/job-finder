@@ -11,7 +11,7 @@ pipeline to configure.
 
 ## 0. Prerequisites
 
-- Python 3.12+
+- Python 3.10 or newer
 - `git`, and the `gh` CLI logged into your GitHub account
 - `uv` (`pip install uv`) — or plain pip, adjusting the commands below
 - An Anthropic API key with credit (console.anthropic.com) — the pipeline's

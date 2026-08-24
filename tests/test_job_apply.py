@@ -252,3 +252,75 @@ def test_absolute_profile_paths_are_left_alone(tmp_path):
 def test_tilde_profile_paths_still_expand():
     config = job_apply.load_config({"paths": {"inputs_dir": "~/some-inputs"}})
     assert config.inputs_dir == Path.home() / "some-inputs"
+
+
+def test_archive_dir_is_none_when_unconfigured():
+    """Absent from [paths] means no archive step, not a path into profile/."""
+    assert job_apply.load_config({"paths": {}}).applications_archive_dir is None
+
+
+def test_absolute_archive_path_passes_through(tmp_path):
+    config = job_apply.load_config({"paths": {"applications_archive_dir": str(tmp_path)}})
+    assert config.applications_archive_dir == tmp_path
+
+
+def test_archive_moves_folders_and_leaves_the_source_empty(tmp_path):
+    src, dest = tmp_path / "render", tmp_path / "archive"
+    (src / "2026-08-24_acme_pm").mkdir(parents=True)
+    (src / "2026-08-24_acme_pm" / "apply.md").write_text("x", encoding="utf-8")
+    dest.mkdir()
+    config = job_apply.Config(inputs_dir=tmp_path, applications_dir=src,
+                              claims_ground_truth=tmp_path / "c.md",
+                              resume_skill=tmp_path / "g.py",
+                              applications_archive_dir=dest)
+    result = job_apply.archive_applications(config)
+    assert result["moved"] == ["2026-08-24_acme_pm"]
+    assert (dest / "2026-08-24_acme_pm" / "apply.md").exists()
+    assert not list(src.iterdir())
+
+
+def test_archive_never_overwrites_an_existing_folder(tmp_path):
+    """A folder already archived may be a submitted application; do not merge it."""
+    src, dest = tmp_path / "render", tmp_path / "archive"
+    (src / "dup").mkdir(parents=True)
+    (src / "dup" / "new.md").write_text("new", encoding="utf-8")
+    (dest / "dup").mkdir(parents=True)
+    (dest / "dup" / "old.md").write_text("old", encoding="utf-8")
+    config = job_apply.Config(inputs_dir=tmp_path, applications_dir=src,
+                              claims_ground_truth=tmp_path / "c.md",
+                              resume_skill=tmp_path / "g.py",
+                              applications_archive_dir=dest)
+    result = job_apply.archive_applications(config)
+    assert result["skipped"] == ["dup"] and result["moved"] == []
+    assert (dest / "dup" / "old.md").read_text(encoding="utf-8") == "old"
+    assert (src / "dup").exists()
+
+
+def test_archive_dry_run_moves_nothing(tmp_path):
+    src, dest = tmp_path / "render", tmp_path / "archive"
+    (src / "a").mkdir(parents=True)
+    dest.mkdir()
+    config = job_apply.Config(inputs_dir=tmp_path, applications_dir=src,
+                              claims_ground_truth=tmp_path / "c.md",
+                              resume_skill=tmp_path / "g.py",
+                              applications_archive_dir=dest)
+    assert job_apply.archive_applications(config, dry_run=True)["moved"] == ["a"]
+    assert (src / "a").exists() and not (dest / "a").exists()
+
+
+def test_archive_refuses_an_unreachable_destination(tmp_path):
+    """From the Cowork VM the archive is a Windows path that does not exist."""
+    config = job_apply.Config(inputs_dir=tmp_path, applications_dir=tmp_path,
+                              claims_ground_truth=tmp_path / "c.md",
+                              resume_skill=tmp_path / "g.py",
+                              applications_archive_dir=tmp_path / "nope")
+    with pytest.raises(FileNotFoundError, match="not reachable"):
+        job_apply.archive_applications(config)
+
+
+def test_archive_without_configuration_raises(tmp_path):
+    config = job_apply.Config(inputs_dir=tmp_path, applications_dir=tmp_path,
+                              claims_ground_truth=tmp_path / "c.md",
+                              resume_skill=tmp_path / "g.py")
+    with pytest.raises(ValueError, match="applications_archive_dir"):
+        job_apply.archive_applications(config)
