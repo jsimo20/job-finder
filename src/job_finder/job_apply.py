@@ -71,9 +71,21 @@ def load_config(profile: Mapping[str, Any] | None = None) -> Config:
     paths = profile.get("paths", {})
     base = settings.profile_dir()
 
+    repo_root = Path(__file__).resolve().parents[2]
+
     def _resolve(key: str, default: Path) -> Path:
+        """Absolute paths as given; relative ones against the repo, never the cwd.
+
+        A relative path lets the profile point at junctions inside the workspace
+        instead of reaching outside it, but resolving those against the working
+        directory would break every caller that runs from somewhere else -- the
+        scheduled task among them.
+        """
         raw = paths.get(key)
-        return Path(raw).expanduser() if raw else default
+        if not raw:
+            return default
+        path = Path(raw).expanduser()
+        return path if path.is_absolute() else (repo_root / path)
 
     return Config(
         inputs_dir=_resolve("inputs_dir", base),
