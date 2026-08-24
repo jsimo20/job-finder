@@ -15,7 +15,7 @@ pipeline to configure.
 - `git`, and the `gh` CLI logged into your GitHub account
 - `uv` (`pip install uv`) — or plain pip, adjusting the commands below
 - An Anthropic API key with credit (console.anthropic.com) — the pipeline's
-  extraction stage and the optional PR reviewer both bill against it
+  extraction stage bills against it
 - A Gmail account with 2FA, for the digest email
 - A Windows machine that's usually on (the weekly run is a Scheduled Task;
   on macOS/Linux use cron/launchd with the same command)
@@ -162,10 +162,9 @@ Registers a Windows Scheduled Task: `job-finder run --email` every Monday at
 09:00 local, with catch-up at next boot if the machine was off. Test it once
 by hand first (`job-finder run --email` — this spends real API tokens).
 
-For the optional PR reviewer (`.github/workflows/claude-review.yml`), set one
-GitHub Actions secret: `ANTHROPIC_API_KEY` (paste via a plain-text editor —
-invisible BOMs from rich editors break the SDK). Delete that workflow file if
-you don't want reviews.
+No GitHub Actions secrets are required: the repo runs no CI workflows. Code
+review is on demand: dispatch the `python-code-reviewer` agent, or use the
+built-in `/code-review`. Either runs locally against your own key.
 
 ## 7. Personalize the Claude-side workflows
 
