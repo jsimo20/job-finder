@@ -59,6 +59,34 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 # external_id = gh_jid for Greenhouse, slug for Lever, id for Ashby
 ```
 
+## Evals
+
+Two deterministic, zero-token graders. Both read artifacts the system already
+produces rather than running a parallel harness, and both have a bucket that is
+a backlog rather than a failure.
+
+```sh
+# Does the score predict what actually gets applied to?
+.venv/Scripts/python.exe -m job_finder.eval_calibration
+# Did the last fill batch fill everything it had a rule for?
+.venv/Scripts/python.exe -m job_finder.fill_grader --date <YYYY-MM-DD>
+```
+
+- **`eval_calibration.py`** grades the scorer against the applied ledger. The
+  digest archive in `state.db` is the only durable record of what a role scored
+  (jobs.db is rebuilt every run), so it reconstructs scores by parsing archived
+  digest bodies. Outputs precision@k against a per-digest chance baseline, apply
+  rate per score band, and per-signal lift. **A signal with high lift and a low
+  weight in `config/pipeline.toml` is an underweighted signal** — that table is
+  the actionable output. Read-only; safe to run any time.
+- **`fill_grader.py`** grades form fills; design in `.claude/context/form-fill-evals.md`.
+- **Digest markdown is a parsed interface now.** Changing the `### [Score N] Company — [Title](url)`
+  header or the `- Domain: … · Stage: …` detail line in `digest.py` breaks
+  `eval_calibration.parse_digest` against every already-archived digest, and
+  archived bodies cannot be re-rendered. Change the format only additively.
+- Unmeasured: `extract.py` (no golden set), the tailoring loop, and
+  `digest-triager` ranking.
+
 ## Per-user configuration (two layers)
 
 - **`config/pipeline.toml`** — gitignored (template: `config/pipeline.example.toml`). Location scope, metro tiers, commute thresholds/notes, title targeting, domain + stage weights, comp floor, YoE cap, stale days. `settings.pipeline_config()` loads it, falling back to the example on a fresh clone. The pipeline runs locally, so edits take effect on the next run — no sync step.
