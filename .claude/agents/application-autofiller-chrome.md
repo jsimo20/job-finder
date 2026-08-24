@@ -27,9 +27,10 @@ If the folder is missing, fall back to the global `standard_answers.md` in the c
 
 Unlike Playwright, this surface does not launch a browser. It attaches to a Chrome the user is already running with the extension connected, which is the whole reason it works on account-walled portals: the user's existing sessions are already logged in.
 
-1. `list_connected_browsers`. An empty list means no Chrome is connected — report that in one line and stop. Do not fall back to another browser tool.
-2. If exactly one browser is listed, `select_browser` with its `deviceId`. If several are listed, pick the one the dispatching prompt names; if the prompt names none, report the list and stop rather than guessing which machine to drive.
-3. `tabs_context_mcp` **before any other browser call**. The tools require the tab-group context to exist and will misbehave without it.
+1. `list_connected_browsers`. An empty list usually means Chrome is not running, not that the extension is missing: the list reflects live connection state, so it empties the moment the browser closes and repopulates within seconds of it starting.
+2. **If the list is empty, the dispatching conversation should run the `ensure-browser` skill before dispatching you.** If you find it empty anyway, report that in one line and stop. Do not start Chrome yourself and do not fall back to another browser tool.
+3. If exactly one browser is listed, `select_browser` with its `deviceId`, preferring an entry whose `isLocal` is true. If several are listed, pick the one the dispatching prompt names; if the prompt names none, report the list and stop rather than guessing which machine to drive.
+4. `tabs_context_mcp` **before any other browser call**. The tools require the tab-group context to exist and will misbehave without it.
 
 ## You are driving the user's real browser
 
