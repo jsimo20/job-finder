@@ -73,7 +73,25 @@ def test_grade_defect_case_flags_correct_finding_at_too_low_a_severity():
             {"min_severity": "CRITICAL", "keywords": ["100,000"]}}
     result = ef.grade_case(case, "### LOW - 100,000 looks rounded")
     assert result["passed"] is False
+    assert result["detected"] is True
     assert "below CRITICAL" in result["detail"]
+
+
+def test_summary_separates_a_miss_from_an_under_severity_finding():
+    """Live run showed both voice defects caught but filed NIT, which the old
+    report called MISSED. A defect nobody named can reach an employer; one filed
+    a rung low still reaches the report."""
+    results = [
+        {"id": "under", "kind": "defect", "passed": False, "detected": True, "detail": ""},
+        {"id": "gone", "kind": "defect", "passed": False, "detected": False, "detail": ""},
+        {"id": "ok", "kind": "defect", "passed": True, "detected": True, "detail": ""},
+    ]
+    summary = ef.summarize(results)
+    assert summary["missed"] == ["gone"]
+    assert summary["under_severity"] == ["under"]
+    assert summary["detected"] == 2
+    assert summary["detection_rate"] == pytest.approx(2 / 3)
+    assert summary["recall"] == pytest.approx(1 / 3)
 
 
 def test_grade_control_case_fails_on_a_false_positive():
@@ -87,8 +105,8 @@ def test_grade_control_case_fails_on_a_false_positive():
 def test_summary_penalises_a_checker_that_flags_everything():
     """Perfect recall bought with false positives must not grade well."""
     results = [
-        {"id": "d1", "kind": "defect", "passed": True, "detail": ""},
-        {"id": "d2", "kind": "defect", "passed": True, "detail": ""},
+        {"id": "d1", "kind": "defect", "passed": True, "detected": True, "detail": ""},
+        {"id": "d2", "kind": "defect", "passed": True, "detected": True, "detail": ""},
         {"id": "c1", "kind": "control", "passed": False, "detail": ""},
         {"id": "c2", "kind": "control", "passed": False, "detail": ""},
     ]
@@ -101,8 +119,8 @@ def test_summary_penalises_a_checker_that_flags_everything():
 
 def test_summary_reports_missed_defects_by_id():
     results = [
-        {"id": "people_management", "kind": "defect", "passed": False, "detail": ""},
-        {"id": "em_dash", "kind": "defect", "passed": True, "detail": ""},
+        {"id": "people_management", "kind": "defect", "passed": False, "detected": False, "detail": ""},
+        {"id": "em_dash", "kind": "defect", "passed": True, "detected": True, "detail": ""},
         {"id": "c1", "kind": "control", "passed": True, "detail": ""},
     ]
     summary = ef.summarize(results)

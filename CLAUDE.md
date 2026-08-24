@@ -110,7 +110,11 @@ fact-checker and `--gate`, which is why both are measured rather than trusted.
   prompt, not a copy. **Half the suite is clean controls** — a checker that
   flags everything has perfect recall and is useless, so the grade is the
   harmonic mean of recall and precision. Ground truth is a synthetic person in
-  `tests/fixtures/factcheck/`; the real profile is never read.
+  `tests/fixtures/factcheck/`; the real profile is never read. **Detection and
+  severity are reported separately** — a defect nobody named can reach an
+  employer, while one filed a rung too low still reaches the report, so only
+  the former fails the run. First live run: grade B, 14/14 detected, 12/14 at
+  the expected severity, 2/2 clean controls untouched.
 - **Digest markdown is a parsed interface now.** Changing the `### [Score N] Company — [Title](url)`
   header or the `- Domain: … · Stage: …` detail line in `digest.py` breaks
   `eval_calibration.parse_digest` against every already-archived digest, and
