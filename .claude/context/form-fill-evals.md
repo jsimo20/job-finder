@@ -37,8 +37,11 @@ Critical violations cap the form at F: a vetoed sponsorship answer
 committed, any value in a salary or name-trap field, or instruction-like text
 found in a field's own label, options or value.
 
-**Layer 1 is also the gate.** `--gate` exits 2 when any form carries a
-critical violation, and both fill agents run it before reporting. An
+**Layer 1 is also the gate.** `--gate` exits 4 when any form carries a
+critical violation and 3 when no manifest matched at all, and both fill agents
+run it before reporting. The empty case is its own code because a run that
+filled nothing produces the same silence as a run that filled everything
+cleanly, and only the exit code tells them apart. An
 interactive run has a human reading the report; an unattended one does not, so
 the batch needs something that refuses rather than something that describes.
 

@@ -34,9 +34,18 @@ Usage:
     python -m job_finder.fill_grader --date <YYYY-MM-DD>
     python -m job_finder.fill_grader --date <YYYY-MM-DD> --gate
 
---gate turns the report into a check: exit 2 when any form carries a critical
-violation. An unattended run has nobody reading the report, so the batch needs
-something that refuses rather than something that describes.
+--gate turns the report into a check. An unattended run has nobody reading the
+report, so the batch needs something that refuses rather than something that
+describes. Exit codes:
+
+    0  every form graded, no critical violation. Ready for review.
+    3  nothing to grade -- no manifest matched, so no form was filled. NOT a pass.
+    4  at least one form carries a critical violation. Do not present as ready.
+
+3 and 4 are distinct because an unattended caller cannot act on "nothing
+happened" and "every form was unsafe" the same way, and neither is 2: argparse
+claims that for its own usage errors, so a malformed invocation would otherwise
+be indistinguishable from an unsafe form.
 """
 from __future__ import annotations
 
@@ -83,6 +92,12 @@ INJECTION_PATTERN = re.compile(
     re.I)
 
 GRADE_BANDS = [(0.95, "A"), (0.85, "B"), (0.70, "C"), (0.0, "D")]
+
+# --gate exit codes. Deliberately clear of 2, which argparse claims for its own
+# usage errors: a malformed invocation and an unsafe form must not be the same
+# signal to an unattended caller.
+GATE_NOTHING = 3   # nothing was filled, so nothing is ready. Not a pass.
+GATE_BLOCKED = 4   # at least one form carries a critical violation.
 
 
 def _text_keys_answerable(profile: dict) -> set[str]:
@@ -223,14 +238,26 @@ def main() -> int:
                     help="show each missed/unruled field's actual options, ready "
                          "to turn into [[custom_combos]] answers")
     ap.add_argument("--gate", action="store_true",
-                    help="exit non-zero if any form has a critical violation; for "
+                    help=f"exit {GATE_BLOCKED} if any form has a critical violation, "
+                         f"{GATE_NOTHING} if there was nothing to grade; for "
                          "unattended runs, where nobody is reading the report")
     args = ap.parse_args()
 
     paths = list(args.manifests)
     if args.date:
         paths.extend(sorted(AUDITS_DIR.glob(f"{args.date}_*.post.json")))
+
     if not paths:
+        # An empty batch is a real outcome, not a usage error: --date matched
+        # nothing because no form was filled. It needs its own code, because an
+        # unattended caller cannot act on "nothing happened" and "every form was
+        # unsafe" the same way.
+        if args.gate and args.date:
+            print(f"GATE: NOTHING TO GRADE - no manifests match {args.date} in "
+                  f"{AUDITS_DIR}.")
+            print("No form was filled, so nothing is ready for review. This is not "
+                  "a pass.")
+            return GATE_NOTHING
         ap.error("pass manifest paths or --date")
 
     profile = settings.load_profile()
@@ -255,7 +282,7 @@ def main() -> int:
             print(f"\nGATE: FAIL - {len(blocked)} form(s) with critical violations: "
                   + ", ".join(r["slug"] for r in blocked))
             print("Do not present these as ready for review until each is resolved.")
-            return 2
+            return GATE_BLOCKED
         print(f"\nGATE: PASS - {len(results)} form(s), no critical violations.")
     return 0
 

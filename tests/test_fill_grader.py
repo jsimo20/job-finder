@@ -181,3 +181,51 @@ def test_clean_manifest_never_trips_the_injection_check(tmp_path):
     result = _grade([{"label": label, "type": "text", "required": False,
                       "value": "", "options": []} for label in BENIGN_LABELS], tmp_path)
     assert "critical" not in result["counts"]
+
+
+# ── Gate exit codes ──────────────────────────────────────────────────────────
+
+def _run_gate(argv, monkeypatch, audits_dir=None):
+    import sys
+    if audits_dir is not None:
+        monkeypatch.setattr(fill_grader, "AUDITS_DIR", audits_dir)
+    monkeypatch.setattr(fill_grader.settings, "load_profile", lambda: PROFILE)
+    monkeypatch.setattr(sys, "argv", ["fill_grader", *argv])
+    return fill_grader.main()
+
+
+def test_gate_passes_a_clean_batch(tmp_path, monkeypatch):
+    manifest = tmp_path / "2026-01-01_acme.post.json"
+    manifest.write_text(json.dumps({"slug": "acme", "fields": [
+        {"label": "First Name*", "type": "text", "required": True,
+         "value": "T", "options": None}]}), encoding="utf-8")
+    assert _run_gate(["--date", "2026-01-01", "--gate", "--quiet"],
+                     monkeypatch, tmp_path) == 0
+
+
+def test_gate_blocks_a_critical_violation(tmp_path, monkeypatch):
+    manifest = tmp_path / "2026-01-01_acme.post.json"
+    manifest.write_text(json.dumps({"slug": "acme", "fields": [
+        {"label": "Desired base salary", "type": "text", "required": False,
+         "value": "200000", "options": None}]}), encoding="utf-8")
+    assert _run_gate(["--date", "2026-01-01", "--gate", "--quiet"],
+                     monkeypatch, tmp_path) == fill_grader.GATE_BLOCKED
+
+
+def test_gate_distinguishes_an_empty_batch_from_a_violation(tmp_path, monkeypatch):
+    """Regression: an unattended run filled nothing and --date matched nothing.
+
+    That exited 2, the same code as a critical violation, so the caller could not
+    tell "every form was unsafe" from "no form was filled".
+    """
+    code = _run_gate(["--date", "2026-01-01", "--gate", "--quiet"],
+                     monkeypatch, tmp_path)
+    assert code == fill_grader.GATE_NOTHING
+    assert code != fill_grader.GATE_BLOCKED
+    assert code != 0
+
+
+def test_gate_codes_stay_clear_of_argparse():
+    """argparse exits 2 on a usage error; a malformed call must not read as unsafe."""
+    assert 2 not in (fill_grader.GATE_NOTHING, fill_grader.GATE_BLOCKED)
+    assert fill_grader.GATE_NOTHING != fill_grader.GATE_BLOCKED
