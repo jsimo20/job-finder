@@ -207,6 +207,48 @@ def test_signal_lift_respects_min_support():
             if s["signal"] == "domain:rare_tag"]
 
 
+def test_parse_digest_recovers_the_comp_floor():
+    first, second, _ = ec.parse_digest(DIGEST_A)
+    assert first["comp_min"] == 200000
+    assert second["comp_min"] is None
+
+
+def test_bare_maximum_comp_is_not_read_as_a_floor():
+    body = ("## Main queue — new (1)\n\n"
+            "### [Score 5] Delta Works — [PM](https://example-ats.test/delta/jobs/555555)\n"
+            "- Remote (remote) · YOE 5 · Comp ≤$190K\n")
+    assert ec.parse_digest(body)[0]["comp_min"] is None
+
+
+def _rescored(body):
+    """Parse a digest, then restate each score as today's weights would compute it.
+
+    The fixture bodies carry illustrative scores; pinning them to real weights
+    would make these tests fail whenever config/pipeline.toml is reweighted,
+    which is the very event under test.
+    """
+    entries = ec.parse_digest(body)
+    for entry in entries:
+        entry["score"] = ec.reconstruct_score(entry)
+    return entries
+
+
+def test_reconstruction_check_is_clean_when_weights_match():
+    check = ec.reconstruction_check({"2026-06-01": _rescored(DIGEST_A)})
+    assert check["drifted"] == 0 and check["rate"] == 1.0
+
+
+def test_reconstruction_check_flags_a_stale_archived_score():
+    """An archived score today's weights cannot reproduce means a reweight happened."""
+    entries = _rescored(DIGEST_A)
+    entries[0]["score"] += 3
+    check = ec.reconstruction_check({"2026-06-01": entries})
+    assert check["drifted"] == 1
+    assert check["rate"] == 2 / 3
+    assert check["last_drift_date"] == "2026-06-01"
+    assert ("domain:ai_agentic", 1) in check["suspects"]
+
+
 def test_evaluate_grades_an_empty_archive(tmp_path):
     db = _seed(tmp_path, [], [])
     result = ec.evaluate(db)

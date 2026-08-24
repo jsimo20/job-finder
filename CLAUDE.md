@@ -79,6 +79,12 @@ a backlog rather than a failure.
   rate per score band, and per-signal lift. **A signal with high lift and a low
   weight in `config/pipeline.toml` is an underweighted signal** — that table is
   the actionable output. Read-only; safe to run any time.
+- **Reweighting `pipeline.toml` invalidates archive comparisons.** Scores are
+  additive, so `eval_calibration` recomputes every archived entry under today's
+  weights and warns when they don't reproduce. Digests either side of a reweight
+  aren't comparable, and a signal whose weight was raised in response to past
+  behaviour will show high lift for that reason alone. Read the warning before
+  trusting the lift table.
 - **`fill_grader.py`** grades form fills; design in `.claude/context/form-fill-evals.md`.
 - **Digest markdown is a parsed interface now.** Changing the `### [Score N] Company — [Title](url)`
   header or the `- Domain: … · Stage: …` detail line in `digest.py` breaks

@@ -58,6 +58,10 @@ ENTRY_RE = re.compile(
     rf"^###\s+\[Score\s+(-?\d+)\]\s+(.+?)\s+{_DASH}\s+\[(.+?)\]\((\S+?)\)\s*$")
 # Stage slugs carry digits (mega_corp_10k), so the class cannot be letters only.
 STAGE_RE = re.compile(r"Stage:\s*([a-z0-9_]+)")
+COMP_LO_RE = re.compile(r"\$(\d+)")
+# digest._fmt_comp renders a bare maximum as "Comp <=$XK", which means the
+# minimum was null. Reading that X as a floor would invent a comp score.
+COMP_MAX_ONLY = "≤"
 
 GRADE_BANDS = [(0.80, "A"), (0.65, "B"), (0.50, "C"), (0.35, "D"), (0.0, "F")]
 SCORE_BANDS = [(17, None), (13, 16), (9, 12), (5, 8), (None, 4)]
@@ -112,6 +116,7 @@ def parse_digest(body: str) -> list[dict[str, Any]]:
                 "domain_tags": [],
                 "stage": None,
                 "comp_posted": False,
+                "comp_min": None,
             }
             entries.append(current)
             continue
@@ -129,7 +134,57 @@ def parse_digest(body: str) -> list[dict[str, Any]]:
                 current["stage"] = stage.group(1)
         elif "YOE" in line and "Comp" in line:
             current["comp_posted"] = "Comp not posted" not in line
+            if current["comp_posted"] and COMP_MAX_ONLY not in line:
+                floor = COMP_LO_RE.search(line)
+                current["comp_min"] = int(floor.group(1)) * 1000 if floor else None
     return entries
+
+
+def reconstruct_score(entry: dict[str, Any]) -> int:
+    """Recompute an archived entry's score under the weights configured today."""
+    from .score import comp_score, domain_score, stage_score
+
+    return (domain_score(entry["domain_tags"])
+            + stage_score(entry["stage"])
+            + comp_score(entry["comp_min"], "posted" if entry["comp_posted"] else None))
+
+
+def reconstruction_check(digests: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
+    """Detect archived scores that today's weights no longer reproduce.
+
+    The scorer is additive, so an archived score should recompute exactly. When
+    it does not, config/pipeline.toml was reweighted partway through the archive
+    and the digests on either side of that edit are not directly comparable --
+    which silently contaminates every rank and lift in this module. Nothing here
+    can repair it, so it is surfaced rather than corrected.
+    """
+    exact = 0
+    drifted: list[dict[str, Any]] = []
+    for date, entries in digests.items():
+        for entry in entries:
+            residual = reconstruct_score(entry) - entry["score"]
+            if residual:
+                drifted.append({"date": date, "residual": residual,
+                                "tags": entry["domain_tags"], "stage": entry["stage"]})
+            else:
+                exact += 1
+
+    total = exact + len(drifted)
+    suspects: dict[str, int] = {}
+    for row in drifted:
+        for tag in row["tags"]:
+            suspects[f"domain:{tag}"] = suspects.get(f"domain:{tag}", 0) + 1
+        if row["stage"]:
+            suspects[f"stage:{row['stage']}"] = suspects.get(f"stage:{row['stage']}", 0) + 1
+
+    return {
+        "exact": exact,
+        "total": total,
+        "rate": exact / total if total else 1.0,
+        "drifted": len(drifted),
+        "last_drift_date": max((r["date"] for r in drifted), default=None),
+        "suspects": sorted(suspects.items(), key=lambda kv: -kv[1])[:5],
+    }
 
 
 def load_digests(conn: sqlite3.Connection) -> dict[str, list[dict[str, Any]]]:
@@ -313,6 +368,7 @@ def evaluate(
         "precision": precision_at_k(linked),
         "bands": score_bands(pool),
         "signals": signal_lift(pool, min_support),
+        "reconstruction": reconstruction_check(digests),
         "grade": next(g for floor, g in GRADE_BANDS if median_pct >= floor),
     }
 
@@ -331,6 +387,19 @@ def print_report(result: dict[str, Any], verbose: bool = True) -> None:
     if total:
         print(f"  {len(linked)}/{total} applications traceable to a digest "
               f"({len(linked) / total:.0%})")
+
+    recon = result["reconstruction"]
+    if recon["drifted"]:
+        print(f"\n  ! WEIGHTS CHANGED MID-ARCHIVE: {recon['drifted']}/{recon['total']} "
+              f"archived entries ({1 - recon['rate']:.0%}) do not reproduce under "
+              f"today's config/pipeline.toml, most recently {recon['last_drift_date']}.")
+        print("    Digests either side of that edit are not directly comparable, so "
+              "the ranks and lifts below are contaminated to that degree.")
+        if recon["suspects"]:
+            print("    Most affected: " + ", ".join(
+                f"{name} ({n})" for name, n in recon["suspects"]))
+        print("    A signal whose weight was raised in response to past behaviour "
+              "will also show high lift here for that reason alone.")
 
     if not linked:
         print("\n  Nothing to grade: no application matched an archived digest.")
