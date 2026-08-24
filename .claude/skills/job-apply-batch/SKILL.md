@@ -1,6 +1,6 @@
 ---
-description: Run the full apply loop over the top N pending roles unattended, with one review at the end
-argument-hint: [--top N] [--include-stretch]
+name: job-apply-batch
+description: Run the full apply loop over the top N pending roles unattended, with one review at the end and no per-role approval gates. Use for a session nobody is watching, or a batch the user intends to review in one sitting. Accepts --top N (default 5) and --include-stretch.
 ---
 
 Run the whole apply loop over several roles without stopping between them, and
