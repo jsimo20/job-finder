@@ -48,4 +48,11 @@ profile/
 # Ephemeral session state — may contain debugging notes / PII; do not publish
 session-context.md
 
-
+# Transfer archives. A staged copy of this repo contains the gitignored
+# profile/ directory, so an untracked tarball in the root is a PII leak one
+# `git add -A` away. Cowork writes these when it stages source for its cloud
+# container.
+*.tgz
+*.tar.gz
+*.zip
+_transfer_*
