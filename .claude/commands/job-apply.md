@@ -3,7 +3,7 @@ description: Tailor resume + cover letter for pending roles and prep apply packa
 argument-hint: [external_id or --top N]
 ---
 
-You are driving the apply-prep loop for the user. The pipeline that picks the roles is `job-finder`; the tailoring ground truth lives in the profile driving docs (`resume_master.md`, `personal_statement.md`, and the session-context file named by `profile/profile.toml` `[paths]`). The deterministic render lives in `src/job_finder/job_apply.py`.
+You are driving the apply-prep loop for the user. The pipeline that picks the roles is `job-finder`; the tailoring ground truth lives in the profile driving docs (`resume_master.md`, `personal_statement.md`, and the claims-ground-truth file named by `profile/profile.toml` `[paths]`). The deterministic render lives in `src/job_finder/job_apply.py`.
 
 ## What to do
 
@@ -26,7 +26,7 @@ Argument: `$ARGUMENTS`.
 a. **Load context** (read these files once and keep in memory for the whole session; all paths come from `profile/profile.toml` `[paths]`, defaulting into `profile/`):
    - `<inputs_dir>/resume_master.md`
    - `<inputs_dir>/personal_statement.md`
-   - the session-context file at `[paths].session_context_path` (default `profile/session_context.md`) — anti-overstatement and voice rules
+   - the claims-ground-truth file at `[paths].claims_ground_truth_path` (default `profile/claims_ground_truth.md`) — per-claim framing rules, skill source pool, voice rules
    - the resume generator at `[paths].resume_skill_path` (default `profile/generate_resume.py`); read any SKILL.md or design notes sitting next to it, if present
    - The full row for this posting from `data/jobs.db` — including `jd_text`. If the DB is stale (it's rebuilt by each pipeline run) or `jd_text` is null, fetch the JD via WebFetch on the posting URL.
    - **Roles with no DB row at all** (a pasted URL, or a company from the digest's Manual check section) are first-class inputs, not errors. Fetch the JD from the live posting page — WebFetch first, the browser if the page is JS-walled — and hand-construct `posting_row` for step g. The ATS behind the URL never gates prep: any posting whose JD you can read gets the full loop below.

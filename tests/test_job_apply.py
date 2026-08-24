@@ -102,7 +102,7 @@ def isolated_config(tmp_path: Path) -> job_apply.Config:
     return job_apply.Config(
         inputs_dir=inputs,
         applications_dir=apps,
-        session_context_path=session_ctx,
+        claims_ground_truth=session_ctx,
         resume_skill=job_apply.REPO_ROOT / "profile.example" / "generate_resume.py",
     )
 
@@ -237,11 +237,11 @@ def test_relative_profile_paths_resolve_against_the_repo_not_the_cwd(monkeypatch
     monkeypatch.chdir(tmp_path)
     config = job_apply.load_config({"paths": {
         "inputs_dir": "profile/inputs",
-        "session_context_path": "profile/ai_skills/SESSION_CONTEXT.md",
+        "claims_ground_truth_path": "profile/ai_skills/claims_ground_truth.md",
     }})
     repo_root = Path(job_apply.__file__).resolve().parents[2]
     assert config.inputs_dir == repo_root / "profile" / "inputs"
-    assert config.session_context_path == repo_root / "profile" / "ai_skills" / "SESSION_CONTEXT.md"
+    assert config.claims_ground_truth == repo_root / "profile" / "ai_skills" / "claims_ground_truth.md"
 
 
 def test_absolute_profile_paths_are_left_alone(tmp_path):

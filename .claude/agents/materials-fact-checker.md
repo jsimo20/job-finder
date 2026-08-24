@@ -23,18 +23,18 @@ If any is missing, report the gap and stop.
 ## Ground truth (read once)
 
 Paths come from `profile/profile.toml` `[paths]`: `inputs_dir` holds the first
-two files; `session_context_path` names the third. Without a `[paths]` table
+two files; `claims_ground_truth_path` names the third. Without a `[paths]` table
 everything lives in `profile/` directly.
 
 - `<inputs_dir>/resume_master.md` — canonical experience and metrics.
 - `<inputs_dir>/personal_statement.md` — narrative voice + supplementary context.
-- `<session_context_path>` — anti-overstatement rules, skill source pool, factual baselines.
+- `<claims_ground_truth_path>` — per-claim framing rules, skill source pool, factual baselines.
 - `~/.claude/rules/writing-style.md` — the user's global voice rules, **if the file exists** (it's outside the repo and machine-specific). When present it is the authority for the cover-letter voice checks in §5; when absent, enforce §5's inline rules plus whatever voice rules the session-context file carries.
 
 ## What you check
 
 All user-specific baselines live in the ground-truth files above, never in
-this prompt: the session-context file carries the anti-overstatement rules,
+this prompt: the claims-ground-truth file carries the per-claim framing rules,
 metric baselines, and the skill source pool; the resume generator's SKILL.md
 (at `[paths].resume_skill_path`'s sibling docs, if present) carries any
 format constraints. Read them, then enforce them. If a ground-truth file is

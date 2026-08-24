@@ -94,7 +94,7 @@ Then edit, in this order:
 4. **`profile/standard_answers.md`** — contact block + stock screening answers.
 5. **`profile/fit_profile.md`** — what a great role looks like for you.
 6. **`profile/generate_resume.py`** — edit only the RESUME_DATA block.
-7. **`profile/qa_checklist.md`** and **`profile/session_context.md`** — grow
+7. **`profile/qa_checklist.md`** and **`profile/claims_ground_truth.md`** — grow
    these over time; the defaults work on day one.
 
 **Do not skip 2–4.** The tailoring, fact-checking, and autofill workflows all
@@ -170,11 +170,11 @@ built-in `/code-review`. Either runs locally against your own key.
 
 The `.claude/` prompts are generic: every user-specific rule (metric
 baselines, banned framings, voice) is read at run time from your profile
-docs, mainly `profile/session_context.md` and the files in `[paths]`. So
+docs, mainly `profile/claims_ground_truth.md` and the files in `[paths]`. So
 personalization happens in §3, not by editing prompts. Two things worth a
 skim anyway:
 
-- `profile/session_context.md` — the anti-overstatement and voice rules the
+- `profile/claims_ground_truth.md` — the per-claim framing rules the
   fact-checker enforces come from here; the richer you make it, the more it
   catches
 - `CLAUDE.md` — project instructions; adjust anything that doesn't match how

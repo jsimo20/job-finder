@@ -21,7 +21,7 @@ reads it; only the local apply workflow does.
 | `standard_answers.md` | form autofill + autofill agent | Contact block plus your stock answers to common screening questions |
 | `fit_profile.md` | digest-triager agent | What "a great role for you" means, so triage can rank the digest |
 | `qa_checklist.md` | `job_apply.render()` | Per-application checklist written into every apply.md |
-| `session_context.md` | tailoring | Anti-overstatement rules: framings and metrics the LLM must not inflate |
+| `claims_ground_truth.md` | tailoring | Per-claim framing rules, skill source pool, and metrics the LLM must not inflate |
 | `generate_resume.py` | `job_apply.render()` | Resume PDF generator; edit only the RESUME_DATA block |
 
 Only `profile.toml` is strictly required to run the pipeline-side tooling.
