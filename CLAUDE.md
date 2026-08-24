@@ -172,12 +172,15 @@ Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract, `eval_factcheck`), `GMA
 
 > Read `.claude/skills/job-apply-batch/SKILL.md` and follow it for the top 1 role.
 
-A file read works on every surface. Slash-command and skill registration does
-not: Cowork rejected `/job-apply-batch` as an unknown skill both while it lived
-in `.claude/commands/` and after it moved to `.claude/skills/` with a `name:`
-field matching the skills Cowork is expected to know, across full restarts. The
-file itself is clean — no BOM, same frontmatter shape as the others — so the
-difference is in what that surface indexes, not in the file.
+A file read works on every surface. **Cowork does not index project-level
+`.claude/skills/` or `.claude/commands/` at all** — confirmed by typing `/mana`
+there and getting only plugin skills, with `manage-companies` absent despite
+being correctly formed and weeks old. It loads plugin skills and this
+`CLAUDE.md`, nothing else from the repo.
+
+So do not move a file between `commands/` and `skills/` hoping that surface will
+notice, and do not copy a procedure into this file: point at its path, so there
+is still one source of truth.
 
 The rule that follows: **anything an unattended session must run should be
 invocable by path.** Keep the skills and commands for the surfaces that resolve
