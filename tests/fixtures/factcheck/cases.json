@@ -37,10 +37,28 @@
         }
       ],
       "skills": {
-        "Product": ["roadmapping", "discovery interviews", "experimentation", "pricing"],
-        "Technical": ["SQL", "REST API design", "event-driven architecture", "Looker"],
-        "Domain": ["logistics operations", "carrier networks", "marketplace supply"],
-        "Process": ["agile facilitation", "stakeholder alignment", "incident review"]
+        "Product": [
+          "roadmapping",
+          "discovery interviews",
+          "experimentation",
+          "pricing"
+        ],
+        "Technical": [
+          "SQL",
+          "REST API design",
+          "event-driven architecture",
+          "Looker"
+        ],
+        "Domain": [
+          "logistics operations",
+          "carrier networks",
+          "marketplace supply"
+        ],
+        "Process": [
+          "agile facilitation",
+          "stakeholder alignment",
+          "incident review"
+        ]
       }
     },
     "cover_letter": {
@@ -48,10 +66,10 @@
       "recipient": "Meridian Freight Hiring Team\nMeridian Freight\nPortland, OR",
       "salutation": "To the Meridian Freight Hiring Team,",
       "paragraphs": [
-        "Your posting for a Senior Product Manager on the carrier platform caught my attention because the integration problem you describe is the one I have spent the last three years inside at Northwind Logistics.",
+        "Most carrier integrations get built one at a time and maintained forever. Meridian is turning them into configuration, which moves the weight onto onboarding instead of the integration code. That weight is what I have spent three years on at Northwind Logistics.",
         "The work there is unglamorous and it touches real money. Carrier integration serves 340 freight partners, and the piece I would point at is the self-serve onboarding flow, which moved 61% of new partners off manual setup. The automated exception handling is in a controlled pilot with twelve partners. It is Phase 1 and still in beta, so there is not much to point at yet.",
         "Before Northwind, a shipment-tracking app at Cascade Freight was the first thing I owned end to end. We thought people wanted a map. They wanted one sentence telling them whether the thing was late, and rewriting that copy cut support tickets 18%.",
-        "Happy to talk if you are open to a short conversation."
+        "If we end up talking, the part I would ask about is how far you want configuration to go before a partner needs a human."
       ],
       "closing": "Thanks,",
       "title_subtitle": "Senior Product Manager | Logistics Platforms | zero-to-one and scale"
@@ -83,7 +101,17 @@
     {
       "id": "invented_metric",
       "defect": "A percentage that appears nowhere in the ground truth.",
-      "expect": {"min_severity": "CRITICAL", "keywords": ["32%", "invent", "not traceable", "cannot be traced", "no source", "fabricat"]},
+      "expect": {
+        "min_severity": "CRITICAL",
+        "keywords": [
+          "32%",
+          "invent",
+          "not traceable",
+          "cannot be traced",
+          "no source",
+          "fabricat"
+        ]
+      },
       "patch": [
         {
           "path": "resume_data.experience.0.bullets.1",
@@ -94,7 +122,14 @@
     {
       "id": "rounded_metric",
       "defect": "90,000 MAU rounded up to 100,000. Ground truth forbids rounding up.",
-      "expect": {"min_severity": "CRITICAL", "keywords": ["100,000", "90,000", "round"]},
+      "expect": {
+        "min_severity": "CRITICAL",
+        "keywords": [
+          "100,000",
+          "90,000",
+          "round"
+        ]
+      },
       "patch": [
         {
           "path": "resume_data.experience.1.bullets.0",
@@ -105,7 +140,16 @@
     {
       "id": "phase_overstatement",
       "defect": "Beta pilot described as shipped to production. Explicitly banned framing.",
-      "expect": {"min_severity": "CRITICAL", "keywords": ["phase 1", "beta", "pilot", "production", "rolled out"]},
+      "expect": {
+        "min_severity": "CRITICAL",
+        "keywords": [
+          "phase 1",
+          "beta",
+          "pilot",
+          "production",
+          "rolled out"
+        ]
+      },
       "patch": [
         {
           "path": "resume_data.experience.0.bullets.3",
@@ -116,7 +160,15 @@
     {
       "id": "people_management",
       "defect": "Claims direct reports the ground truth says do not exist.",
-      "expect": {"min_severity": "CRITICAL", "keywords": ["direct report", "managed", "people management", "hired"]},
+      "expect": {
+        "min_severity": "CRITICAL",
+        "keywords": [
+          "direct report",
+          "managed",
+          "people management",
+          "hired"
+        ]
+      },
       "patch": [
         {
           "path": "resume_data.experience.0.bullets.0",
@@ -127,7 +179,14 @@
     {
       "id": "zero_to_one_violation",
       "defect": "Claims zero-to-one on a platform that predates the tenure.",
-      "expect": {"min_severity": "CRITICAL", "keywords": ["zero-to-one", "predates", "carrier-integration"]},
+      "expect": {
+        "min_severity": "CRITICAL",
+        "keywords": [
+          "zero-to-one",
+          "predates",
+          "carrier-integration"
+        ]
+      },
       "patch": [
         {
           "path": "resume_data.experience.0.bullets.0",
@@ -138,27 +197,63 @@
     {
       "id": "unsourced_skill",
       "defect": "A skill outside the documented source pool.",
-      "expect": {"min_severity": "MEDIUM", "keywords": ["kubernetes", "source pool", "not in the pool", "not listed"]},
+      "expect": {
+        "min_severity": "MEDIUM",
+        "keywords": [
+          "kubernetes",
+          "source pool",
+          "not in the pool",
+          "not listed"
+        ]
+      },
       "patch": [
         {
           "path": "resume_data.skills.Technical",
-          "value": ["SQL", "Kubernetes", "REST API design", "Looker"]
+          "value": [
+            "SQL",
+            "Kubernetes",
+            "REST API design",
+            "Looker"
+          ]
         }
       ]
     },
     {
       "id": "skill_category_count",
       "defect": "Five categories where the ground truth fixes the count at four.",
-      "expect": {"min_severity": "MEDIUM", "keywords": ["four", "categor", "count", "five"]},
+      "expect": {
+        "min_severity": "MEDIUM",
+        "keywords": [
+          "four",
+          "categor",
+          "count",
+          "five"
+        ]
+      },
       "patch": [
         {
           "path": "resume_data.skills",
           "value": {
-            "Product": ["roadmapping", "discovery interviews"],
-            "Technical": ["SQL", "REST API design"],
-            "Domain": ["logistics operations", "carrier networks"],
-            "Process": ["agile facilitation", "stakeholder alignment"],
-            "Leadership": ["incident review", "pricing"]
+            "Product": [
+              "roadmapping",
+              "discovery interviews"
+            ],
+            "Technical": [
+              "SQL",
+              "REST API design"
+            ],
+            "Domain": [
+              "logistics operations",
+              "carrier networks"
+            ],
+            "Process": [
+              "agile facilitation",
+              "stakeholder alignment"
+            ],
+            "Leadership": [
+              "incident review",
+              "pricing"
+            ]
           }
         }
       ]
@@ -166,7 +261,15 @@
     {
       "id": "arrow_glyph_subtitle",
       "defect": "Arrow glyph instead of the spelled-out form.",
-      "expect": {"min_severity": "LOW", "keywords": ["glyph", "zero-to-one", "arrow", "0→1"]},
+      "expect": {
+        "min_severity": "LOW",
+        "keywords": [
+          "glyph",
+          "zero-to-one",
+          "arrow",
+          "0→1"
+        ]
+      },
       "patch": [
         {
           "path": "resume_data.title_subtitle",
@@ -177,7 +280,14 @@
     {
       "id": "em_dash",
       "defect": "Em-dash in the cover letter body.",
-      "expect": {"min_severity": "MEDIUM", "keywords": ["em-dash", "em dash", "—"]},
+      "expect": {
+        "min_severity": "MEDIUM",
+        "keywords": [
+          "em-dash",
+          "em dash",
+          "—"
+        ]
+      },
       "patch": [
         {
           "path": "cover_letter.paragraphs.2",
@@ -188,7 +298,14 @@
     {
       "id": "ai_trope",
       "defect": "Two banned tropes in one paragraph.",
-      "expect": {"min_severity": "MEDIUM", "keywords": ["spearhead", "uniquely positioned", "trope"]},
+      "expect": {
+        "min_severity": "MEDIUM",
+        "keywords": [
+          "spearhead",
+          "uniquely positioned",
+          "trope"
+        ]
+      },
       "patch": [
         {
           "path": "cover_letter.paragraphs.1",
@@ -199,7 +316,15 @@
     {
       "id": "paragraph_starts_with_i",
       "defect": "A paragraph opening with the word I.",
-      "expect": {"min_severity": "LOW", "keywords": ["begins with", "starts with", "paragraph", "\"I\""]},
+      "expect": {
+        "min_severity": "LOW",
+        "keywords": [
+          "begins with",
+          "starts with",
+          "paragraph",
+          "\"I\""
+        ]
+      },
       "patch": [
         {
           "path": "cover_letter.paragraphs.3",
@@ -210,7 +335,15 @@
     {
       "id": "punchy_resolution_line",
       "defect": "A standalone rhetorical resolution line.",
-      "expect": {"min_severity": "LOW", "keywords": ["punchy", "resolution", "confidence", "standalone"]},
+      "expect": {
+        "min_severity": "LOW",
+        "keywords": [
+          "punchy",
+          "resolution",
+          "confidence",
+          "standalone"
+        ]
+      },
       "patch": [
         {
           "path": "cover_letter.paragraphs.2",
@@ -221,19 +354,139 @@
     {
       "id": "wrong_closing",
       "defect": "Closing other than the mandated one.",
-      "expect": {"min_severity": "LOW", "keywords": ["closing", "thanks", "regards"]},
+      "expect": {
+        "min_severity": "LOW",
+        "keywords": [
+          "closing",
+          "thanks",
+          "regards"
+        ]
+      },
       "patch": [
-        {"path": "cover_letter.closing", "value": "Best regards,"}
+        {
+          "path": "cover_letter.closing",
+          "value": "Best regards,"
+        }
       ]
     },
     {
       "id": "cover_letter_invented_claim",
       "defect": "A cover-letter claim with no basis in either ground-truth document.",
-      "expect": {"min_severity": "CRITICAL", "keywords": ["saas", "not traceable", "cannot be traced", "no source", "invent", "fabricat"]},
+      "expect": {
+        "min_severity": "CRITICAL",
+        "keywords": [
+          "saas",
+          "not traceable",
+          "cannot be traced",
+          "no source",
+          "invent",
+          "fabricat"
+        ]
+      },
       "patch": [
         {
           "path": "cover_letter.paragraphs.0",
           "value": "Your posting for a Senior Product Manager on the carrier platform caught my attention because after eight years building SaaS billing systems at three venture-backed startups, the integration problem you describe is a familiar one."
+        }
+      ]
+    },
+    {
+      "id": "trailing_gloss",
+      "defect": "A relative clause restating the sentence it hangs off (epexegesis).",
+      "expect": {
+        "min_severity": "MEDIUM",
+        "keywords": [
+          "gloss",
+          "restate",
+          "which is",
+          "redundant",
+          "epexeg"
+        ]
+      },
+      "patch": [
+        {
+          "path": "cover_letter.paragraphs.1",
+          "value": "The work there is unglamorous and it touches real money. Carrier integration serves 340 freight partners, and the piece I would point at is the self-serve onboarding flow, which moved 61% of new partners off manual setup, which is a faster path to value for them. The automated exception handling is in a controlled pilot with twelve partners. It is Phase 1 and still in beta, so there is not much to point at yet."
+        }
+      ]
+    },
+    {
+      "id": "reaction_opener",
+      "defect": "The letter opens on the applicant's reaction instead of a fact about the company.",
+      "expect": {
+        "min_severity": "MEDIUM",
+        "keywords": [
+          "opening",
+          "opens",
+          "posting",
+          "reaction",
+          "first sentence"
+        ]
+      },
+      "patch": [
+        {
+          "path": "cover_letter.paragraphs.0",
+          "value": "Your posting for a Senior Product Manager on the carrier platform caught my attention. Carrier integration is what I have spent three years on at Northwind Logistics."
+        }
+      ]
+    },
+    {
+      "id": "no_paragraph_transition",
+      "defect": "A paragraph opening on a fresh topic with no backward reference.",
+      "expect": {
+        "min_severity": "MEDIUM",
+        "keywords": [
+          "transition",
+          "chain",
+          "backward",
+          "connect",
+          "fresh topic"
+        ]
+      },
+      "patch": [
+        {
+          "path": "cover_letter.paragraphs.2",
+          "value": "Skiing and cycling take up most of what the week leaves over, and the golf game has not improved in years."
+        }
+      ]
+    },
+    {
+      "id": "close_does_not_return",
+      "defect": "The last line names nothing from the opening and asks no real question.",
+      "expect": {
+        "min_severity": "MEDIUM",
+        "keywords": [
+          "clos",
+          "last line",
+          "return",
+          "opening",
+          "question"
+        ]
+      },
+      "patch": [
+        {
+          "path": "cover_letter.paragraphs.3",
+          "value": "Happy to talk further if you would like to learn more about my background."
+        }
+      ]
+    },
+    {
+      "id": "abstraction_in_subject",
+      "defect": "An abstraction holds the subject where the applicant should be doing the verb.",
+      "expect": {
+        "min_severity": "LOW",
+        "keywords": [
+          "subject",
+          "abstraction",
+          "passive",
+          "actor",
+          "verb"
+        ]
+      },
+      "patch": [
+        {
+          "path": "cover_letter.paragraphs.2",
+          "value": "That first attempt came at Cascade Freight, where a shipment-tracking app was the first thing I owned end to end. The bulk of the quarter went to a map nobody wanted. What people wanted was one sentence telling them whether the thing was late, and rewriting that copy cut support tickets 18%."
         }
       ]
     }
