@@ -191,6 +191,25 @@ The rule that follows: **anything an unattended session must run should be
 invocable by path.** Keep the skills and commands for the surfaces that resolve
 them, and point at the file when you cannot rely on that.
 
+## Cowork plugin (`cowork-plugin/`)
+
+Cowork does not index project-level `.claude/skills/`, so the weekly batch is
+also packaged as a plugin. It is a **thin launcher, not a copy**: the skill reads
+`.claude/skills/job-apply-batch/SKILL.md` from the mounted repo and adds only the
+role count, the browser-tool check, and the archive step. Two copies of the batch
+procedure would drift.
+
+- `cowork-plugin/.claude-plugin/plugin.json` — manifest
+- `cowork-plugin/.mcp.json` — Playwright, **version-pinned** (`@latest`
+  re-resolves per session and a breaking change would land silently)
+- `cowork-plugin/skills/job-apply-weekly/SKILL.md` — the launcher
+
+**Install it, do not add the folder as context.** A connected folder is just
+files on disk, so `.mcp.json` never runs and the failure looks like a broken
+plugin. Cowork tab → Customize → Plugins → upload. Full reference, including
+the `mcp__remote-devices__plugin_*` tool naming:
+`~/.claude/context/cowork-plugins.md`.
+
 ## Project-level skills
 
 - `.claude/skills/job-apply-batch/SKILL.md` — the unattended apply loop. **Lives in `skills/`, not `commands/`, on purpose:** Cowork rejected it as an unknown skill while it sat in `.claude/commands/`, and its frontmatter only parsed once it carried a `name:` field. Skills register on both surfaces; commands appear not to. Prefer `skills/` for anything an unattended session must invoke.
