@@ -164,7 +164,7 @@ def check_feeling_verbs(letter: dict[str, Any]) -> list[Finding]:
     for i, para in enumerate(paragraphs(letter), 1):
         for hit in FEELING_VERBS.finditer(para):
             out.append(Finding("feeling_verb", CRITICAL,
-                               f'"{hit.group(0)}" — specificity carries it, not the word',
+                               f'"{hit.group(0)}": specificity carries it, not the word',
                                f"para {i}"))
     return out
 
@@ -182,7 +182,7 @@ def check_closing(letter: dict[str, Any]) -> list[Finding]:
     closing = str(letter.get("closing", "")).strip()
     if closing and closing.rstrip(",") != "Thanks":
         return [Finding("wrong_closing", CRITICAL,
-                        f'"{closing}" — the closing is always "Thanks,"', "closing")]
+                        f'"{closing}": the closing is always "Thanks,"', "closing")]
     return []
 
 
@@ -195,7 +195,7 @@ def check_gloss(letter: dict[str, Any]) -> list[Finding]:
                 continue
             tail = sent[hit.start():].rstrip(".")
             out.append(Finding("gloss_candidate", ADVISORY,
-                               f'"{tail[:70]}" — delete it; if no fact is lost it was a gloss',
+                               f'"{tail[:70]}": delete it; if no fact is lost it was a gloss',
                                f"para {i}"))
     return out
 
@@ -284,7 +284,7 @@ def report(results: list[tuple[str, list[Finding]]], quiet: bool = False) -> int
         if quiet and not crit:
             continue
         status = "BLOCKED" if crit else ("clean" if not adv else "clean, with notes")
-        print(f"\n{name} — {status}")
+        print(f"\n{name}: {status}")
         for f in crit + adv:
             print(f)
     if not results:
