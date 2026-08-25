@@ -230,6 +230,7 @@ job-finder review                          # interactive digest review
 job-finder applied add --external-id ...   # record an application
 python -m job_finder.fill_greenhouse \
     --url <apply url> --folder <per-app folder>   # deterministic form fill
+python -m job_finder.letter_linter --date <YYYY-MM-DD>  # grade the drafted letters
 python -m job_finder.fill_grader --date <YYYY-MM-DD>   # grade a fill batch
 ```
 
