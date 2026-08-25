@@ -2,5 +2,7 @@
   "name": "job-finder",
   "version": "0.1.0",
   "description": "Weekly job application loop: tailor, fact-check, render and fill the top pending roles, stopping before submit.",
-  "author": { "name": "jsimo20" }
+  "author": {
+    "name": "job-finder"
+  }
 }

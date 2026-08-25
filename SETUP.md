@@ -180,7 +180,38 @@ skim anyway:
 - `CLAUDE.md` — project instructions; adjust anything that doesn't match how
   you work
 
-## 8. What never goes in git
+## 8. Optional — run it from Cowork
+
+Skip this if you only use Claude Code; everything works there already.
+
+Cowork does not index a project's `.claude/skills/`, so the weekly batch is also
+packaged as a plugin in `cowork-plugin/`. Build the archive:
+
+```sh
+python scripts/build_cowork_plugin.py
+```
+
+That writes `job-finder-cowork-plugin.zip` to your Downloads folder (`--out` to
+put it elsewhere). Then, in Cowork: **Customize -> Plugins -> upload** it.
+
+**Install it; do not add `cowork-plugin/` as a context folder.** A connected
+folder is just files on disk, so its `.mcp.json` never runs, Playwright never
+starts, and the failure looks exactly like a broken plugin.
+
+Once installed, `/job-apply-weekly` runs the batch. It takes a count:
+`/job-apply-weekly 3`, or `all`, defaulting to 5. The plugin is a launcher only
+— the procedure it follows is `.claude/skills/job-apply-batch/SKILL.md` in this
+repo, so **the repo still has to be the mounted folder for that session.**
+
+Two things worth knowing before you rely on it:
+
+- The plugin's `.mcp.json` pins the Playwright MCP version. If you bump it,
+  bump the repo-root `.mcp.json` too; they are intentionally identical.
+- Playwright starts from a fresh browser profile with no cookies or logins, so
+  any form behind an account wall gets an `APPLY_NOTES.md` handoff for manual
+  submission rather than a fill attempt.
+
+## 9. What never goes in git
 
 Everything personal, already handled by `.gitignore`: `profile/`, `.env`,
 `config/pipeline.toml`, and ALL of `data/` and `digests/` — the state
