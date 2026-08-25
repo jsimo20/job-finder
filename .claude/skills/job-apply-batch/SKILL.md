@@ -29,10 +29,18 @@ each:
 - the resume generator at `[paths].resume_skill_path`
 
 All of them live inside the repo. **If any is unreadable, stop and say so
-before doing any work.** A run once got most of the way through with an
-unreachable source pool; nothing drafted after that point could have been
-traceable, and no amount of revision would have reached CLEAN. Failing in the
-first ten seconds is much cheaper than failing in the last ten minutes.
+before doing any work.** Nothing drafted against an unreachable source pool can
+be traced, and no revision pass will reach CLEAN.
+
+Then check the digest is current:
+
+```sh
+job-finder digest-archive list
+```
+
+**Report the date of the latest digest, and stop if it is more than 7 days old.**
+The roles come from that digest; a stale one means applying to postings that may
+already be filled. If the caller named a required date, honour it exactly.
 
 ## 2. Confirm the browser before you need it
 
