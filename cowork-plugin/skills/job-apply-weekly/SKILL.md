@@ -21,9 +21,9 @@ the code it drives and a second copy would drift from it.
 | nothing | 5 |
 | `all`, `everything` | every pending main-queue role |
 
-Confirm the count in your first message before drafting anything. Above 10, say
-what the run will cost and ask once: each role is a full tailor, fact-check,
-render and fill, plus the review that follows.
+Confirm the count in your first message before drafting anything. Above 10,
+state what the run will cost; ask first only if someone is there to answer.
+A scheduled run has nobody to ask, so proceed and note it rather than stalling.
 
 ## If the repo is not mounted
 
