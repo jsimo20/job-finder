@@ -165,6 +165,12 @@ Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract, `eval_factcheck`), `GMA
 - **Grade every fill batch**: `python -m job_finder.fill_grader --date <YYYY-MM-DD>` letter-grades the audit manifests (Layer 1, zero tokens). Its `no_rule` output is the backlog — turn entries into `[[custom_combos]]` answers in `profile/profile.toml`. `python -m job_finder.profile_check` is the profile doctor (placeholder/missing-doc detection); SETUP.md tells new users to run it.
 - **Every fill captures a before/after field inventory** to `data/fill_audits/<date>_<slug>.{pre,post}.json` (gitignored — the `value` column holds contact details). Both fill paths use `form_inventory.py` so their output is comparable; the deterministic script writes them directly, the agent via `browser_evaluate`. Capture is best-effort and never blocks a fill. Redact with `form_inventory.redact()` before promoting a manifest to `tests/fixtures/`. Design: `.claude/context/form-fill-evals.md`.
 - **Playwright MCP is project-scoped** (`.mcp.json`). Its `mcp__playwright__*` tools only load when the Claude session is rooted in this directory — autofill won't work from a session started in the parent `dev/` directory.
+- **Uploaded filenames are exactly what `render()` wrote** — `James_Simonelli_Resume_<company>.pdf` and
+  `James_Simonelli_CoverLetter_<company>.pdf`. The ATS shows the uploaded filename to the hiring manager,
+  so it never carries a role slug, a date, or any other staging artifact. Keeping two same-company roles
+  apart is what the staging **folder** is for: `<uploads root>/<role-slug>/<filename>`. A `role-slug__`
+  filename prefix shipped to a live Greenhouse form on 2026-08-25; the rule now lives in
+  `.claude/agents/application-autofiller.md` and the batch skill.
 - **Batch autofill = one Chrome instance, one tab per app** (never a separate browser per app). Dispatch a single `application-autofiller` with the full list of `(url, folder)` pairs; it opens each app in a new tab and leaves them all open, unsubmitted, for review. Rule lives in the Batch mode section of `.claude/agents/application-autofiller.md`.
 
 ## Running an unattended batch (Cowork, or any session that will not be watched)
