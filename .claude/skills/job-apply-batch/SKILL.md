@@ -31,22 +31,21 @@ unreachable source pool; nothing drafted after that point could have been
 traceable, and no amount of revision would have reached CLEAN. Failing in the
 first ten seconds is much cheaper than failing in the last ten minutes.
 
-## 2. Get a browser before you need one
+## 2. Confirm the browser before you need it
 
-Run the `ensure-browser` skill now, not after a fill agent fails. It checks the
-cheap surfaces first: `fill_greenhouse` needs no browser at all, and Playwright
-launches its own.
+Playwright launches its own browser and opens a real window the user can see and
+click. Nothing has to be open beforehand, and there is no separate browser skill
+to run.
 
-**Say in your first message whether autofill will happen at all.** A Cowork
-session reaches filled-but-unsubmitted only if Chrome is already open on the
-Windows desktop, because the workspace VM is a Linux container that cannot start
-it. Set that expectation now rather than in the final report; a run once got all
-the way to the end before reporting it could never have filled anything.
+Check once, now, that `mcp__playwright__*` tools are loaded, and say in your
+first message whether autofill will happen. If they are missing, that is not a
+reason to stop: carry on with tailoring, fact-checking and rendering for every
+role, write `APPLY_NOTES.md` into each folder, and say plainly in the report
+that every role is prepped and waiting on a hand-submit.
 
-If no browser is available, that is not a reason to stop. Carry on with
-tailoring, fact-checking and rendering for every role, write `APPLY_NOTES.md`
-into each folder, and say plainly in the report that every role is prepped and
-waiting on a hand-submit. Do not retry and do not start more Chrome processes.
+For Greenhouse specifically, `python -m job_finder.fill_greenhouse` is cheaper
+than the agent by roughly 30x and drives its own browser too. Prefer it when the
+session can run Python.
 
 ### 2b. Archive the rendered folders
 

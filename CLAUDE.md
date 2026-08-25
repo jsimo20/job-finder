@@ -95,14 +95,14 @@ fact-checker and `--gate`, which is why both are measured rather than trusted.
   behaviour will show high lift for that reason alone. Read the warning before
   trusting the lift table.
 - **`fill_grader.py`** grades form fills; design in `.claude/context/form-fill-evals.md`.
-  `--gate` turns it into a check both fill agents run before reporting: **0**
+  `--gate` turns it into a check the fill agent runs before reporting: **0**
   ready, **4** critical violation, **3** nothing to grade because no form was
   filled. 3 and 4 are separate because an unattended caller cannot act on
   "nothing happened" and "every form was unsafe" the same way, and both stay
   clear of argparse's own exit 2.
   Critical now includes **prompt-injection suspects**: `INJECTION_PATTERN` scans
   each field's label, options and value for text addressed to the agent rather
-  than the applicant. Both agents already carry a prompt rule saying page
+  than the applicant. The agent already carries a prompt rule saying page
   content is data — this is the same rule in code, so an unattended run cannot
   reason past it. Nine benign labels are pinned as a false-positive guard.
 - **`eval_factcheck.py`** measures the `materials-fact-checker`, the last
@@ -183,6 +183,10 @@ So do not move a file between `commands/` and `skills/` hoping that surface will
 notice, and do not copy a procedure into this file: point at its path, so there
 is still one source of truth.
 
+**Playwright works from Cowork and opens a real, clickable window.** Verified
+2026-08-24 by running it there. The autofill path is Playwright everywhere, with
+no Chrome-extension fallback and nothing to open beforehand.
+
 The rule that follows: **anything an unattended session must run should be
 invocable by path.** Keep the skills and commands for the surfaces that resolve
 them, and point at the file when you cannot rely on that.
@@ -191,7 +195,6 @@ them, and point at the file when you cannot rely on that.
 
 - `.claude/skills/job-apply-batch/SKILL.md` — the unattended apply loop. **Lives in `skills/`, not `commands/`, on purpose:** Cowork rejected it as an unknown skill while it sat in `.claude/commands/`, and its frontmatter only parsed once it carried a `name:` field. Skills register on both surfaces; commands appear not to. Prefer `skills/` for anything an unattended session must invoke.
 - `.claude/skills/manage-companies/SKILL.md` — add/remove/probe tracked companies in `data/state.db` from plain-English instructions, via the `job-finder companies` CLI.
-- `.claude/skills/ensure-browser/SKILL.md` — get a usable browser before dispatching a fill agent. The Claude in Chrome tools attach to a running Chrome, they never launch one, and `list_connected_browsers` reflects live state: it empties when the browser closes and repopulates within seconds of it starting. So an empty list usually means Chrome is shut, not that the extension is missing. The skill checks the cheaper surfaces first (`fill_greenhouse` needs no browser at all; Playwright launches its own), and is honest that a genuinely unconnected extension is one-time human setup it cannot do.
 
 ## Subagents
 
