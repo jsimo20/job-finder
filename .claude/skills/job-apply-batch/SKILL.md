@@ -49,6 +49,28 @@ job-finder digest-archive list
 The roles come from that digest; a stale one means applying to postings that may
 already be filled. If the caller named a required date, honour it exactly.
 
+Then drop the roles that have already closed, **before spending anything on
+them**:
+
+```sh
+python -c "
+from job_finder import liveness
+import json,sys
+roles = json.load(sys.stdin)
+worth, dead = liveness.partition(roles)
+print(json.dumps({'worth': worth, 'dead': dead}, indent=1))
+" <<< '<the picked roles as JSON: company, external_id, title>'
+```
+
+A digest is a snapshot, and postings close between the run that wrote it and
+the run that reads it. Checking costs under a second per board and no tokens;
+tailoring a closed posting costs a full draft, fact-check and render.
+
+**Report the dead ones as skipped, with their titles, and carry on with the
+rest.** An undetermined role counts as live and gets tailored: a network blip
+must never look like a closed posting. If dropping the dead ones leaves fewer
+roles than asked for, say so rather than topping the list back up.
+
 ## 2. Confirm the browser before you need it
 
 Playwright launches its own browser and opens a real window the user can see and
