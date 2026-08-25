@@ -86,9 +86,10 @@ every surface can write to. The durable home is the archive directory in
 job-finder applications archive
 ```
 
-From the Cowork VM this fails cleanly, because the archive is a Windows path the
-container cannot see. Report it as pending rather than retrying, and include the
-command in the final report so the user can run it.
+The archive lives outside the repo, so it is reachable only where that path is
+granted. Run the command and report the result. If it fails because the path is
+unreachable, say so and include the command in the final report rather than
+retrying.
 
 ## 3. Pick the roles
 
