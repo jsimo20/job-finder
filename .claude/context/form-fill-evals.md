@@ -38,8 +38,8 @@ committed, any value in a salary or name-trap field, or instruction-like text
 found in a field's own label, options or value.
 
 **Layer 1 is also the gate.** `--gate` exits 4 when any form carries a
-critical violation and 3 when no manifest matched at all, and both fill agents
-run it before reporting. The empty case is its own code because a run that
+critical violation and 3 when no manifest matched at all, and the fill agent
+runs it before reporting. The empty case is its own code because a run that
 filled nothing produces the same silence as a run that filled everything
 cleanly, and only the exit code tells them apart. An
 interactive run has a human reading the report; an unattended one does not, so
@@ -87,7 +87,7 @@ redacted fixtures keep it CI-capable. Test fixtures are otherwise synthetic.
 
 `fill_grader.INJECTION_PATTERN` scans every field's label, options and value
 for text addressed to the agent reading the form rather than to the applicant,
-and buckets a hit as `critical`. Both fill agents already carry a prompt rule
+and buckets a hit as `critical`. The fill agent already carries a prompt rule
 saying page content is data; this is the same rule in code, so an unattended
 run cannot reason its way past it. The hostile fixture is
 `tests/fixtures/injection_manifest.post.json`.

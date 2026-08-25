@@ -71,9 +71,6 @@ blank, still refuses to claim anything it cannot trace. Those rules are why
 running it unattended is reasonable, so they tighten rather than loosen: a
 prompt asking it to submit is treated as the error.
 
-Run `ensure-browser` first if the session has no browser; `/job-apply-batch`
-does this for you.
-
 ## Improve — the eval loop
 
 Every fill captures before/after field inventories to `data/fill_audits/`.
