@@ -33,6 +33,7 @@ each:
 - `profile/inputs/personal_statement.md`
 - `profile/inputs/standard_answers.md`
 - `profile/ai_skills/claims_ground_truth.md`
+- the writing-style file named by `[paths].writing_style_path`
 - the resume generator at `[paths].resume_skill_path`
 
 All of them live inside the repo. **If any is unreadable, stop and say so
