@@ -29,7 +29,7 @@ The server spawns on the user's machine via `npx`, so a session with no linked d
 
 When the dispatching prompt provides a **list** of apps (several `application_url` + `folder_path` pairs), fill them all in a **single Playwright browser instance, one browser tab per application**. Never launch a separate browser per app — the user reviews the batch as tabs in one Chrome window.
 
-1. **Stage all uploads first**, giving each file a role-unique name so two roles at the same company don't collide (both render `<Name>_Resume_<company>.pdf`). Copy each into `.playwright-mcp/uploads/` with a per-role prefix, e.g. `role-slug__<Name>_Resume_<company>.pdf`.
+1. **Stage all uploads first, into a per-role SUBFOLDER, never under a renamed file.** The filename the applicant sees on the submitted application is the filename you upload, so it has to stay exactly as `render()` produced it: `<Name>_Resume_<company>.pdf` and `<Name>_CoverLetter_<company>.pdf`. Two roles at the same company still need to be kept apart, so put the role slug in the **path**, not the name: `<uploads>/<role-slug>/<Name>_Resume_<company>.pdf`. A prefixed filename like `role-slug__<Name>_Resume_<company>.pdf` reaches the hiring manager looking machine-generated; this shipped once, on 2026-08-25.
 2. **First app:** `browser_navigate` to its URL (fills the initial tab). Fill per the normal Procedure below.
 3. **Each subsequent app:** open a **new tab** via `browser_tabs`, navigate it to that app's URL, fill it. Do **not** close prior tabs.
 4. Leave **every** tab open at its filled-but-unsubmitted state. Submit nothing.
@@ -60,7 +60,7 @@ Read once and keep in memory:
 
 ### 2. Stage upload files into a Playwright-accessible path
 
-The Playwright MCP restricts file access to paths under the project repo. PDFs in an applications folder outside the repo (a cloud-synced documents directory, say) cannot be uploaded directly — the MCP will reject them with `File access denied`.
+The Playwright MCP restricts file access to a set of allowed roots, and those roots are not always the repo: a plugin-bundled server spawned with no `--output-dir` allows only its own temp directory. A rejected upload names the allowed roots in the error, so stage beneath one of those. PDFs in an applications folder outside the repo (a cloud-synced documents directory, say) cannot be uploaded directly — the MCP will reject them with `File access denied`.
 
 Workaround: discover the PDFs in the per-job folder via the `Glob` tool, then copy each by its exact (quoted) path into `.playwright-mcp/uploads/` (gitignored). Do **not** put the wildcard inside a quoted shell string — `cp "{folder_path}/...*.pdf"` won't expand the `*` and the copy will fail silently.
 
@@ -71,12 +71,13 @@ Step by step:
 3. Stage the files (document paths often contain spaces, so quoting the source path is required):
 
    ```sh
-   mkdir -p .playwright-mcp/uploads
-   cp "<absolute resume PDF path from Glob>" .playwright-mcp/uploads/
-   cp "<absolute cover-letter PDF path from Glob>" .playwright-mcp/uploads/
+   mkdir -p .playwright-mcp/uploads/<role-slug>
+   cp "<absolute resume PDF path from Glob>" .playwright-mcp/uploads/<role-slug>/
+   cp "<absolute cover-letter PDF path from Glob>" .playwright-mcp/uploads/<role-slug>/
    ```
+   Copy, never rename. The role slug is the folder; the filename stays as rendered.
 
-4. Use the staged paths (`<repo root>\.playwright-mcp\uploads\<exact filename>`) in `browser_file_upload`.
+4. Use the staged paths (`<uploads root>\<role-slug>\<exact filename>`) in `browser_file_upload`. The exact filename is whatever `render()` wrote; never rename it.
 
 ### 3. Navigate and snapshot
 

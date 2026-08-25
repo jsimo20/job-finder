@@ -136,9 +136,13 @@ stop a bad application:
 - **When a judgment call is close, park rather than guess.** A parked role
   costs a few minutes of the user's attention. A wrong claim in a submitted
   application costs considerably more.
-- **Same-company roles need role-unique upload filenames.** Two applications to
-  one company otherwise render identically-named PDFs and one overwrites the
-  other. This has happened.
+- **Uploaded filenames are `<Name>_Resume_<company>.pdf`, always.** That name is
+  what the hiring manager sees on the application, so it never carries a slug,
+  a date, a tab index or any other staging artifact. Same-company roles still
+  have to be kept apart, and the role slug goes in the staging **folder**, never
+  in the filename. Both halves of this have already gone wrong once: identically
+  named PDFs overwriting each other, and then a `role-slug__` prefix shipping to
+  a live Greenhouse form on 2026-08-25.
 
 ## 5. Gate the batch
 
