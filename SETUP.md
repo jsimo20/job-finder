@@ -205,8 +205,10 @@ repo, so **the repo still has to be the mounted folder for that session.**
 
 Two things worth knowing before you rely on it:
 
-- The plugin's `.mcp.json` pins the Playwright MCP version. If you bump it,
-  bump the repo-root `.mcp.json` too; they are intentionally identical.
+- The plugin's `.mcp.json` is **required, not a duplicate of the repo-root one**.
+  Cowork does not read a project's `.mcp.json`, so a plugin-bundled server is the
+  only way it gets Playwright; the repo copy serves Claude Code. If you bump the
+  version, bump both.
 - Playwright starts from a fresh browser profile with no cookies or logins, so
   any form behind an account wall gets an `APPLY_NOTES.md` handoff for manual
   submission rather than a fill attempt.

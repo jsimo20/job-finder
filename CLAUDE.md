@@ -201,7 +201,10 @@ procedure would drift.
 
 - `cowork-plugin/.claude-plugin/plugin.json` — manifest
 - `cowork-plugin/.mcp.json` — Playwright, **version-pinned** (`@latest`
-  re-resolves per session and a breaking change would land silently)
+  re-resolves per session and a breaking change would land silently). **Not a
+  duplicate of the repo-root `.mcp.json`:** Cowork does not read a project's
+  `.mcp.json` at all (verified 2026-08-25), so a plugin-bundled server is the only
+  way it gets one. The repo copy serves Claude Code.
 - `cowork-plugin/skills/job-apply-weekly/SKILL.md` — the launcher
 
 **Install it, do not add the folder as context.** A connected folder is just
