@@ -2,7 +2,11 @@
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["@playwright/mcp@0.0.79"]
+      "args": [
+        "@playwright/mcp@0.0.79",
+        "--output-dir",
+        "C:\\Users\\James\\dev\\projects\\job-finder\\.playwright-mcp"
+      ]
     }
   }
 }
