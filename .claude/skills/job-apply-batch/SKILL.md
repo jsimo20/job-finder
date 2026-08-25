@@ -169,7 +169,27 @@ stop a bad application:
 
 ## 5. Gate the batch
 
-After the last fill:
+Two gates. Run the letter linter **after render and before any fill**, so a bad
+letter never reaches a form:
+
+```sh
+python -m job_finder.letter_linter --date <today>
+```
+
+- **0** — no critical violation.
+- **4** — a letter breaks a flat ban (em-dash, a paragraph opening on "I", an
+  opening that announces a reaction rather than stating a fact about the company,
+  a feeling verb, a trope, a closing that is not "Thanks,"). **Fix the letter and
+  re-render before filling.** These are zero-judgment rules; there is nothing to
+  weigh.
+- **3** — no `cover_letter.json` found, so nothing was rendered. Not a pass.
+
+ADVISORY lines never block. They are candidates for a human: a trailing clause
+that may be restating its sentence, a paragraph opening on a fresh topic, a close
+that names nothing from the opening. Put them in the report; do not act on them
+unattended, because each has legitimate exceptions.
+
+Then, after the last fill:
 
 ```sh
 python -m job_finder.fill_grader --date <today> --gate
@@ -193,7 +213,8 @@ describe forms as verified when nothing verified them.
 2. **Ready to submit** — company, role, tab, folder path.
 3. **Needs my judgment** — parked roles and the unresolved findings.
 4. **Skipped** — blocked companies, duplicates, unreachable forms.
-5. **Gate** — the exit code and what it means, or why it could not run.
+5. **Gates** — the letter linter's exit code and any ADVISORY lines, then the
+   fill grader's exit code, or why either could not run.
 6. **`mark-applied` commands** for everything in section 2, ready to paste.
 
 ## Hard rules

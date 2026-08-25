@@ -61,7 +61,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 
 ## Evals
 
-Two deterministic zero-token graders plus one that spends tokens. They read
+Three deterministic zero-token graders plus two that spend tokens. They read
 artifacts the system already produces rather than running a parallel harness,
 and each has a bucket that is a backlog rather than a failure.
 
@@ -72,8 +72,12 @@ and each has a bucket that is a backlog rather than a failure.
 .venv/Scripts/python.exe -m job_finder.fill_grader --date <YYYY-MM-DD>
 # Refuse the batch instead of describing it (unattended runs)
 .venv/Scripts/python.exe -m job_finder.fill_grader --date <YYYY-MM-DD> --gate
+# Does the drafted cover letter break a flat voice rule? (zero tokens)
+.venv/Scripts/python.exe -m job_finder.letter_linter --date <YYYY-MM-DD>
 # Does the fact-checker catch a defect planted on purpose? (spends tokens)
 .venv/Scripts/python.exe -m job_finder.eval_factcheck
+# Does the drafter write a good letter unattended? (spends tokens, live JDs)
+.venv/Scripts/python.exe -m job_finder.eval_generation --n 3
 ```
 
 **Interactive runs are graded after the fact; unattended runs have to be able
@@ -105,6 +109,32 @@ fact-checker and `--gate`, which is why both are measured rather than trusted.
   than the applicant. The agent already carries a prompt rule saying page
   content is data — this is the same rule in code, so an unattended run cannot
   reason past it. Nine benign labels are pinned as a false-positive guard.
+- **`letter_linter.py`** reads a rendered letter's `cover_letter.json` and flags
+  the voice rules that survive as patterns. **CRITICAL blocks and ADVISORY never
+  does**, because a flat ban (em-dash, a paragraph opening on "I", an opening that
+  announces a reaction rather than stating a fact about the company, a feeling
+  verb, a trope, a closing that is not "Thanks,") has no legitimate exception,
+  while a trailing-gloss candidate does: "which is what started my search" carries
+  a new fact and matches the same shape. It carries a **subset** of the style
+  guide, never the whole of it; the guide named by `[paths].writing_style_path` is
+  the authority and the `materials-fact-checker` is what reads all of it. Both
+  exist because the checker's measured failure mode is filing a real violation as
+  NIT, and a pattern match cannot reason its way down to NIT. The batch runs it
+  **after render and before any fill**, so a bad letter never reaches a form.
+  Structural checks (paragraph chaining, whether the close returns to the opening)
+  are ADVISORY on purpose: they encode a procedure written 2026-08-25 against one
+  letter, and collect signal until there is enough to justify blocking on.
+- **`eval_generation.py`** measures the drafter rather than the checker, and its
+  graders are the two that already exist, so there is no new rubric to drift:
+  `letter_linter` for patterns, the `materials-fact-checker` prompt for judgment.
+  A letter passes when neither reports a CRITICAL. **It reads the real profile**,
+  unlike `eval_factcheck` — a synthetic person would measure a different system,
+  since the drafting prompt's whole job is turning those documents into a letter.
+  **JDs are live, not fixtures**: a frozen JD goes stale while quietly becoming
+  the thing the prompt was tuned against, so runs are not reproducible and the
+  report names the postings used. Any posting in the applied ledger is held out.
+  ~25k tokens per case. **Neither grader can tell whether the opening's contrast
+  is true** — a manufactured departure passes every check, so read one letter.
 - **`eval_factcheck.py`** measures the `materials-fact-checker`, the last
   automated step before a claim reaches an employer. Each case is a clean draft
   plus one planted defect (invented metric, rounded metric, claimed direct
@@ -170,6 +200,8 @@ Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract, `eval_factcheck`), `GMA
 - `/fill-application <url> [folder]` — standalone Playwright autofill via the `application-autofiller` subagent. Stops without submitting; the user reviews and submits by hand. Logic in `.claude/commands/fill-application.md`.
 - **Greenhouse forms: prefer the deterministic script** over the agent — `python -m job_finder.fill_greenhouse --url <url> --folder <per-app folder> [--city <city>]`. Fills the standard section (contact, auth, EEO, uploads) with zero LLM tokens, DOM-verifies every dropdown commit, prints a fill report, holds the browser open for review, never submits. ~2k tokens vs ~63k for the agent. One-time setup: `pip install -e .[apply]` + `playwright install chromium` (local only; CI never needs it). The agent stays as the fallback for unknown ATSes and custom questions.
 - Field values come from `profile/profile.toml` (identity, EEO, work-auth stance) plus `standard_answers.md` in the configured `inputs_dir` (`profile/profile.toml [paths]`; may point at a cloud-synced folder outside the repo).
+- **`render()` writes `cover_letter.json` beside the PDFs.** The PDF is not readable input, so
+  without it a revision is a rewrite rather than an edit, and `letter_linter` has nothing to read.
 - **Grade every fill batch**: `python -m job_finder.fill_grader --date <YYYY-MM-DD>` letter-grades the audit manifests (Layer 1, zero tokens). Its `no_rule` output is the backlog — turn entries into `[[custom_combos]]` answers in `profile/profile.toml`. `python -m job_finder.profile_check` is the profile doctor (placeholder/missing-doc detection); SETUP.md tells new users to run it.
 - **Every fill captures a before/after field inventory** to `data/fill_audits/<date>_<slug>.{pre,post}.json` (gitignored — the `value` column holds contact details). Both fill paths use `form_inventory.py` so their output is comparable; the deterministic script writes them directly, the agent via `browser_evaluate`. Capture is best-effort and never blocks a fill. Redact with `form_inventory.redact()` before promoting a manifest to `tests/fixtures/`. Design: `.claude/context/form-fill-evals.md`.
 - **Playwright MCP is project-scoped** (`.mcp.json`). Its `mcp__playwright__*` tools only load when the Claude session is rooted in this directory — autofill won't work from a session started in the parent `dev/` directory.
