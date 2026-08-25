@@ -37,15 +37,33 @@ Playwright launches its own browser and opens a real window the user can see and
 click. Nothing has to be open beforehand, and there is no separate browser skill
 to run.
 
-Check once, now, that `mcp__playwright__*` tools are loaded, and say in your
-first message whether autofill will happen. If they are missing, that is not a
-reason to stop: carry on with tailoring, fact-checking and rendering for every
-role, write `APPLY_NOTES.md` into each folder, and say plainly in the report
-that every role is prepped and waiting on a hand-submit.
+Check once, now, that the Playwright tools are loaded, and say in your first
+message whether autofill will happen.
+
+**Match on the tool name containing `playwright`, not on a fixed prefix.** The
+prefix depends on how the server was reached: a project `.mcp.json` gives
+`mcp__playwright__*`, while a plugin-bundled server proxied through the device
+bridge gives `mcp__remote-devices__plugin_<plugin>_<server>__<tool>`. Checking
+for one exact prefix reports "not loaded" on a session where the tools are
+present and working.
+
+The server spawns on the user's own machine via `npx`, so a session with no
+linked device legitimately has no Playwright. That is the setup being absent,
+not a bug to work around.
+
+If the tools are missing, that is not a reason to stop: carry on with
+tailoring, fact-checking and rendering for every role, write `APPLY_NOTES.md`
+into each folder, and say plainly in the report that every role is prepped and
+waiting on a hand-submit.
 
 For Greenhouse specifically, `python -m job_finder.fill_greenhouse` is cheaper
 than the agent by roughly 30x and drives its own browser too. Prefer it when the
 session can run Python.
+
+**Playwright starts from a fresh profile with no cookies or logins.** Any form
+behind an account wall is unreachable by it however well it fills, so those get
+an `APPLY_NOTES.md` handoff rather than an attempt. That is the existing rule,
+not a new limitation.
 
 ### 2b. Archive the rendered folders
 
@@ -120,8 +138,7 @@ Read the exit code, not the wording:
 - **2** — you invoked it wrong. Fix the invocation; it says nothing about the
   forms.
 
-**If the gate cannot execute at all**, say so plainly. The repo needs Python
-3.12 and some environments have 3.10. Never omit the gate section, and never
+**If the gate cannot execute at all**, say so plainly. Never omit the gate section, and never
 describe forms as verified when nothing verified them.
 
 ## 6. Report once

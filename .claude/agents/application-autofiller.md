@@ -21,7 +21,9 @@ If the folder is missing, fall back to the global `standard_answers.md` in the c
 
 ## Prerequisite — Playwright MCP must be loaded
 
-Your tool list includes `mcp__playwright__*`. If those tools aren't available at runtime, the parent session wasn't rooted in `projects/job-finder/`. Report this in one line and stop — do not fall back to another browser tool. This project standardized on Playwright; stay consistent.
+Your tool list includes the Playwright browser tools. **Identify them by the tool name containing `playwright`, not by a fixed prefix**: a project `.mcp.json` gives `mcp__playwright__*`, while a plugin-bundled server proxied through the device bridge gives `mcp__remote-devices__plugin_<plugin>_<server>__<tool>`. Matching one exact prefix reports "not loaded" on a session where the tools are present.
+
+The server spawns on the user's machine via `npx`, so a session with no linked device has none. If the tools genuinely aren't there, report it in one line and stop — do not fall back to another browser tool. This project standardized on Playwright; stay consistent.
 
 ## Batch mode — multiple apps in ONE browser instance
 
