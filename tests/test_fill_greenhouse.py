@@ -98,6 +98,10 @@ def test_no_match_returns_none():
     "Emergency contact last name",
     "Referred by (first and last name)",
     "Your manager's name",
+    "Manager name",
+    "Hiring manager email",
+    "Current supervisor",
+    "Recruiter",
 ])
 def test_name_traps_are_not_autofilled(label):
     assert fg.NAME_TRAP_PATTERN.search(label)
@@ -105,6 +109,21 @@ def test_name_traps_are_not_autofilled(label):
 
 @pytest.mark.parametrize("label", ["First Name*", "Last Name", "Preferred First Name"])
 def test_real_name_fields_are_not_trapped(label):
+    assert fg.NAME_TRAP_PATTERN.search(label) is None
+
+
+# A bare "manager" trap fired on questions about the applicant's own career.
+# Seen live on a StackBlitz req 2026-08-25: the fill was correct, the answer
+# was "Yes", and the gate still returned 4, which is the one exit code an
+# unattended run cannot argue with.
+@pytest.mark.parametrize("label", [
+    "Have you been a product manager of a product line or a major feature set "
+    "for a consumer, SMB, or enterprise application?",
+    "How many years of product management experience do you have?",
+    "Have you managed engineering managers?",
+    "Describe a time you disagreed with your manager.",
+])
+def test_self_referential_manager_questions_are_not_trapped(label):
     assert fg.NAME_TRAP_PATTERN.search(label) is None
 
 

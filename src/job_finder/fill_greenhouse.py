@@ -155,9 +155,19 @@ def veto_for(label: str) -> str | None:
 # employee referral that never happened.
 # Word-anchored on purpose: a bare "referr" also matches "P-referred First Name",
 # which would block a field that fills correctly today.
+# "manager" on its own cannot be trapped the way the other role words can. A
+# product-management application is full of self-referential job titles, so a
+# bare match fires on questions about the applicant: "Have you been a product
+# manager of a product line or a major feature set?" is not a request for
+# somebody else's name, but it was graded as one. Trap the word only where the
+# label actually asks for a manager's identity. "supervisor" and "recruiter"
+# stay bare because neither doubles as a title the applicant would claim here.
+_MANAGER_TRAP = r"\bmanagers?(?:['\u2019]s)?\s+(?:name|e-?mail|phone|contact|title)\b"
+
 NAME_TRAP_PATTERN = re.compile(
-    r"\brefer(r|red|ence|ral)|\bemergency\b|\bsupervisor\b|\bmanager\b|"
-    r"\bspouse\b|\bguardian\b|next of kin|who told you|\brecruiter\b",
+    r"\brefer(r|red|ence|ral)|\bemergency\b|\bsupervisor\b|"
+    + _MANAGER_TRAP +
+    r"|\bspouse\b|\bguardian\b|next of kin|who told you|\brecruiter\b",
     re.I,
 )
 
