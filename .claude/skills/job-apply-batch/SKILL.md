@@ -10,8 +10,15 @@ any batch they intend to review in one sitting.
 `$ARGUMENTS` carries the role count and flags. Accept `--top N`, a bare number,
 or `all` for every pending main-queue role; default to 5 when nothing is given.
 `--include-stretch` opts stretch roles in (default off, see below). Confirm the
-count in your first message, and if it is above 10, say what the run will cost
-and ask once before starting.
+count in your first message. Above 10, state what the run will cost; ask first
+only if someone is there to answer, and otherwise proceed and note it. A
+scheduled run has nobody to ask, and stalling on a question is worse than a
+long run.
+
+**At 10 or more roles, prefer `fill_greenhouse` over the autofill agent wherever
+the ATS allows it.** The agent costs roughly 63k tokens per form against the
+script's 2k, and at that count the difference decides whether the batch finishes
+coherently.
 
 **The per-role loop is `.claude/commands/job-apply.md` and is not restated
 here.** Read it and follow it for each role. This file specifies only what
