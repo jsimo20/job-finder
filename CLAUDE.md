@@ -153,6 +153,14 @@ Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract, `eval_factcheck`), `GMA
 - **Commit subjects and PR titles are one plain sentence stating what the change does** — imperative, lowercase start, no `type(scope):` prefixes, no "Type of change" checklists. The body (optional) explains why.
 - **PRs are the norm**, not direct-to-main — for the audit trail, not for review gating. Nothing reviews them automatically. When a change is worth a second pass, dispatch the `python-code-reviewer` agent, or use the built-in `/code-review`.
 
+- `src/job_finder/liveness.py` — is a posting still listed on its board? Reads the
+  light listing endpoints, not the collect adapters, so a board answers in under a
+  second instead of minutes. **HTTP status cannot answer this**: a closed Ashby
+  posting still serves 200 from its single-page app, and only the board listing
+  distinguishes it. Unknown counts as live, since skipping a real posting costs an
+  application while tailoring a dead one costs tokens. Workday is deliberately
+  absent — no cheap listing endpoint, so its roles read as undetermined.
+
 ## Apply workflow (slash commands)
 
 - `/job-apply [external_id | --top N]` — tailors resume + cover letter for pending roles, runs the materials fact-checker, renders the per-job folder via `job_apply.render()`, then dispatches autofill. Logic in `.claude/commands/job-apply.md`; deterministic render in `src/job_finder/job_apply.py`.
