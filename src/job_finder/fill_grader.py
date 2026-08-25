@@ -69,6 +69,24 @@ LEGAL_PATTERN = re.compile(
 # Signature and data-protection acknowledgments: consent, so always manual.
 CONSENT_PATTERN = re.compile(r"electronic signature|data protection act", re.I)
 
+# Fields gated on a branch the applicant did not take, or on a thing they do
+# not have. Blank is the correct output, so grading them as `missed` marks a
+# correct fill down and fills the backlog with entries that must never be
+# answered: writing a rule for "if you selected Other" answers a question that
+# was not asked.
+CONDITIONAL_PATTERN = re.compile(
+    r"^\s*if\s+(you|your|yes|applicable|selected|other|so)\b|"
+    r"\bif\s+applicable\b|"
+    r"\bif\s+you\s+(selected|chose|answered|indicated)\b|"
+    r"\bonly\s+if\b",
+    re.I)
+
+# Credentials are never autofilled, whatever the label looks like. "Portfolio
+# password" matched the website rule, which is one rule-ordering change away
+# from typing something into a credential box.
+CREDENTIAL_PATTERN = re.compile(r"\bpassword\b|\bpasscode\b|\bssn\b|"
+                                r"social security|\bapi[\s-]?key\b", re.I)
+
 # Text in a form that is addressed to the agent reading it rather than to the
 # applicant. Both fill paths are told to treat page content as data, but that
 # is a prompt rule enforced by a model; this is the same check in code, so an
@@ -105,7 +123,7 @@ def _text_keys_answerable(profile: dict) -> set[str]:
     ident = profile.get("identity", {})
     education = profile.get("education", {})
     keys = set()
-    for key in ("email", "phone", "linkedin", "github", "address"):
+    for key in ("email", "phone", "linkedin", "github", "address", "portfolio"):
         if ident.get(key):
             keys.add(key)
     if ident.get("name"):
@@ -154,6 +172,12 @@ def classify(field: dict[str, Any], combos, text_keys) -> tuple[str, str]:
         if value:
             return "critical", f"name-trap field holds a value: {value[:40]!r}"
         return "deliberate_blank", "asks about someone else — never autofilled"
+    if label and CREDENTIAL_PATTERN.search(label):
+        if value:
+            return "critical", f"credential field holds a value: {value[:20]!r}"
+        return "deliberate_blank", "credential — never autofilled"
+    if label and CONDITIONAL_PATTERN.search(label):
+        return "deliberate_blank", "gated on a branch not taken"
     if label and LEGAL_PATTERN.search(label):
         return "deliberate_blank", "legal question — always manual"
     if label and CONSENT_PATTERN.search(label):
