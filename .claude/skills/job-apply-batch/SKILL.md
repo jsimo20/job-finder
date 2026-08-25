@@ -7,8 +7,11 @@ Run the whole apply loop over several roles without stopping between them, and
 report once at the end. Built for a session the user is not watching: Cowork, or
 any batch they intend to review in one sitting.
 
-`$ARGUMENTS` may carry `--top N` (default 5) and `--include-stretch` (default
-off, see below).
+`$ARGUMENTS` carries the role count and flags. Accept `--top N`, a bare number,
+or `all` for every pending main-queue role; default to 5 when nothing is given.
+`--include-stretch` opts stretch roles in (default off, see below). Confirm the
+count in your first message, and if it is above 10, say what the run will cost
+and ask once before starting.
 
 **The per-role loop is `.claude/commands/job-apply.md` and is not restated
 here.** Read it and follow it for each role. This file specifies only what
