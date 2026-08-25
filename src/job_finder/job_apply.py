@@ -39,11 +39,15 @@ class Config:
 
     def __init__(self, *, inputs_dir: Path, applications_dir: Path,
                  claims_ground_truth: Path, resume_skill: Path,
+                 writing_style: Path | None = None,
                  applications_archive_dir: Path | None = None) -> None:
         self.inputs_dir = inputs_dir
         self.applications_dir = applications_dir
         self.claims_ground_truth = claims_ground_truth
         self.resume_skill = resume_skill
+        # Voice rules for anything written as the user. Must live inside the
+        # repo: a surface that mounts only the repo cannot read a copy outside it.
+        self.writing_style = writing_style or (inputs_dir / "steering" / "writing-style.md")
         # Where finished folders are kept for good, when that is somewhere the
         # renderer cannot reliably write. See archive_applications().
         self.applications_archive_dir = applications_archive_dir
@@ -95,6 +99,8 @@ def load_config(profile: Mapping[str, Any] | None = None) -> Config:
     return Config(
         inputs_dir=_resolve("inputs_dir", base),
         applications_dir=_resolve("applications_dir", base / "applications"),
+        writing_style=_resolve("writing_style_path",
+                               base / "inputs" / "steering" / "writing-style.md"),
         claims_ground_truth=_resolve("claims_ground_truth_path",
                                     base / "claims_ground_truth.md"),
         resume_skill=_resolve("resume_skill_path", base / "generate_resume.py"),
@@ -405,6 +411,10 @@ def render(
         raise RuntimeError(f"Resume render failed; RESUME_DATA dumped to {raw}") from exc
 
     _render_cover_letter(identity, cover_letter, cover_pdf)
+    # The PDF is not readable input. Keeping the source makes a re-draft an edit
+    # rather than a rewrite, and gives letter_linter something to read.
+    (outdir / "cover_letter.json").write_text(
+        json.dumps(cover_letter, indent=2, ensure_ascii=False), encoding="utf-8")
 
     if config.standard_answers_md.exists():
         shutil.copy2(config.standard_answers_md, outdir / "standard_answers.md")

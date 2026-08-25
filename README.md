@@ -91,6 +91,7 @@ job-finder review                        # interactive picker: applied/dismissed
 job-finder companies list                # the tracked-company universe
 job-finder digest-archive show           # latest digest from the archive
 python -m job_finder.profile_check       # is my profile complete?
+python -m job_finder.letter_linter --date <YYYY-MM-DD>   # voice rules, zero tokens
 python -m job_finder.fill_grader --date <YYYY-MM-DD> --suggest
 pytest                                    # no network, keys, or profile needed
 ```
