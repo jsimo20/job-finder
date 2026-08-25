@@ -45,7 +45,11 @@ TEXT_FIELDS: list[tuple[str, str]] = [
     (r"last\s*name", "last_name"),
     (r"e-?mail", "email"),
     (r"linked\s*in", "linkedin"),
-    (r"website|portfolio|github", "github"),
+    # A GitHub profile is not a portfolio. Claiming "portfolio" for the
+    # github answer puts a code-hosting link in a field asking for personal
+    # work, and claims the field for a user who has no portfolio at all.
+    (r"github", "github"),
+    (r"portfolio|personal\s*site|(?<!e-)(?<!e)\bwebsite\b", "portfolio"),
     (r"start\s*(date\s*)?year", "start_year"),
     (r"end\s*(date\s*)?year", "end_year"),
     (r"address", "address"),

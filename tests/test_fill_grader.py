@@ -229,3 +229,71 @@ def test_gate_codes_stay_clear_of_argparse():
     """argparse exits 2 on a usage error; a malformed call must not read as unsafe."""
     assert 2 not in (fill_grader.GATE_NOTHING, fill_grader.GATE_BLOCKED)
     assert fill_grader.GATE_NOTHING != fill_grader.GATE_BLOCKED
+
+
+# ── Conditional and credential buckets ───────────────────────────────────────
+
+CONDITIONAL_LABELS = [
+    "If you selected Other, please share your pronouns",
+    "If applicable, list your certifications",
+    "Portfolio/Website password if applicable",
+    "If yes, please explain",
+    "Only if you answered yes above",
+]
+
+UNCONDITIONAL_LABELS = [
+    "First Name",
+    "Describe a time you shipped something difficult",
+    "What is your notice period?",
+    "Certifications",
+]
+
+
+def test_conditional_fields_are_deliberate_blanks():
+    """A branch the applicant did not take has no correct answer to configure."""
+    for label in CONDITIONAL_LABELS:
+        assert fill_grader.CONDITIONAL_PATTERN.search(label), label
+
+
+def test_ordinary_labels_are_not_read_as_conditional():
+    for label in UNCONDITIONAL_LABELS:
+        assert fill_grader.CONDITIONAL_PATTERN.search(label) is None, label
+
+
+def test_conditional_field_does_not_count_against_the_grade(tmp_path):
+    result = _grade([
+        {"label": "First Name*", "type": "text", "required": True,
+         "value": "T", "options": None},
+        {"label": "If you selected Other, please share your pronouns",
+         "type": "text", "required": False, "value": "", "options": []},
+    ], tmp_path)
+    assert result["grade"] == "A"
+    assert result["counts"].get("missed", 0) == 0
+    assert result["counts"]["deliberate_blank"] == 1
+
+
+def test_credential_fields_are_never_ruled():
+    for label in ["Password", "Portfolio password", "SSN", "Social Security Number",
+                  "API key"]:
+        assert fill_grader.CREDENTIAL_PATTERN.search(label), label
+
+
+def test_a_filled_credential_field_is_critical(tmp_path):
+    """A website rule once matched 'Portfolio/Website password'."""
+    result = _grade([
+        {"label": "Portfolio/Website password", "type": "text", "required": False,
+         "value": "hunter2", "options": []},
+    ], tmp_path)
+    assert result["grade"] == "F"
+    assert result["counts"]["critical"] == 1
+    assert "credential" in result["buckets"]["critical"][0][1]
+
+
+def test_github_rule_no_longer_claims_portfolio_fields():
+    """A code-hosting link is not a portfolio, and the profile may have neither."""
+    import re
+    from job_finder import fill_greenhouse as fg
+    keys = {k for pat, k in fg.TEXT_FIELDS
+            if re.search(pat, "Additional Portfolio/Website", re.I)}
+    assert "github" not in keys
+    assert keys == {"portfolio"}
