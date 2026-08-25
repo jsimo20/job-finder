@@ -29,7 +29,9 @@ everything lives in `profile/` directly.
 - `<inputs_dir>/resume_master.md` — canonical experience and metrics.
 - `<inputs_dir>/personal_statement.md` — narrative voice + supplementary context.
 - `<claims_ground_truth_path>` — per-claim framing rules, skill source pool, factual baselines.
-- `~/.claude/rules/writing-style.md` — the user's global voice rules, **if the file exists** (it's outside the repo and machine-specific). When present it is the authority for the cover-letter voice checks in §5; when absent, enforce §5's inline rules plus whatever voice rules the session-context file carries.
+- the writing-style file at `[paths].writing_style_path` — the user's voice rules, and **the authority for every voice check in §5**. Read it in full; §5's inline list is a summary of its §2, not a substitute for the rest of it. It carries rules the inline list does not: show the work rather than claim the match (§8), plain words over writerly metaphor-nouns (§9), no self-grading (§5), no triadic lists built for rhythm (§2), and a numbered self-check to run before you report.
+
+  The configured path is the only one to read. A copy outside the repo is unreachable from surfaces that mount only the repo, so never fall back to one. **If the configured file is missing, that is a finding — report it rather than falling back quietly.**
 
 ## What you check
 
@@ -66,7 +68,11 @@ For every bullet in `resume_data["experience"][*]["bullets"]`, verify:
 
 ### 5. Cover letter — voice + factual
 
-- **No em-dashes** anywhere in the body. (The user does not use them. See `writing-style.md` §1 — the single loudest AI tell.)
+- **Run the writing-style file's own self-check list against the letter, item by item.** It is numbered and explicit; the checks below are the ones that fail most often, not the whole set.
+- **No em-dashes** anywhere in the body. (The user does not use them. Style guide §1, the single loudest AI tell.)
+- **No claiming the match** (§8). Any sentence editorializing the overlap between his background and their need is a finding: "sits close to work I already do", "reads like the same problem", "would be a good next chapter". State what he did; let the reader connect it.
+- **No writerly metaphor-nouns** (§9) where a plain word works: "the standing tension", "X's bet", "a close cousin of", "supplied the other half".
+- **First person, and consistently.** He is never "someone" or "a person who". The rule is only that a paragraph may not *begin* with the word "I"; mid-sentence "I" is correct and expected. Gerund-stacked openings ("Leading the launch meant...", "Working next to their CPO produced...") used to dodge that rule read machine-written. Flag a letter where most paragraphs open on a nominalized gerund.
 - **No AI tropes.** `writing-style.md` §2 is the source-of-truth ban list; flag every instance. Common offenders: "spearheaded," "leveraged," "synergize," "delve into," "navigate the landscape," "robust," "comprehensive," "seamless," "uniquely positioned," "passionate about," "excited to explore," "at the intersection of."
 - **No punchy confidence / resolution lines** (`writing-style.md` §3) — standalone one-sentence flourishes engineered to hit hard ("That's the trade I want to make," "The math is simple"). Flag them.
 - **No paragraph starts with "I"** (per cover letter SKILL §0.3).
