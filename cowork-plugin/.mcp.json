@@ -1,4 +1,5 @@
 {
+  "_comment": "Duplicate of the repo-root .mcp.json on purpose: that one serves Claude Code sessions rooted in the repo, this one serves Cowork, which may not read project .mcp.json. Keep the version pin identical in both. If a Cowork run proves the repo copy is read, delete this file rather than keeping two.",
   "mcpServers": {
     "playwright": {
       "command": "npx",
