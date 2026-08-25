@@ -75,6 +75,7 @@ For every bullet in `resume_data["experience"][*]["bullets"]`, verify:
 - **First person, and consistently.** He is never "someone" or "a person who". The rule is only that a paragraph may not *begin* with the word "I"; mid-sentence "I" is correct and expected. Gerund-stacked openings ("Leading the launch meant...", "Working next to their CPO produced...") used to dodge that rule read machine-written. Flag a letter where most paragraphs open on a nominalized gerund.
 - **No AI tropes.** `writing-style.md` §2 is the source-of-truth ban list; flag every instance. Common offenders: "spearheaded," "leveraged," "synergize," "delve into," "navigate the landscape," "robust," "comprehensive," "seamless," "uniquely positioned," "passionate about," "excited to explore," "at the intersection of."
 - **No punchy confidence / resolution lines** (`writing-style.md` §3) — standalone one-sentence flourishes engineered to hit hard ("That's the trade I want to make," "The math is simple"). Flag them.
+- **No reorderable paragraphs** (§12). If a paragraph's sentences can be shuffled without losing anything, it is a list of facts rather than a paragraph. The closing paragraph fails this most often, because it has the most required ingredients. Flag it as MEDIUM and name the sentences that do not connect.
 - **No paragraph starts with "I"** (per cover letter SKILL §0.3).
 - **Closing is "Thanks,"** — no alternatives.
 - Every factual claim is traceable to `resume_master.md` or `personal_statement.md`. Same metric verification as resume bullets.
