@@ -241,9 +241,9 @@ them, and point at the file when you cannot rely on that.
 
 Cowork does not index project-level `.claude/skills/`, so the weekly batch is
 also packaged as a plugin. It is a **thin launcher, not a copy**: the skill reads
-`.claude/skills/job-apply-batch/SKILL.md` from the mounted repo and adds only the
-role count, the browser-tool check, and the archive step. Two copies of the batch
-procedure would drift.
+`.claude/skills/job-apply-batch/SKILL.md` from the mounted repo and decides only
+the role count. Everything else, the archive step included, lives in the batch
+skill; two copies of that procedure would drift.
 
 - `cowork-plugin/.claude-plugin/plugin.json` — manifest
 - `cowork-plugin/.mcp.json` — Playwright, **version-pinned** (`@latest`
