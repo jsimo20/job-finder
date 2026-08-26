@@ -179,9 +179,10 @@ python -m job_finder.letter_linter --date <today>
 - **0** — no critical violation.
 - **4** — a letter breaks a flat ban (em-dash, a paragraph opening on "I", an
   opening that announces a reaction rather than stating a fact about the company,
-  a feeling verb, a trope, a closing that is not "Thanks,"). **Fix the letter and
-  re-render before filling.** These are zero-judgment rules; there is nothing to
-  weigh.
+  a feeling verb, a trope, a closing that is not "Thanks,"). **Re-draft that letter and re-render
+  before filling it.** These are zero-judgment rules, so there is nothing to
+  weigh and nothing to ask about: fix it and carry on. Never fill a form with a
+  letter that failed, and never skip the role instead of fixing it.
 - **3** — no `cover_letter.json` found, so nothing was rendered. Not a pass.
 
 ADVISORY lines never block. They are candidates for a human: a trailing clause
@@ -214,8 +215,16 @@ describe forms as verified when nothing verified them.
 3. **Needs my judgment** — parked roles and the unresolved findings.
 4. **Skipped** — blocked companies, duplicates, unreachable forms.
 5. **Gates** — the letter linter's exit code and any ADVISORY lines, then the
-   fill grader's exit code, or why either could not run.
-6. **`mark-applied` commands** for everything in section 2, ready to paste.
+   fill grader's exit code, or why either could not run. Name the fill path each
+   role took, deterministic script or autofill agent; that is the run's largest
+   cost and the report is the only place it is visible.
+6. **One cover letter, quoted in full.** Pick the role you are least sure of and
+   paste its four paragraphs. **Neither gate can tell whether the opening's
+   contrast is true.** "Most companies do X, this one does Y" passes the linter
+   and the fact-checker both while being something you invented about the
+   category, and a build procedure makes that failure more likely rather than
+   less. One letter read by a human per batch is the only check on it.
+7. **`mark-applied` commands** for everything in section 2, ready to paste.
 
 ## Hard rules
 
