@@ -30,7 +30,12 @@ import sys
 import time
 from pathlib import Path
 
-from playwright.sync_api import Frame, Page, TimeoutError as PWTimeout, sync_playwright
+try:
+    from playwright.sync_api import (Frame, Page, TimeoutError as PWTimeout,
+                                     sync_playwright)
+except ImportError:  # fill_grader imports the pattern constants and needs no browser
+    Frame = Page = sync_playwright = None  # type: ignore[assignment]
+    PWTimeout = TimeoutError  # type: ignore[assignment,misc]
 
 from job_finder import form_inventory, settings
 from job_finder.form_inventory import has_selection, label_of

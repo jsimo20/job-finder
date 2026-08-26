@@ -65,6 +65,9 @@ f. **Dispatch the `materials-fact-checker` subagent** (Sonnet) with `resume_data
 
 g. **On final approval, call render()** by running this in the repo's venv. **Pass `open_browser=False`** because step h dispatches the autofill subagent, which drives its own Playwright-controlled browser.
 
+   Two forms, because the two surfaces differ. **Windows / Claude Code** (the repo
+   venv has `job_finder` installed and every dependency):
+
    ```
    .venv/Scripts/python.exe -c "
    from job_finder import job_apply, db
@@ -79,6 +82,19 @@ g. **On final approval, call render()** by running this in the repo's venv. **Pa
    print(out)
    "
    ```
+
+   **A Linux device VM / Cowork** (no editable install, so `job_finder` is not
+   importable and `.venv/Scripts/` does not exist). Same call, different prefix:
+
+   ```
+   PYTHONPATH=".cowork-deps:src" python3 -c "
+   ...the identical body...
+   "
+   ```
+
+   Build `.cowork-deps/` first with `sh scripts/bootstrap_cowork_deps.sh` if it is
+   missing. `render()` needs `reportlab`, which an import-only check will not
+   catch.
 
    `posting_row` must contain at minimum: `external_id`, `title`, `url`, `company_name`. Optional but used in `apply.md`: `total_score`, `queue`, `location`. If you're hand-constructing because the DB is empty (CI doesn't preserve `data/jobs.db` across runs), include all of these so the rendered `apply.md` is complete.
 
