@@ -98,7 +98,7 @@ DOM state instead of a reconstruction.
 1. Get the inventory function once per dispatch (not once per form):
 
    ```sh
-   python -c "from job_finder.form_inventory import INVENTORY_JS; print(INVENTORY_JS)"
+   PYTHONPATH=".cowork-deps:src" python3 -c "from job_finder.form_inventory import INVENTORY_JS; print(INVENTORY_JS)"
    ```
 
 2. Pass it verbatim to `browser_evaluate`.
@@ -184,8 +184,11 @@ mid-fill, fields left required-and-blank, and values that landed in the wrong bo
 ### 13. Run the gate before you report
 
 ```sh
-python -m job_finder.fill_grader <the .post.json paths you just wrote> --gate --quiet
+PYTHONPATH=".cowork-deps:src" python3 -m job_finder.fill_grader <the .post.json paths you just wrote> --gate --quiet
 ```
+
+The prefix makes `job_finder` importable where the repo is mounted but not
+installed, which is every Linux device VM. It is harmless on Windows.
 
 Read the exit code, not the wording:
 
