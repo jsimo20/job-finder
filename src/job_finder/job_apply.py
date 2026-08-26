@@ -48,8 +48,9 @@ class Config:
         # Voice rules for anything written as the user. Must live inside the
         # repo: a surface that mounts only the repo cannot read a copy outside it.
         self.writing_style = writing_style or (inputs_dir / "steering" / "writing-style.md")
-        # Where finished folders are kept for good, when that is somewhere the
-        # renderer cannot reliably write. See archive_applications().
+        # Optional and unset by default: finished folders live in
+        # applications_dir permanently. Set [paths].applications_archive_dir only
+        # if you want archive_applications() to move them somewhere else.
         self.applications_archive_dir = applications_archive_dir
 
     @property
