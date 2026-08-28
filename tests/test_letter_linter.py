@@ -88,6 +88,21 @@ def test_tropes_are_critical():
     assert severities(letter, "ai_trope") == [L.CRITICAL]
 
 
+def test_announcing_a_fact_up_front_is_critical():
+    letter = {**CLEAN, "paragraphs": ["Worth saying up front that I haven't built one."]}
+    assert severities(letter, "ai_trope") == [L.CRITICAL]
+
+
+def test_a_banned_hedge_word_is_critical():
+    letter = {**CLEAN, "paragraphs": ["I am mostly curious how you decide."]}
+    assert severities(letter, "banned_word") == [L.CRITICAL]
+
+
+def test_banned_words_match_whole_words_only():
+    letter = {**CLEAN, "paragraphs": ["Most of my time goes to the platform."]}
+    assert severities(letter, "banned_word") == []
+
+
 def test_closing_must_be_thanks():
     assert severities({**CLEAN, "closing": "Best regards,"}, "wrong_closing") == [L.CRITICAL]
     assert severities({**CLEAN, "closing": "Thanks,"}, "wrong_closing") == []
