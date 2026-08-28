@@ -179,6 +179,17 @@ Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract, `eval_factcheck`), `GMA
 
 - **BOMs in Python source**: use `chr(0xfeff)` constants, never literal BOM characters. Source-file encoding can corrupt the literal between Windows editors and Linux runners. See `_BOM = chr(0xfeff)` patterns in `extract.py`, `ashby.py`, `lever.py`.
 - **Defensive `.strip().replace(_BOM, "")` on env-var reads** in `extract.py` — pasted secrets can carry invisible BOMs that crash SDK header construction. Already in place.
+- **Both SQLite databases run `journal_mode = TRUNCATE`, set per connection in
+  `db.connect()` and `state.connect()`.** The default DELETE mode unlinks the
+  rollback journal on every commit, and a Cowork device-bridge mount blocks
+  unlink: the commit fails, a hot journal is left behind, and the next reader
+  gets `disk I/O error` until someone clears it by hand. This wedged `jobs.db` on
+  2026-08-28. TRUNCATE zeroes the journal instead of removing it, so no unlink is
+  ever needed and rollback still works. **Not MEMORY** — that also avoids the
+  file but gives up crash recovery, and `state.db` holds the applied ledger with
+  no backup anywhere. The pragma does not persist (only WAL is written to the
+  file header), so any new code opening `sqlite3.connect()` directly reintroduces
+  the bug; go through the two `connect()` helpers.
 - **Don't auto-run the pipeline** to test changes — it spends real Anthropic tokens (~$$). The scheduled task owns the weekly run; prefer targeted unit tests via pytest.
 - **Commit subjects and PR titles are one plain sentence stating what the change does** — imperative, lowercase start, no `type(scope):` prefixes, no "Type of change" checklists. The body (optional) explains why.
 - **PRs are the norm**, not direct-to-main — for the audit trail, not for review gating. Nothing reviews them automatically. When a change is worth a second pass, dispatch the `python-code-reviewer` agent, or use the built-in `/code-review`.

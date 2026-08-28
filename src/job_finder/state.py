@@ -74,6 +74,14 @@ def connect(db_path: Path = DEFAULT_STATE_DB) -> Iterator[sqlite3.Connection]:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
+    # TRUNCATE, not the default DELETE: DELETE unlinks the rollback journal on
+    # every commit, and a device-bridge mount blocks unlink. The commit then
+    # fails and leaves a hot journal, which wedges the database for the next
+    # reader because rollback also needs to delete it. TRUNCATE zeroes the
+    # journal instead of removing it, so no unlink is ever required and the
+    # rollback guarantee is unchanged. MEMORY would also avoid the file, at the
+    # cost of crash-safety, which is not worth trading for the durable ledgers.
+    conn.execute("PRAGMA journal_mode = TRUNCATE")
     conn.executescript(SCHEMA)
     _migrate(conn)
     try:
