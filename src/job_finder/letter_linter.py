@@ -14,7 +14,8 @@ Two severities:
 
 - **CRITICAL** blocks. A flat ban with no legitimate exception: em-dashes, a
   paragraph opening on "I", an opening that announces a reaction, a feeling verb,
-  a trope from the guide's §2, a closing that is not "Thanks,".
+  a trope from the guide's §2, a banned hedge word, a closing that is not
+  "Thanks,".
 - **ADVISORY** never blocks. Patterns with real exceptions, where the value is a
   human glance rather than a verdict. Trailing-gloss candidates live here because
   "which is what started my search" is correct and matches the same shape.
@@ -51,7 +52,12 @@ AI_TROPES = (
     "would love to connect", "would love the opportunity",
     "excited to explore", "hope this finds you well",
     "hope your week is off to a good start", "synergize", "best-in-class",
+    "worth saying up front", "worth naming up front", "worth noting up front",
 )
+
+# Whole-word bans from the guide's §2. Substring matching would be wrong here:
+# "mostly" must not catch a containing word, so these match on word boundaries.
+BANNED_WORDS = ("mostly",)
 
 # Openings that announce a reaction instead of stating an observation. The defect
 # takes new wording every time, so this list is a floor, not a definition: the
@@ -178,6 +184,17 @@ def check_tropes(letter: dict[str, Any]) -> list[Finding]:
     return out
 
 
+def check_banned_words(letter: dict[str, Any]) -> list[Finding]:
+    out = []
+    for i, para in enumerate(paragraphs(letter), 1):
+        for word in BANNED_WORDS:
+            for _ in re.finditer(rf"\b{word}\b", para, re.I):
+                out.append(Finding("banned_word", CRITICAL,
+                                   f'"{word}": cut it or commit to the statement',
+                                   f"para {i}"))
+    return out
+
+
 def check_closing(letter: dict[str, Any]) -> list[Finding]:
     closing = str(letter.get("closing", "")).strip()
     if closing and closing.rstrip(",") != "Thanks":
@@ -251,8 +268,8 @@ def check_close_returns(letter: dict[str, Any]) -> list[Finding]:
 
 CHECKS = (
     check_em_dash, check_paragraph_opening_i, check_opening, check_feeling_verbs,
-    check_tropes, check_closing, check_gloss, check_paragraph_chain,
-    check_close_returns,
+    check_tropes, check_banned_words, check_closing, check_gloss,
+    check_paragraph_chain, check_close_returns,
 )
 
 
