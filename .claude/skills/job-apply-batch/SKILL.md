@@ -71,8 +71,7 @@ job-finder digest-archive list
 The `job-finder` console script comes from the editable install, so on a device
 VM it is not on PATH either. There the equivalent is
 `PYTHONPATH=".cowork-deps:src" python3 -m job_finder.cli digest-archive list`,
-which needs the `--cli` extras. **Prefer running the two console-script calls on
-Windows**, where the install already works; pulling `anthropic` into
+which needs the `--cli` extras. **Prefer running this on Windows**, where the install already works; pulling `anthropic` into
 `.cowork-deps` locks it to one Python build.
 
 **Report the date of the latest digest, and stop if it is more than 7 days old.**
@@ -134,23 +133,6 @@ session can run Python.
 behind an account wall is unreachable by it however well it fills, so those get
 an `APPLY_NOTES.md` handoff rather than an attempt. That is the existing rule,
 not a new limitation.
-
-### 2b. Archive the rendered folders
-
-`render()` writes into `profile/applications` because that is the one location
-every surface can write to. The durable home is the archive directory in
-`[paths]`, so after the last render:
-
-```sh
-job-finder applications archive
-```
-
-Same console-script caveat as the digest check above.
-
-The archive lives outside the repo, so it is reachable only where that path is
-granted. Run the command and report the result. If it fails because the path is
-unreachable, say so and include the command in the final report rather than
-retrying.
 
 ## 3. Pick the roles
 
