@@ -297,3 +297,29 @@ def test_github_rule_no_longer_claims_portfolio_fields():
             if re.search(pat, "Additional Portfolio/Website", re.I)}
     assert "github" not in keys
     assert keys == {"portfolio"}
+
+
+def test_fill_grader_imports_without_playwright(monkeypatch):
+    """The gate runs on a device VM that has no browser client installed.
+
+    fill_grader pulls its pattern constants from fill_greenhouse, whose
+    playwright import used to be unguarded, so `python3 -m job_finder.fill_grader`
+    died on a machine that only ever reads captured manifests.
+    """
+    import importlib
+    import sys
+
+    for name in list(sys.modules):
+        if name.startswith(("playwright", "job_finder.fill_greenhouse",
+                            "job_finder.fill_grader")):
+            monkeypatch.delitem(sys.modules, name, raising=False)
+
+    class Blocker:
+        def find_spec(self, name, path=None, target=None):
+            if name.split(".")[0] == "playwright":
+                raise ImportError("playwright is not installed on this machine")
+            return None
+
+    monkeypatch.setattr(sys, "meta_path", [Blocker()] + list(sys.meta_path))
+    module = importlib.import_module("job_finder.fill_grader")
+    assert module.CREDENTIAL_PATTERN.search("Portfolio password")

@@ -26,6 +26,28 @@ changes when nobody is watching. Two copies of that loop would drift.
 
 ## 1. Preflight, before drafting anything
 
+**Every Python call below is prefixed `PYTHONPATH=".cowork-deps:src" python3`.**
+`job_finder` lives under `src/` and the only editable install is a .pth file in
+the Windows `.venv`, which a Linux device VM cannot see, so a bare `python -c`
+dies on `No module named 'job_finder'` before it reaches any real work.
+
+**On Windows, drop the prefix and use `.venv/Scripts/python.exe`.** The editable
+install already puts `job_finder` on the path there, and Windows separates
+PYTHONPATH entries with `;` rather than `:`, so the prefix as written resolves to
+one nonexistent directory.
+
+If `.cowork-deps/` is missing, build it rather than failing:
+
+```sh
+sh scripts/bootstrap_cowork_deps.sh
+```
+
+It is gitignored, so a fresh clone or a different machine will not have it.
+**If the bootstrap itself fails** (no egress, no pip), say so plainly in the
+report and carry on: liveness treats unknown as live, so losing it costs tokens
+on dead postings rather than correctness. Losing `reportlab` is different and
+does stop the run, because `render()` cannot write a PDF without it.
+
 Confirm you can read every ground-truth file and print the absolute path of
 each:
 
@@ -46,6 +68,13 @@ Then check the digest is current:
 job-finder digest-archive list
 ```
 
+The `job-finder` console script comes from the editable install, so on a device
+VM it is not on PATH either. There the equivalent is
+`PYTHONPATH=".cowork-deps:src" python3 -m job_finder.cli digest-archive list`,
+which needs the `--cli` extras. **Prefer running the two console-script calls on
+Windows**, where the install already works; pulling `anthropic` into
+`.cowork-deps` locks it to one Python build.
+
 **Report the date of the latest digest, and stop if it is more than 7 days old.**
 The roles come from that digest; a stale one means applying to postings that may
 already be filled. If the caller named a required date, honour it exactly.
@@ -54,7 +83,7 @@ Then drop the roles that have already closed, **before spending anything on
 them**:
 
 ```sh
-python -c "
+PYTHONPATH=".cowork-deps:src" python3 -c "
 from job_finder import liveness
 import json,sys
 roles = json.load(sys.stdin)
@@ -116,6 +145,8 @@ every surface can write to. The durable home is the archive directory in
 job-finder applications archive
 ```
 
+Same console-script caveat as the digest check above.
+
 The archive lives outside the repo, so it is reachable only where that path is
 granted. Run the command and report the result. If it fails because the path is
 unreachable, say so and include the command in the final report rather than
@@ -173,7 +204,7 @@ Two gates. Run the letter linter **after render and before any fill**, so a bad
 letter never reaches a form:
 
 ```sh
-python -m job_finder.letter_linter --date <today>
+PYTHONPATH=".cowork-deps:src" python3 -m job_finder.letter_linter --date <today>
 ```
 
 - **0** — no critical violation.
@@ -193,7 +224,7 @@ unattended, because each has legitimate exceptions.
 Then, after the last fill:
 
 ```sh
-python -m job_finder.fill_grader --date <today> --gate
+PYTHONPATH=".cowork-deps:src" python3 -m job_finder.fill_grader --date <today> --gate
 ```
 
 Read the exit code, not the wording:

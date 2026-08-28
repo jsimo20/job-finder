@@ -8,6 +8,8 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+# Built by scripts/bootstrap_cowork_deps.sh on a Cowork device VM.
+.cowork-deps/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/

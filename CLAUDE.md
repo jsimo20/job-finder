@@ -237,6 +237,42 @@ The rule that follows: **anything an unattended session must run should be
 invocable by path.** Keep the skills and commands for the surfaces that resolve
 them, and point at the file when you cannot rely on that.
 
+## Running Python from a Cowork device VM
+
+**Every Python call on a device VM is prefixed `PYTHONPATH=".cowork-deps:src" python3`.**
+
+`job_finder` lives under `src/`, and the only editable install is
+`.venv/Lib/site-packages/_editable_impl_job_finder.pth` inside the **Windows**
+venv, which the Linux VM Cowork mounts cannot see. `pyproject.toml`'s
+`pythonpath = ["src"]` only applies under pytest. So a bare `python -c "from
+job_finder import liveness"` dies on `ModuleNotFoundError` before any dependency
+question arises, and an unattended run has nobody to ask.
+
+`PYTHONPATH=src` fixes the import. `.cowork-deps/` fixes the third-party imports
+behind it, because the VM ships bare Python with no site-packages. Build it with
+`sh scripts/bootstrap_cowork_deps.sh`; it is gitignored, so a fresh clone will
+not have it and the batch preflight rebuilds it rather than failing.
+
+- **Default set is `httpx tomli reportlab`**, all pure Python with no compiled
+  extensions, so the directory survives a Python minor-version bump.
+- **`reportlab` is a call-time dependency, not an import-time one.** `import
+  job_finder.job_apply` succeeds without it and `render()` then fails, so an
+  import-only smoke test does not prove the batch will work.
+- **`--cli` adds `anthropic python-dotenv`** for
+  `python3 -m job_finder.cli ...`, the stand-in for the `job-finder` console
+  script, which also does not exist on the VM. Not the default: anthropic pulls
+  `jiter.cpython-310-x86_64-linux-gnu.so` and locks the directory to CPython 3.10
+  on linux/x86_64. Prefer running `job-finder digest-archive list` and
+  `job-finder applications archive` on Windows.
+- `python3`, not `python`. Both exist on the VM; be explicit.
+- **On Windows use `.venv/Scripts/python.exe` with no prefix.** Windows separates
+  PYTHONPATH entries with `;`, so `".cowork-deps:src"` resolves to a single
+  nonexistent directory there; the editable install makes the prefix unnecessary
+  anyway.
+- **`fill_grader` imports its pattern constants from `fill_greenhouse`**, whose
+  playwright import is guarded for that reason. Keep it guarded: the fill gate
+  runs where no browser client is installed.
+
 ## Cowork plugin (`cowork-plugin/`)
 
 Cowork does not index project-level `.claude/skills/`, so the weekly batch is
