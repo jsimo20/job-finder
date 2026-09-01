@@ -305,6 +305,12 @@ plugin. Cowork tab → Customize → Plugins → upload. Full reference, includi
 the `mcp__remote-devices__plugin_*` tool naming:
 `~/.claude/context/cowork-plugins.md`.
 
+**Bump `plugin.json`'s `version` on every change that has to reach Cowork.**
+The repo cannot see what is installed, but Cowork's plugin list shows the
+installed version, so the two versions side by side are the one drift check a
+human can run in five seconds. A version left alone across a rebuild throws that
+away.
+
 **Editing `cowork-plugin/` changes nothing until you rebuild and re-upload.**
 `python scripts/build_cowork_plugin.py`, then upload the zip. Cowork runs the
 snapshot it was given and keeps it service-side — `~/.claude/plugins/data/job-finder-inline/`
