@@ -1,0 +1,104 @@
+{
+  "_comment": "Ground truth for eval_skill_terms. Synthetic throughout: the pool is fixtures/skill_pool_sample.md and every JD below is invented. The real profile is never read. A case is a JD plus the swap the mapper should or should not propose; `kind` is `swap` when the right answer is to propose it, `gap` when the term is a capability the pool does not hold, and `covered` when the term is already on the resume verbatim. `covered` exists because swaps are one-in-one-out: proposing a redundant swap would take a real skill off to add a word that is already there.",
+  "skills": [
+    [
+      "AI/ML Product Strategy",
+      "LLM-based workflows (Claude, ChatGPT, Gemini), agentic processes, AI model evaluation, agent evals and tracing, output guardrails, RAG, and rapid prototyping with Cursor, Kiro, Figma, GitHub Copilot"
+    ],
+    [
+      "Analytics & Data",
+      "SQL, Python, Tableau, Power BI, behavioral analytics, product analytics, product experimentation, customer interviewing, market research"
+    ],
+    [
+      "Strategy",
+      "Product vision, roadmap creation, outcome-driven planning, backlog prioritization, senior stakeholder alignment, go-to-market strategy, writing requirements"
+    ],
+    [
+      "Platform",
+      "Multi-tenant API design, partner integrations, zero-to-one discovery, in-market pilots, scaling from prototype to production"
+    ]
+  ],
+  "cases": [
+    {
+      "id": "swap-lovable-for-figma",
+      "kind": "swap",
+      "term": "Lovable",
+      "jd": "You will own our design tooling surface. Day to day you will be in Lovable building and iterating on interface prototypes, running Lovable sessions with designers, and turning Lovable output into buildable specs. Familiarity with Lovable or comparable AI-driven UI prototyping tools is required.",
+      "expect_replaces_any": [
+        "rapid prototyping with Cursor",
+        "Figma",
+        "Kiro",
+        "GitHub Copilot"
+      ],
+      "why": "same class of AI-driven UI prototyping tool, and the pool names three"
+    },
+    {
+      "id": "swap-prds-for-requirements",
+      "kind": "swap",
+      "term": "creating PRDs",
+      "jd": "The role is accountable for creating PRDs for every shipped surface. You will be creating PRDs with engineering, reviewing PRDs at spec sign-off, and keeping PRDs current as scope moves.",
+      "expect_replaces_any": [
+        "writing requirements"
+      ],
+      "why": "the same document under a different name"
+    },
+    {
+      "id": "covered-chatgpt",
+      "kind": "covered",
+      "term": "ChatGPT",
+      "jd": "We are looking for someone fluent in ChatGPT. You will design ChatGPT-based internal workflows, evaluate ChatGPT output quality, and teach teams to use ChatGPT well.",
+      "why": "already on the resume verbatim; nothing to take off and nothing to add"
+    },
+    {
+      "id": "swap-customer-discovery",
+      "kind": "swap",
+      "term": "customer discovery",
+      "jd": "You will run customer discovery end to end. Expect weekly customer discovery sessions, synthesising customer discovery notes into opportunity areas, and teaching the team to run customer discovery themselves.",
+      "expect_replaces_any": [
+        "customer interviewing",
+        "market research"
+      ],
+      "why": "customer discovery is what customer interviewing names"
+    },
+    {
+      "id": "swap-experimentation",
+      "kind": "swap",
+      "term": "A/B testing",
+      "jd": "Heavy A/B testing culture. You will design A/B tests, read A/B test results, and own the A/B testing roadmap for activation surfaces.",
+      "expect_replaces_any": [
+        "product experimentation",
+        "behavioral analytics",
+        "product analytics"
+      ],
+      "why": "A/B testing is what product experimentation names"
+    },
+    {
+      "id": "gap-databricks",
+      "kind": "gap",
+      "term": "Databricks",
+      "jd": "Deep Databricks experience required. You will own Databricks pipelines, tune Databricks jobs, manage Databricks cluster spend, and be the Databricks point of contact for three analytics teams.",
+      "why": "a specific platform; no pool entry names it or anything it stands for"
+    },
+    {
+      "id": "gap-transformer-training",
+      "kind": "gap",
+      "term": "training transformer models",
+      "jd": "You will own the roadmap for training transformer models at scale, including distributed training runs, checkpoint strategy, and the compute budget for training transformer models across two clusters.",
+      "why": "model evaluation and RAG are not model training"
+    },
+    {
+      "id": "gap-assembly-line",
+      "kind": "gap",
+      "term": "assembly line optimization",
+      "jd": "Manufacturing product role. You will drive assembly line optimization across four plants, own line throughput and takt time, and lead assembly line optimization studies with industrial engineers.",
+      "why": "nothing in the pool is manufacturing or operations research"
+    },
+    {
+      "id": "gap-kubernetes",
+      "kind": "gap",
+      "term": "Kubernetes",
+      "jd": "You will own our Kubernetes platform. Expect to write Kubernetes operator requirements, prioritize Kubernetes upgrade work, and speak to Kubernetes scheduling tradeoffs with staff engineers.",
+      "why": "the pool's cloud exposure is consumption-level, not orchestration"
+    }
+  ]
+}

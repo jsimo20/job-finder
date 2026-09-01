@@ -80,7 +80,24 @@ def test_grade_bands_ignore_postings_that_never_drafted():
         {"posting": {}},  # draft failed
     ]
     summary = E.grade(results)
-    assert summary == {"drafted": 2, "attempted": 3, "pass_rate": 1.0, "band": "A"}
+    assert summary["drafted"] == 2
+    assert summary["attempted"] == 3
+    assert summary["pass_rate"] == 1.0
+    assert summary["band"] == "A"
+
+
+def test_grade_reports_per_posting_outcomes_for_repeat_runs():
+    """--repeat names the postings that flipped, which needs a per-case list."""
+    results = [
+        {"posting": {"company": "Acme"}, "grade": {"passed": True}},
+        {"posting": {"company": "Borealis"}, "grade": {"passed": False}},
+        {"posting": {"company": "Cyngus"}},  # draft failed
+    ]
+    assert E.grade(results)["results"] == [
+        {"id": "Acme", "passed": True},
+        {"id": "Borealis", "passed": False},
+        {"id": "Cyngus", "passed": False},
+    ]
 
 
 def test_grade_of_an_empty_run_is_f_not_a_crash():

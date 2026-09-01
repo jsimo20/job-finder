@@ -48,7 +48,8 @@ import anthropic
 import httpx
 from dotenv import load_dotenv
 
-from . import applied, eval_factcheck, job_apply, letter_linter, settings, state
+from . import (applied, eval_factcheck, eval_spread, job_apply, letter_linter,
+               settings, state)
 
 DRAFT_MODEL = "claude-opus-5"
 DRAFT_MAX_TOKENS = 3000
@@ -259,7 +260,12 @@ def grade(results: list[dict[str, Any]]) -> dict[str, Any]:
     rate = (sum(1 for r in graded if r["grade"]["passed"]) / len(graded)
             if graded else 0.0)
     return {"drafted": len(graded), "attempted": len(results), "pass_rate": rate,
-            "band": next(b for cut, b in GRADE_BANDS if rate >= cut)}
+            "band": next(b for cut, b in GRADE_BANDS if rate >= cut),
+            # Per-posting outcomes, so repeated runs can name which postings
+            # flipped rather than only showing the rate moving.
+            "results": [{"id": r["posting"].get("company", "?"),
+                         "passed": bool(r.get("grade", {}).get("passed"))}
+                        for r in results]}
 
 
 def print_report(results: list[dict[str, Any]], summary: dict[str, Any],
@@ -297,30 +303,42 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--model", default=DRAFT_MODEL, help="the drafting model")
     ap.add_argument("--seed", type=int, help="fix the company shuffle")
     ap.add_argument("--show-letter", action="store_true")
+    ap.add_argument("--repeat", type=int, default=1,
+                    help="draft the same postings N times and report the spread")
     args = ap.parse_args(argv)
 
     config = job_apply.load_config(settings.require_profile())
     gt = ground_truth(config)
+    # Pinned outside the repeat loop on purpose: repeating is for the drafter's
+    # variance, and re-shuffling the postings would confound it with the
+    # postings' own difficulty.
     postings = held_out_postings(args.n, seed=args.seed)
     if not postings:
         print("No held-out PM postings found on the tracked boards.")
         return 3
 
     client = _client()
-    results = []
-    for posting in postings:
-        print(f"drafting {posting['company']}...", file=sys.stderr)
-        letter = draft(client, posting, gt, args.model)
-        if letter is None:
-            results.append({"posting": posting})
-            continue
-        report = fact_check(client, letter, posting, gt)
-        results.append({"posting": posting, "letter": letter,
-                        "grade": grade_one(letter, report), "report": report})
+    runs = []
+    for attempt in range(max(1, args.repeat)):
+        if args.repeat > 1:
+            print(f"\nrun {attempt + 1} of {args.repeat}")
+        results = []
+        for posting in postings:
+            print(f"drafting {posting['company']}...", file=sys.stderr)
+            letter = draft(client, posting, gt, args.model)
+            if letter is None:
+                results.append({"posting": posting})
+                continue
+            report = fact_check(client, letter, posting, gt)
+            results.append({"posting": posting, "letter": letter,
+                            "grade": grade_one(letter, report), "report": report})
+        summary = grade(results)
+        print_report(results, summary, args.show_letter)
+        runs.append(summary)
 
-    summary = grade(results)
-    print_report(results, summary, args.show_letter)
-    return 0 if summary["pass_rate"] >= 0.7 else 1
+    if len(runs) > 1:
+        print(eval_spread.format_spread(runs, score_key="pass_rate", case_key="results"))
+    return 0 if min(r["pass_rate"] for r in runs) >= 0.7 else 1
 
 
 if __name__ == "__main__":
