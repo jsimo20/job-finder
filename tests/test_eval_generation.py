@@ -15,7 +15,8 @@ CLEAN_LETTER = {
         "onboarding. That weight is what I have spent three years on.",
         "That work serves 340 freight partners.",
         "Those partners came from the self-serve onboarding flow.",
-        "If we end up talking, how far should configuration go for a partner?",
+        "Getting to work on any of that means leaving my current role. I look "
+        "forward to discussing this opportunity in greater detail with you.",
     ],
 }
 
@@ -64,7 +65,8 @@ def test_a_medium_finding_does_not_fail_the_letter():
 def test_advisories_are_reported_without_failing():
     letter = {**CLEAN_LETTER,
               "paragraphs": ["The Directory is public, which is a harder place to earn it.",
-                             "Golf remains difficult."]}
+                             "Golf remains difficult. I look forward to discussing this "
+                             "opportunity in greater detail with you."]}
     grade = E.grade_one(letter, "- Verdict: CLEAN")
     assert grade["passed"] is True
     assert grade["lint_advisory"]

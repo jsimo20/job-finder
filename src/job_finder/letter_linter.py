@@ -15,15 +15,15 @@ Two severities:
 - **CRITICAL** blocks. A flat ban with no legitimate exception: em-dashes, a
   paragraph opening on "I", an opening that announces a reaction, a feeling verb,
   a trope from the guide's §2, a banned hedge word, a closing that is not
-  "Thanks,".
+  "Thanks,", a final sentence that is not the fixed one.
 - **ADVISORY** never blocks. Patterns with real exceptions, where the value is a
   human glance rather than a verdict. Trailing-gloss candidates live here because
   "which is what started my search" is correct and matches the same shape.
 
-The structural checks (paragraph chaining, whether the close returns to the
-opening) are ADVISORY on purpose. They encode a procedure written on 2026-08-25
-and validated against one letter; they collect signal until there is enough of it
-to justify blocking on.
+Paragraph chaining is ADVISORY on purpose. It encodes a procedure written on
+2026-08-25 and validated against one letter; it collects signal until there is
+enough of it to justify blocking on. The closing is not in that category: the
+final sentence is fixed text, so there is nothing to weigh.
 """
 from __future__ import annotations
 
@@ -252,24 +252,43 @@ def check_paragraph_chain(letter: dict[str, Any]) -> list[Finding]:
     return out
 
 
-def check_close_returns(letter: dict[str, Any]) -> list[Finding]:
-    """The last line should name something the first paragraph opened on."""
+FINAL_LINE = "I look forward to discussing this opportunity in greater detail with you."
+
+# The close this replaced: one line naming the hook and asking a real question.
+# Across a stack of letters it was the tell, so it is now a violation rather than
+# the target.
+CURIOSITY_CLOSE = re.compile(
+    r"\bi(?:'m| am)? curious\b"
+    r"|\bif we end up talking\b"
+    r"|\bcurious (?:how|what|whether|where|why)\b",
+    re.I,
+)
+
+
+def check_final_line(letter: dict[str, Any]) -> list[Finding]:
+    """The letter ends on one fixed sentence, verbatim, and nothing follows it."""
     paras = paragraphs(letter)
-    if len(paras) < 2:
+    if not paras:
         return []
-    opening = " ".join(sentences(paras[0])[:2])
-    last = sentences(paras[-1])[-1] if sentences(paras[-1]) else paras[-1]
-    if content_words(opening) & content_words(last):
-        return []
-    return [Finding("close_does_not_return", ADVISORY,
-                    f'last line shares no subject with the opening: "{last[:60]}"',
-                    f"para {len(paras)}")]
+    last_para = paras[-1]
+    said = sentences(last_para)
+    last = said[-1] if said else last_para
+    out: list[Finding] = []
+    if last.strip().rstrip(".") != FINAL_LINE.rstrip("."):
+        out.append(Finding("wrong_final_line", CRITICAL,
+                           f'the last sentence must be "{FINAL_LINE}", not "{last[:60]}"',
+                           f"para {len(paras)}"))
+    if match := CURIOSITY_CLOSE.search(last_para):
+        out.append(Finding("curiosity_close", CRITICAL,
+                           f'"{match.group(0)}": the closing question pattern is retired',
+                           f"para {len(paras)}"))
+    return out
 
 
 CHECKS = (
     check_em_dash, check_paragraph_opening_i, check_opening, check_feeling_verbs,
     check_tropes, check_banned_words, check_closing, check_gloss,
-    check_paragraph_chain, check_close_returns,
+    check_paragraph_chain, check_final_line,
 )
 
 
