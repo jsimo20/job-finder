@@ -173,6 +173,30 @@ fact-checker and `--gate`, which is why both are measured rather than trusted.
 - Unmeasured: `extract.py` (no golden set of JD to expected extraction, so Haiku
   drift is invisible) and `digest-triager` ranking.
 
+## Resume skill terms and the ATS
+
+An ATS filters on the job description's exact words, and the source pool often
+holds the same skill under a different name. So a JD term may be written onto the
+resume **in place of** a pool term that already names it — never in addition.
+
+- `.claude/agents/skill-term-mapper.md` makes the judgment: 90% confidence that
+  the JD's word names something in the pool. "Lovable" for "Figma", "creating
+  PRDs" for "writing requirements", "ChatGPT" for "LLM-based workflows" clear it.
+  "Databricks", "Kubernetes", "assembly line optimization" do not — those are new
+  capabilities, and they belong in the cover letter as named gaps.
+- **Every swap anchors to the pool, never to another swap.** Figma → Lovable is
+  defensible; Lovable → "production React delivery" is defensible *from Lovable*,
+  and the chain lands on a claim nothing supports. `skill_terms.check_substitutions`
+  enforces this by requiring `replaces` to exist in the pool.
+- `python -m job_finder.skill_terms --folder <per-app folder>` verifies the
+  structure deterministically: 0 clean, 4 a critical violation, 3 nothing to check.
+  **It cannot check the judgment** — a swap the agent rationalized reaches an
+  employer, which is why `rejected` entries are read rather than trusted.
+- **Named tools the user has not opened do go on the resume** when a swap clears
+  the bar. That is a deliberate call (2026-09-01) trading interview exposure for
+  the keyword match; the folder records what each swap stands on so the honest
+  answer is ready before anyone asks.
+
 ## Per-user configuration (two layers)
 
 - **`config/pipeline.toml`** — gitignored (template: `config/pipeline.example.toml`). Location scope, metro tiers, commute thresholds/notes, title targeting, domain + stage weights, comp floor, YoE cap, stale days. `settings.pipeline_config()` loads it, falling back to the example on a fresh clone. The pipeline runs locally, so edits take effect on the next run — no sync step.
@@ -360,6 +384,7 @@ can carry. In Claude Code on Windows the script runs and costs ~2k.
 | Subagent | Purpose | Model |
 |---|---|---|
 | `digest-triager` | Reads latest digest, ranks pending roles against fit profile, returns ranked picks | Sonnet |
+| `skill-term-mapper` | Proposes JD-vocabulary swaps into the resume skills section, anchored to the source pool | Sonnet |
 | `materials-fact-checker` | Cross-checks drafted RESUME_DATA + cover letter against ground-truth files; severity-tagged findings | Sonnet |
 | `application-autofiller` | Drives Playwright MCP through the application form; stops before submit | Sonnet |
 | `python-code-reviewer` | Code review on demand; dispatched by hand, not wired to any trigger | Opus |
