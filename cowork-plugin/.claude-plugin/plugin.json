@@ -1,7 +1,7 @@
 {
   "name": "job-finder",
-  "version": "0.1.0",
-  "description": "Weekly job application loop: tailor, fact-check, render and fill the top pending roles, stopping before submit.",
+  "version": "0.2.0",
+  "description": "Weekly job application loop: tailor, fact-check, render and fill the top pending roles, stopping before submit. Bump the version on every change that must reach Cowork; the version shown in Cowork's plugin list is the only way to see whether the installed snapshot matches the repo.",
   "author": {
     "name": "job-finder"
   }

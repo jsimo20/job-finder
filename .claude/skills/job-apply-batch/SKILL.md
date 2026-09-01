@@ -15,10 +15,15 @@ only if someone is there to answer, and otherwise proceed and note it. A
 scheduled run has nobody to ask, and stalling on a question is worse than a
 long run.
 
-**At 10 or more roles, prefer `fill_greenhouse` over the autofill agent wherever
-the ATS allows it.** The agent costs roughly 63k tokens per form against the
-script's 2k, and at that count the difference decides whether the batch finishes
-coherently.
+**Which fill path is available depends on the surface, and on Cowork there is
+only one.** `fill_greenhouse` needs the `playwright` Python module, which the
+Cowork device VM does not have, and a browser launched inside that VM is not one
+the user can see or click, which defeats leaving tabs open for review. Tested
+2026-08-31: it does not run there. So a Cowork batch fills every form through the
+autofill agent at roughly 63k tokens per form, and that is a ceiling on how many
+roles one batch can carry, not a preference to weigh. In Claude Code on Windows
+`fill_greenhouse` does run, costs about 2k per form, and is the better path
+wherever the ATS is Greenhouse.
 
 **The per-role loop is `.claude/commands/job-apply.md` and is not restated
 here.** Read it and follow it for each role. This file specifies only what
@@ -126,13 +131,70 @@ into each folder, and say plainly in the report that every role is prepped and
 waiting on a hand-submit.
 
 For Greenhouse specifically, `python -m job_finder.fill_greenhouse` is cheaper
-than the agent by roughly 30x and drives its own browser too. Prefer it when the
-session can run Python.
+than the agent by roughly 30x and drives its own browser too. Prefer it in Claude
+Code on Windows. **It is not available on Cowork** — see the note at the top of
+this file; do not attempt it there and do not report it as a fill path.
 
 **Playwright starts from a fresh profile with no cookies or logins.** Any form
 behind an account wall is unreachable by it however well it fills, so those get
 an `APPLY_NOTES.md` handoff rather than an attempt. That is the existing rule,
 not a new limitation.
+
+### Probe the upload path before drafting anything
+
+**The server accepts uploads only from its `--output-dir` and its cwd.** Cowork
+spawns it with `cwd=C:\Windows\System32`, so if the installed plugin was built
+without `--output-dir`, every staged PDF is rejected as outside allowed roots and
+no application gets a resume or a cover letter attached. On 2026-08-31 that
+surfaced only after seven roles had been tailored, rendered and filled, which is
+the expensive place to find it.
+
+So test it first, with one throwaway file, on the real path:
+
+```sh
+mkdir -p .playwright-mcp/uploads
+echo upload probe > .playwright-mcp/uploads/_probe.txt
+```
+
+Then, using the Playwright tools:
+
+1. `browser_navigate` to
+   `data:text/html,<input type="file" id="probe">`
+2. `browser_snapshot` to get the ref, then `browser_click` it, which opens the
+   file chooser. **The ref goes in `target`, not `ref`** — `ref` is rejected as a
+   missing argument and costs a round trip.
+3. `browser_file_upload` the **absolute** path of `.playwright-mcp/uploads/_probe.txt`
+4. Confirm it actually attached, because a call that returns without an error is
+   not proof:
+   ```
+   browser_evaluate: () => document.getElementById('probe').files.length
+   ```
+   Verified 2026-08-31 in Claude Code, where the output dir is set: returns 1.
+
+Three outcomes, and they are not two:
+
+- **Accepted** — step 4 returns 1. Uploads work. Say so in one line and carry on.
+- **Rejected** — quote the error verbatim at the **top** of your first message,
+  before anything about roles. The rejection names the roots the running server
+  actually allows, and that text is the only place the installed plugin's real
+  configuration is visible, so it is the diagnosis rather than just the symptom.
+  Say plainly: **every role in this batch will need its resume and cover letter
+  attached by hand**, and the fix is to rebuild and reinstall the plugin
+  (`python scripts/build_cowork_plugin.py`, then Cowork tab -> Customize ->
+  Plugins -> upload the zip). **Do not stop.** Prep is still worth doing: the
+  tailoring, fact-checking and rendering are all still good, and the forms still
+  get filled with everything that is not a file.
+- **Inconclusive** — the probe itself could not run (no file chooser, the
+  `data:` URL blocked, the tools absent). Report it as inconclusive. **Never
+  report an inconclusive probe as a pass**, and expect the hand-attach.
+
+Delete `_probe.txt` afterwards.
+
+**Do not work around a rejection.** The allowed-roots restriction is a security
+boundary on a browser-driving agent. No `browser_run_code_unsafe`, no
+self-written JS, no copying PDFs into Windows temp to land inside the server's
+own directory. The fix is the server's configuration, and a run that cannot
+upload reports that it cannot upload.
 
 ## 3. Pick the roles
 
