@@ -117,6 +117,31 @@ def applied_company_titles(*, db_path: Path = DEFAULT_STATE_DB) -> set[tuple[str
     return pairs
 
 
+def drop_applied(rows: Iterable[Any], *,
+                 db_path: Path = DEFAULT_STATE_DB) -> list[Any]:
+    """Remove rows for roles already applied to, by external_id or by reposted
+    (company, title).
+
+    Any query against jobs.db that means "roles still to apply to" has to end
+    here. Its own `postings.applied_at` cannot answer the question: jobs.db is
+    rebuilt from scratch every pipeline run, so the column is NULL for every
+    row that predates the current run, and a role applied to last month reads
+    as pending. Filtering on it is what put two duplicate applications in on
+    2026-08-31.
+
+    Rows need `external_id`, `company_name` and `title`; sqlite3.Row and dict
+    both work.
+    """
+    applied_ids = applied_external_ids(db_path=db_path)
+    applied_pairs = applied_company_titles(db_path=db_path)
+    return [
+        r for r in rows
+        if r["external_id"] not in applied_ids
+        and ((r["company_name"] or "").strip().lower(),
+             _norm_title(r["title"])) not in applied_pairs
+    ]
+
+
 def is_applied(
     *,
     external_id: str | None = None,

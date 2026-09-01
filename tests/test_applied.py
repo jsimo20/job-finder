@@ -115,3 +115,49 @@ def test_applied_company_titles_normalizes_punctuation(tmp_path):
 def test_norm_title_handles_empty():
     assert applied._norm_title(None) is None
     assert applied._norm_title("  --  ") is None
+
+
+def _row(external_id: str, company: str, title: str) -> dict:
+    """The three columns drop_applied reads; sqlite3.Row indexes the same way."""
+    return {"external_id": external_id, "company_name": company, "title": title}
+
+
+def test_drop_applied_removes_an_exact_external_id(tmp_path):
+    p = tmp_path / "state.db"
+    applied.record_applied("8108956", company="Example Telematics",
+                           title="Principal Technical PM, ML", db_path=p)
+    rows = [_row("8108956", "Example Telematics", "Principal Technical PM, ML"),
+            _row("999", "Other Corp", "Senior PM")]
+    kept = applied.drop_applied(rows, db_path=p)
+    assert [r["external_id"] for r in kept] == ["999"]
+
+
+def test_drop_applied_removes_a_repost_under_a_new_id(tmp_path):
+    """A reposted requisition gets a fresh external_id; company+title still matches."""
+    p = tmp_path / "state.db"
+    applied.record_applied("old-id", company="Other Corp",
+                           title="Senior Product Manager, Integrations", db_path=p)
+    rows = [_row("new-id", "Other Corp", "Senior Product Manager - Integrations")]
+    assert applied.drop_applied(rows, db_path=p) == []
+
+
+def test_drop_applied_keeps_everything_when_nothing_was_applied(tmp_path):
+    p = tmp_path / "state.db"
+    rows = [_row("a", "Example Co", "Senior PM"), _row("b", "Other Corp", "Staff PM")]
+    assert len(applied.drop_applied(rows, db_path=p)) == 2
+
+
+def test_a_rebuilt_jobs_db_cannot_hide_an_applied_role(tmp_path):
+    """The 2026-08-31 duplicate, reproduced.
+
+    jobs.db is rebuilt every run, so postings.applied_at is NULL for anything
+    applied to before it. A pending-roles query that trusts that column offers
+    the role again; the durable ledger is the only thing that knows.
+    """
+    p = tmp_path / "state.db"
+    applied.record_applied("8108956", company="Example Telematics",
+                           title="Principal Technical PM, ML",
+                           applied_on="2026-08-14", db_path=p)
+    # What PENDING_SQL returns after a rebuild: applied_at IS NULL, so it passes.
+    rebuilt = [_row("8108956", "Example Telematics", "Principal Technical PM, ML")]
+    assert applied.drop_applied(rebuilt, db_path=p) == []
