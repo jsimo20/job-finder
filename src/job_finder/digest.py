@@ -138,16 +138,8 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
     # drop anything recorded in the committed applied-log (covers ad-hoc roles
     # the DB never saw). Keyed by external_id, plus company+title so a
     # reposted req (fresh external_id, same role) stays suppressed.
-    applied_ids = applied.applied_external_ids(db_path=state_db)
-    applied_pairs = applied.applied_company_titles(db_path=state_db)
-
     def _drop_applied(rows):
-        return [
-            r for r in rows
-            if r["external_id"] not in applied_ids
-            and ((r["company_name"] or "").strip().lower(),
-                 applied._norm_title(r["title"])) not in applied_pairs
-        ]
+        return applied.drop_applied(rows, db_path=state_db)
 
     seen_map = seen.load_seen(state_db)
     overrides = state.max_age_overrides(state_db)

@@ -368,6 +368,7 @@ Durable record of roles applied to, keyed by `external_id`. Fixes the fact that 
 - **Store:** the `applied` table in `data/state.db` (gitignored, local-only). The digest reads it to suppress already-applied roles, including reposts (company + normalized-title match).
 - **Module:** `src/job_finder/applied.py` — `record_applied()`, `list_applied()`, `is_applied(external_id=…, url=…)`, `applied_external_ids()`, `remove_applied()`. URL matching normalizes scheme/query/trailing `/apply`/`/application` so a pasted apply-form link matches the posting.
 - **Digest integration:** `digest.render()` drops any row whose `external_id` is in the log (both new and carried-forward, main and stretch queues).
+- **`applied.drop_applied(rows)` is the only correct way to ask "is this still pending?"** `postings.applied_at` in jobs.db is rebuilt to NULL every run, so it only catches applies made since the last one; anything older reads as pending. `digest.py` and `review.py` both route through `drop_applied`, and any new caller reaching for pending roles must too. Trusting the column instead re-offered two already-applied roles on 2026-08-31 and both were submitted twice.
 - **CLI:**
   ```sh
   job-finder applied add --external-id 1234567 --company "Example Co" --title "Senior Product Manager" [--url …] [--date YYYY-MM-DD] [--source …]
