@@ -173,7 +173,11 @@ The committed config encodes the owner's home base and a deliberately different 
 
 ## Credentials
 
-Local `.env` (gitignored): `ANTHROPIC_API_KEY` (extract, `eval_factcheck`), `GMAIL_USER` + `GMAIL_APP_PASSWORD` (digest email via `emailer.py`; user is both sender and recipient). No GitHub Actions secrets are needed — the repo runs no workflows. Paste keys via a plain-text editor to avoid BOM corruption (see Gotchas).
+Everything is read through `os.environ`, so a credential can sit in the gitignored `.env` or in a Windows user environment variable. **They are split today, and that is fine:** `ANTHROPIC_API_KEY` (extract, `eval_factcheck`) is in `.env`, while `GMAIL_USER` + `GMAIL_APP_PASSWORD` (digest email via `emailer.py`; user is both sender and recipient) are user env vars set with `setx`. The scheduled task inherits them.
+
+**Never add the Gmail keys to `.env` as a second copy.** `cli.py` calls `load_dotenv(override=True)`, so a stale value in `.env` silently wins over the working environment one, and the failure looks like a credential that stopped working for no reason.
+
+No GitHub Actions secrets are needed — the repo runs no workflows. Paste keys into `.env` via a plain-text editor to avoid BOM corruption (see Gotchas); `setx` avoids that problem entirely.
 
 ## Gotchas
 
