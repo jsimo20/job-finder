@@ -19,8 +19,8 @@ CLEAN = {
         "problems, and onboarding is where most of my work has been.",
         "All of that is retention work under a different name. Analytiks is where "
         "I learned to see it that way.",
-        "Getting to work on any of that means leaving Spectrum. If we end up "
-        "talking, the Directory is what I would want to ask about.",
+        "Getting to work on any of that means leaving Spectrum. I look forward "
+        "to discussing this opportunity in greater detail with you.",
     ],
 }
 
@@ -158,25 +158,49 @@ def test_one_word_in_common_is_not_a_transition():
     assert severities(letter, "no_transition") == [L.ADVISORY]
 
 
-def test_a_close_that_shares_nothing_with_the_opening_is_flagged():
+def test_the_fixed_final_line_passes():
+    assert severities(CLEAN, "wrong_final_line") == []
+    assert severities(CLEAN, "curiosity_close") == []
+
+
+def test_any_other_final_line_blocks():
+    letter = {**CLEAN, "paragraphs": [
+        *CLEAN["paragraphs"][:-1],
+        "Getting to work on any of that means leaving Spectrum. Happy to talk whenever.",
+    ]}
+    assert severities(letter, "wrong_final_line") == [L.CRITICAL]
+
+
+def test_the_retired_curiosity_close_blocks():
+    """The old rule asked for exactly this; it is now the violation."""
+    letter = {**CLEAN, "paragraphs": [
+        *CLEAN["paragraphs"][:-1],
+        "Getting to work on any of that means leaving Spectrum. If we end up "
+        "talking, I am curious how you are thinking about the Directory.",
+    ]}
+    found = severities(letter, "curiosity_close")
+    assert found == [L.CRITICAL]
+
+
+def test_a_curiosity_question_before_the_fixed_line_still_blocks():
+    """Appending the required sentence must not launder the retired pattern."""
+    letter = {**CLEAN, "paragraphs": [
+        *CLEAN["paragraphs"][:-1],
+        "I am curious how you are thinking about the Directory. I look forward to "
+        "discussing this opportunity in greater detail with you.",
+    ]}
+    assert severities(letter, "wrong_final_line") == []
+    assert severities(letter, "curiosity_close") == [L.CRITICAL]
+
+
+def test_paragraph_chaining_never_blocks():
+    """It encodes a young procedure, so it collects signal rather than gates."""
     letter = {**CLEAN, "paragraphs": [
         "The Directory makes the trust case in public.",
-        "Golf remains stubbornly difficult for me.",
+        "Golf remains stubbornly difficult for me. I look forward to discussing "
+        "this opportunity in greater detail with you.",
     ]}
-    assert severities(letter, "close_does_not_return") == [L.ADVISORY]
-
-
-def test_a_close_naming_the_opening_subject_passes():
-    assert severities(CLEAN, "close_does_not_return") == []
-
-
-def test_structural_checks_never_block():
-    """They encode a young procedure, so they collect signal rather than gate."""
-    letter = {**CLEAN, "paragraphs": [
-        "The Directory makes the trust case in public.",
-        "Golf remains stubbornly difficult for me.",
-    ]}
-    assert [f for f in L.lint(letter) if f.severity == L.CRITICAL] == []
+    assert [f.code for f in L.lint(letter) if f.severity == L.CRITICAL] == []
 
 
 def test_exit_codes(tmp_path, capsys):
