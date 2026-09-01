@@ -2,10 +2,14 @@
 #
 #   powershell -ExecutionPolicy Bypass -File scripts\install_schedule.ps1
 #
-# Runs `job-finder run --email` every Monday at 09:00 local time. If the
-# machine is off at that moment, StartWhenAvailable runs it at next boot, so
-# a powered-down Monday costs lead time, not the digest. Re-running this
-# script replaces the existing task. Remove with:
+# Runs `job-finder run --email` every Monday at 09:00 local time.
+#
+# WakeToRun is what makes that reliable. On 2026-08-31 the machine was asleep
+# at 09:00 and StartWhenAvailable did NOT produce a catch-up run: 24 minutes
+# past wake the task still showed NumberOfMissedRuns=1 and a next run a week
+# out. StartWhenAvailable stays on for the powered-off case, but do not rely
+# on it alone; sleep is the common case and waking for the trigger is the fix.
+# Re-running this script replaces the existing task. Remove with:
 #   Unregister-ScheduledTask -TaskName 'job-finder weekly' -Confirm:$false
 #
 # The task launches scripts\run_scheduled.py with pythonw.exe (no console),
@@ -25,7 +29,7 @@ if (-not (Test-Path $pyw)) {
 
 $action = New-ScheduledTaskAction -Execute $pyw -Argument ('"{0}"' -f $runner) -WorkingDirectory $repo
 $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At 9:00am
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopIfGoingOnBatteries -AllowStartIfOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -WakeToRun -DontStopIfGoingOnBatteries -AllowStartIfOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 2)
 
 Register-ScheduledTask -TaskName 'job-finder weekly' -Action $action -Trigger $trigger -Settings $settings -Description 'Weekly job-finder pipeline: collect, extract, score, digest, email.' -Force | Out-Null
 
