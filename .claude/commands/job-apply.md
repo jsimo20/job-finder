@@ -34,6 +34,19 @@ a. **Load context** (read these files once and keep in memory for the whole sess
 
 b. **Show the user a one-paragraph read of the JD** — what they're hiring for, the 3–5 keywords/frames that genuinely map to the user's resume, anything that risks overstatement. Ask the user for any orientation before you draft (sometimes they'll have a specific angle).
 
+b2. **Dispatch the `skill-term-mapper` subagent** (Sonnet) with the JD text, the
+   path to the claims-ground-truth file, and the current four `(category, body)`
+   skill pairs. It returns swaps — a JD word to write in place of a pool term it
+   already names — each with evidence, a confidence and a justification, plus the
+   terms it rejected as genuine gaps.
+
+   An ATS filters on the JD's exact words, and the pool often holds the same skill
+   under another name, so this is keyword matching without a new claim. Apply the
+   accepted swaps when drafting the skills section below. **Its `rejected` list is
+   the more useful half** — those are the gaps the cover letter should name.
+   Write the accepted swaps to `skill_substitutions.json` in the application folder;
+   `render()` turns them into the interview-prep note.
+
 c. **Draft `RESUME_DATA`** as a Python dict, editing only what the resume generator's schema allows:
    - Reorder current-role bullets to lead with the strongest JD match
    - Adjust the title subtitle toward the JD's framing, staying within any subtitle rules the session-context file sets

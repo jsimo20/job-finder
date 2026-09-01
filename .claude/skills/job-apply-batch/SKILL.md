@@ -274,6 +274,21 @@ that may be restating its sentence, a paragraph opening on a fresh topic, a clos
 that names nothing from the opening. Put them in the report; do not act on them
 unattended, because each has legitimate exceptions.
 
+Also verify the resume's skill terms for each role, before render:
+
+```sh
+PYTHONPATH=".cowork-deps:src" python3 -m job_finder.skill_terms --folder <per-app folder>
+```
+
+- **0** — every term traces to the source pool or a recorded swap.
+- **4** — a term has no source. **Fix it before rendering**; a skill the pool does
+  not support is the one defect on a resume that cannot be walked back.
+- **3** — no `resume_skills.json`, so nothing was checked. Not a pass.
+
+It checks structure, not judgment. A swap the `skill-term-mapper` rationalized
+passes this and still reaches an employer, so put the agent's `rejected` list in
+the report: those are the gaps the letter should be naming.
+
 Then, after the last fill:
 
 ```sh
