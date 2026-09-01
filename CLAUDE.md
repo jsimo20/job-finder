@@ -59,6 +59,24 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 # external_id = gh_jid for Greenhouse, slug for Lever, id for Ashby
 ```
 
+## Checking on the system
+
+```sh
+job-finder status
+```
+
+One read-only report across both halves: last pipeline run with its exit code
+**and** the two numbers that exit 0 hides (rate-limited requests, collect
+errors), the scheduled task's next run and whether it will wake the machine, the
+latest digest and its age, applied count, application folders not in the applied
+ledger, and this repo's cowork-plugin version for comparison against the one
+Cowork shows. No network, no tokens.
+
+**Exit 0 is not a healthy run.** The 2026-08-31 pipeline exited 0 with 963
+rate-limited requests and 50 collect errors; 46 Ashby boards contributed nothing
+to that digest. That is why those two counts sit next to the exit code rather
+than in a log nobody opens.
+
 ## Evals
 
 Three deterministic zero-token graders plus two that spend tokens. They read

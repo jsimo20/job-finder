@@ -55,6 +55,12 @@ def _cmd_digest(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_status(args: argparse.Namespace) -> int:
+    from . import status
+    print(status.format_status(status.collect_status()))
+    return 0
+
+
 def _cmd_review(args: argparse.Namespace) -> int:
     review.run(db_path=Path(args.db) if args.db else db.DEFAULT_DB_PATH)
     return 0
@@ -291,6 +297,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("init-db").set_defaults(func=_cmd_init_db)
+    sub.add_parser("status", help="did the last run work? both halves, one place").set_defaults(func=_cmd_status)
 
     p = sub.add_parser("collect")
     p.set_defaults(func=_cmd_collect)

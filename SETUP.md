@@ -159,8 +159,17 @@ powershell -ExecutionPolicy Bypass -File scripts\install_schedule.ps1
 ```
 
 Registers a Windows Scheduled Task: `job-finder run --email` every Monday at
-09:00 local, with catch-up at next boot if the machine was off. Test it once
-by hand first (`job-finder run --email` — this spends real API tokens).
+09:00 local. Test it once by hand first (`job-finder run --email` — this spends
+real API tokens).
+
+The task is registered with **`WakeToRun`**, which matters more than it sounds.
+`StartWhenAvailable` is also on and covers a powered-off machine, but on
+2026-08-31 the machine was merely **asleep** at 09:00 and no catch-up run ever
+fired: 24 minutes after wake the task still reported one missed run and a next
+run a week out. Sleep is the common case, so waking for the trigger is the fix.
+
+Confirm afterwards with `job-finder status`, which prints the task's next run
+and whether it will wake the machine.
 
 No GitHub Actions secrets are required: the repo runs no CI workflows. Code
 review is on demand: dispatch the `python-code-reviewer` agent, or use the
@@ -193,22 +202,52 @@ python scripts/build_cowork_plugin.py
 
 That writes `job-finder-cowork-plugin.zip` to your Downloads folder (`--out` to
 put it elsewhere). Then, in Cowork: **Customize -> Plugins -> upload** it.
+Uploading a plugin with the same `name` replaces the installed one.
 
 **Install it; do not add `cowork-plugin/` as a context folder.** A connected
 folder is just files on disk, so its `.mcp.json` never runs, Playwright never
 starts, and the failure looks exactly like a broken plugin.
+
+### Editing the plugin later: rebuild and re-upload, every time
+
+**A correct file in `cowork-plugin/` does nothing until you rebuild the zip and
+upload it again.** Cowork runs the snapshot it was given and keeps it
+service-side, so nothing on your machine can compare the repo against what is
+installed — `~/.claude/plugins/data/job-finder-inline/` is empty and
+`.claude.json` holds only a usage counter.
+
+That gap is not theoretical. On 2026-08-31 the repo's `.mcp.json` was correct and
+the installed plugin was months older; every file upload was rejected, and seven
+applications were filed with no resume and no cover letter attached.
+
+Two checks exist, and you need both:
+
+- **Bump `version` in `cowork-plugin/.claude-plugin/plugin.json` on every change
+  that has to reach Cowork.** Cowork's plugin list shows the installed version, so
+  the two side by side are a five-second drift check. `job-finder status` prints
+  the repo's version for comparison. A version left alone across a rebuild throws
+  this away.
+- **The batch's preflight upload probe**, which uploads one throwaway file before
+  drafting anything. It asks the running server rather than reading a file, so it
+  is the only check that catches a stale install on its own.
 
 Once installed, `/job-apply-weekly` runs the batch. It takes a count:
 `/job-apply-weekly 3`, or `all`, defaulting to 5. The plugin is a launcher only
 — the procedure it follows is `.claude/skills/job-apply-batch/SKILL.md` in this
 repo, so **the repo still has to be the mounted folder for that session.**
 
-Two things worth knowing before you rely on it:
+Three things worth knowing before you rely on it:
 
 - The plugin's `.mcp.json` is **required, not a duplicate of the repo-root one**.
   Cowork does not read a project's `.mcp.json`, so a plugin-bundled server is the
-  only way it gets Playwright; the repo copy serves Claude Code. If you bump the
-  version, bump both.
+  only way it gets Playwright; the repo copy serves Claude Code. Keep the
+  **Playwright version pin** identical in both (separate from the plugin's own
+  `version` above).
+- **`fill_greenhouse` does not run on Cowork.** The device VM has no `playwright`
+  Python module, and a browser launched inside it is not one you can see or click,
+  which defeats leaving tabs open for review. On Cowork every form goes through the
+  autofill agent at roughly 63k tokens each, so that is a ceiling on how many roles
+  one batch can carry. In Claude Code on Windows the script runs at about 2k.
 - Playwright starts from a fresh browser profile with no cookies or logins, so
   any form behind an account wall gets an `APPLY_NOTES.md` handoff for manual
   submission rather than a fill attempt.
@@ -225,11 +264,12 @@ commit ever contains personal data, that's a bug.
 
 ```sh
 python -m pytest -q                              # tests
+job-finder status                          # did the last run work? both halves
 python -m job_finder.profile_check         # is my profile complete?
 job-finder review                          # interactive digest review
 job-finder applied add --external-id ...   # record an application
 python -m job_finder.fill_greenhouse \
-    --url <apply url> --folder <per-app folder>   # deterministic form fill
+    --url <apply url> --folder <per-app folder>   # deterministic fill (not on Cowork)
 python -m job_finder.letter_linter --date <YYYY-MM-DD>  # grade the drafted letters
 python -m job_finder.fill_grader --date <YYYY-MM-DD>   # grade a fill batch
 ```
