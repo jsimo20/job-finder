@@ -201,6 +201,15 @@ upload reports that it cannot upload.
 Take the top N pending roles from the latest digest by score, **main queue
 only** unless `--include-stretch` was passed.
 
+**Take them from the digest, not from a query you write against `data/jobs.db`.**
+That database is rebuilt from scratch every pipeline run, so its
+`postings.applied_at` is NULL for anything applied to before the last run and a
+finished role reads as pending. The digest already drops applied roles; a
+hand-rolled `applied_at IS NULL` query does not. On 2026-08-31 that fallback
+re-offered two roles that had been applied to on 2026-08-14 and 2026-07-31, and
+both were submitted a second time. If you have no digest and must query directly,
+pass the rows through `job_finder.applied.drop_applied()` first.
+
 Stretch roles are excluded by default because the calibration eval measures
 them at 0.52x the baseline apply rate against 1.23x for main queue. Picking by
 hand, the user simply skips them; in a batch nobody skips, so a stretch role

@@ -9,7 +9,7 @@ import json
 import webbrowser
 from pathlib import Path
 
-from . import db
+from . import applied, db
 from .taxonomy import STALE_DAYS
 
 PENDING_SQL = f"""
@@ -24,6 +24,9 @@ PENDING_SQL = f"""
     JOIN companies c ON c.id = p.company_id
     JOIN extractions e ON e.posting_id = p.id
     WHERE p.closed_at IS NULL
+      -- p.applied_at is jobs.db's own column and it is rebuilt to NULL every
+      -- run, so it only catches applies made since the last one. The durable
+      -- answer is applied.drop_applied(), applied to these rows by the caller.
       AND p.applied_at IS NULL
       AND p.dismissed_at IS NULL
       AND s.queue IN ('main','stretch')
@@ -56,7 +59,7 @@ def _render(idx: int, total: int, row) -> None:
 def run(db_path: Path = db.DEFAULT_DB_PATH) -> dict:
     stats = {"applied": 0, "dismissed": 0, "skipped": 0}
     with db.connect(db_path) as conn:
-        rows = conn.execute(PENDING_SQL).fetchall()
+        rows = applied.drop_applied(conn.execute(PENDING_SQL).fetchall())
     if not rows:
         print("No pending roles. Run `job-finder run` first or wait for the next digest.")
         return stats
