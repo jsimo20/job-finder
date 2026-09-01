@@ -305,6 +305,21 @@ plugin. Cowork tab → Customize → Plugins → upload. Full reference, includi
 the `mcp__remote-devices__plugin_*` tool naming:
 `~/.claude/context/cowork-plugins.md`.
 
+**Editing `cowork-plugin/` changes nothing until you rebuild and re-upload.**
+`python scripts/build_cowork_plugin.py`, then upload the zip. Cowork runs the
+snapshot it was given and keeps it service-side — `~/.claude/plugins/data/job-finder-inline/`
+is empty, so nothing local can compare the repo against what is installed, and a
+correct file here can sit next to a stale running plugin indefinitely. That gap
+filed seven applications with no resume attached on 2026-08-31. The batch
+preflight's upload probe is the only check that catches it, because it asks the
+running server instead of reading a file.
+
+**`fill_greenhouse` does not run on Cowork.** The device VM has no `playwright`
+Python module, and a browser launched inside it is not one the user can see or
+click, which defeats leaving tabs open for review. On Cowork the autofill agent
+is the only fill path at ~63k tokens per form, which caps how many roles a batch
+can carry. In Claude Code on Windows the script runs and costs ~2k.
+
 ## Project-level skills
 
 - `.claude/skills/job-apply-batch/SKILL.md` — the unattended apply loop. **Lives in `skills/`, not `commands/`, on purpose:** Cowork rejected it as an unknown skill while it sat in `.claude/commands/`, and its frontmatter only parsed once it carried a `name:` field. Skills register on both surfaces; commands appear not to. Prefer `skills/` for anything an unattended session must invoke.
