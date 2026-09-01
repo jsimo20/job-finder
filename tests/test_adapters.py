@@ -1,4 +1,6 @@
 import json
+import threading
+import time
 from pathlib import Path
 
 from job_finder.adapters import greenhouse, lever
@@ -67,6 +69,35 @@ def test_ashby_normalize_strips_utf8_bom():
     assert bom not in p.jd_text
     assert "Lead our payments roadmap." in p.jd_text
     p.jd_text.encode("ascii", errors="strict")
+
+
+def test_ashby_pacing_holds_across_threads(monkeypatch):
+    """The floor is global. Unsynchronized, every worker read the same stamp,
+    slept the same amount and fired together, which is what drew the 429s."""
+    from job_finder.adapters import ashby
+
+    interval = 0.05
+    monkeypatch.setattr(ashby, "_MIN_INTERVAL", interval)
+    monkeypatch.setattr(ashby, "_last_request_at", 0.0)
+
+    starts: list[float] = []
+    lock = threading.Lock()
+
+    def worker():
+        ashby._pace()
+        with lock:
+            starts.append(time.monotonic())
+
+    threads = [threading.Thread(target=worker) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    starts.sort()
+    gaps = [b - a for a, b in zip(starts, starts[1:])]
+    assert len(gaps) == 7
+    assert min(gaps) >= interval * 0.8, f"requests fired together: {gaps}"
 
 
 def test_workday_normalize():
