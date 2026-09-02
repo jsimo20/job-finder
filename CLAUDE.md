@@ -92,6 +92,10 @@ and each has a bucket that is a backlog rather than a failure.
 .venv/Scripts/python.exe -m job_finder.fill_grader --date <YYYY-MM-DD> --gate
 # Does the drafted cover letter break a flat voice rule? (zero tokens)
 .venv/Scripts/python.exe -m job_finder.letter_linter --date <YYYY-MM-DD>
+# Does the term mapper take honest keywords and refuse gaps? (spends tokens)
+.venv/Scripts/python.exe -m job_finder.eval_skill_terms
+# Any eval, repeated, so a change can be told apart from noise
+.venv/Scripts/python.exe -m job_finder.eval_skill_terms --repeat 3
 # Does the fact-checker catch a defect planted on purpose? (spends tokens)
 .venv/Scripts/python.exe -m job_finder.eval_factcheck
 # Does the drafter write a good letter unattended? (spends tokens, live JDs)
@@ -166,6 +170,25 @@ fact-checker and `--gate`, which is why both are measured rather than trusted.
   employer, while one filed a rung too low still reaches the report, so only
   the former fails the run. First live run: grade B, 14/14 detected, 12/14 at
   the expected severity, 2/2 clean controls untouched.
+- **`eval_skill_terms.py`** measures the `skill-term-mapper`'s judgment, which
+  `skill_terms.py` cannot. Each case is one JD built around a single repeated
+  term. Three kinds: `swap` (the pool holds the same thing under another name),
+  `gap` (a capability it does not hold), and **`covered`** (the term is already on
+  the resume verbatim). `covered` exists because swaps are one-in-one-out, so a
+  redundant swap would take a real skill off to add a word already there. Grade is
+  the harmonic mean of swaps-taken and holds-refused, so a mapper that proposes
+  nothing scores F. Ground truth is synthetic. **13 cases: 6 swaps, 6 gaps, 1 covered.** Measured
+  2026-09-01 at **1.00 across two runs, spread 0.00**, after the prompt gained a
+  practice-name rule and lost a self-contradiction the eval surfaced. Four of the
+  gaps exist to catch that looser rule going sloppy ("data engineering is a
+  practice built on SQL"); they are the cases to watch when the prompt changes.
+- **Every LLM eval takes `--repeat N` and reports the spread.** They graded each
+  case once until 2026-09-01, which is a single sample from a stochastic process:
+  14/14 and 12/14 on an unchanged prompt are both ordinary, so one number cannot
+  tell a regression from noise. `--repeat` prints median, spread, stdev, and the
+  cases that flipped between runs. **A change smaller than the spread is not a
+  result.** Shared implementation in `eval_spread.py` so the three evals agree on
+  what a spread means.
 - **Digest markdown is a parsed interface now.** Changing the `### [Score N] Company — [Title](url)`
   header or the `- Domain: … · Stage: …` detail line in `digest.py` breaks
   `eval_calibration.parse_digest` against every already-archived digest, and
