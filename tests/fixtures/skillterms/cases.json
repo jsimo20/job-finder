@@ -99,6 +99,41 @@
       "term": "Kubernetes",
       "jd": "You will own our Kubernetes platform. Expect to write Kubernetes operator requirements, prioritize Kubernetes upgrade work, and speak to Kubernetes scheduling tradeoffs with staff engineers.",
       "why": "the pool's cloud exposure is consumption-level, not orchestration"
+    },
+    {
+      "id": "swap-user-research",
+      "kind": "swap",
+      "term": "user research",
+      "jd": "Own user research for the platform. You will plan user research studies, run user research sessions with customers, and present user research findings to leadership every sprint.",
+      "expect_replaces_any": [
+        "customer interviewing",
+        "market research"
+      ],
+      "why": "a practice whose core activity is customer interviewing"
+    },
+    {
+      "id": "swap-stakeholder-management",
+      "kind": "swap",
+      "term": "stakeholder management",
+      "jd": "Strong stakeholder management is the core of this role. You will handle stakeholder management across three orgs, run stakeholder management reviews, and escalate through stakeholder management channels.",
+      "expect_replaces_any": [
+        "senior stakeholder alignment"
+      ],
+      "why": "the same activity the pool calls senior stakeholder alignment"
+    },
+    {
+      "id": "gap-data-engineering",
+      "kind": "gap",
+      "term": "data engineering",
+      "jd": "A data engineering role. You will own data engineering pipelines, model warehouse schemas, tune data engineering jobs for cost, and set data engineering standards across the org.",
+      "why": "SQL and Python are in the pool, but data engineering is a different job built on activities the pool has none of - it is not a practice around SQL"
+    },
+    {
+      "id": "gap-ml-engineering",
+      "kind": "gap",
+      "term": "ML engineering",
+      "jd": "We need an ML engineering leader. You will own ML engineering infrastructure, the ML engineering deployment path, and the ML engineering on-call rotation for production models.",
+      "why": "AI model evaluation is in the pool; ML engineering is not a practice built on evaluating models, it is building and running them"
     }
   ]
 }

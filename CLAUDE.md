@@ -177,8 +177,11 @@ fact-checker and `--gate`, which is why both are measured rather than trusted.
   the resume verbatim). `covered` exists because swaps are one-in-one-out, so a
   redundant swap would take a real skill off to add a word already there. Grade is
   the harmonic mean of swaps-taken and holds-refused, so a mapper that proposes
-  nothing scores F. Ground truth is synthetic. First live run: **grade B (0.86)**,
-  8/9, all four gaps refused and named.
+  nothing scores F. Ground truth is synthetic. **13 cases: 6 swaps, 6 gaps, 1 covered.** Measured
+  2026-09-01 at **1.00 across two runs, spread 0.00**, after the prompt gained a
+  practice-name rule and lost a self-contradiction the eval surfaced. Four of the
+  gaps exist to catch that looser rule going sloppy ("data engineering is a
+  practice built on SQL"); they are the cases to watch when the prompt changes.
 - **Every LLM eval takes `--repeat N` and reports the spread.** They graded each
   case once until 2026-09-01, which is a single sample from a stochastic process:
   14/14 and 12/14 on an unchanged prompt are both ordinary, so one number cannot

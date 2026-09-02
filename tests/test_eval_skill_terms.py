@@ -28,8 +28,8 @@ def test_the_suite_balances_swaps_against_holds():
     """A mapper that proposes nothing must not be able to score well, so the
     cases where a swap is right match the cases where it is wrong."""
     kinds = [c["kind"] for c in CASES]
-    assert kinds.count("swap") == 4
-    assert kinds.count("gap") + kinds.count("covered") == 5
+    assert kinds.count("swap") == 6
+    assert kinds.count("gap") + kinds.count("covered") == 7
 
 
 def test_an_already_covered_term_must_not_be_swapped():
@@ -121,7 +121,7 @@ def test_structure_is_graded_separately_from_judgment():
 def test_a_mapper_that_refuses_everything_does_not_score_well():
     results = [E.grade_case(c, _out(), POOL) for c in CASES]
     s = E.summarize(results)
-    assert s["gaps_refused"] == 4 and s["swaps_taken"] == 0
+    assert s["gaps_refused"] == 6 and s["swaps_taken"] == 0
     assert s["score"] == 0.0
     assert s["grade"] == "F"
 
