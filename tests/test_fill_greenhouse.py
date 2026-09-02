@@ -113,9 +113,8 @@ def test_real_name_fields_are_not_trapped(label):
 
 
 # A bare "manager" trap fired on questions about the applicant's own career.
-# Seen live on a StackBlitz req 2026-08-25: the fill was correct, the answer
-# was "Yes", and the gate still returned 4, which is the one exit code an
-# unattended run cannot argue with.
+# Seen live: the fill was correct, the answer was "Yes", and the gate still
+# returned 4, which is the one exit code an unattended run cannot argue with.
 @pytest.mark.parametrize("label", [
     "Have you been a product manager of a product line or a major feature set "
     "for a consumer, SMB, or enterprise application?",
