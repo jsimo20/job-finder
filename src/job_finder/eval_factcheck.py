@@ -30,7 +30,12 @@ Costs real tokens (one call per case), so it is never part of the pytest run.
 
 Usage:
     python -m job_finder.eval_factcheck
+    python -m job_finder.eval_factcheck --repeat 3     # same cases, 3 samples
     python -m job_finder.eval_factcheck --case invented_metric --show-report
+
+**Repeat before acting on a change.** A single pass is one sample from a
+stochastic grader, so 14/14 and 12/14 on an unchanged prompt are both ordinary
+outcomes and a lone number cannot tell a regression from noise.
 """
 from __future__ import annotations
 
@@ -44,6 +49,8 @@ from typing import Any
 
 import anthropic
 from dotenv import load_dotenv
+
+from . import eval_spread
 
 MODEL = "claude-sonnet-4-5"
 MAX_TOKENS = 2000
@@ -277,13 +284,23 @@ def main() -> int:
     ap.add_argument("--show-report", action="store_true",
                     help="print each full fact-check report")
     ap.add_argument("--fixtures", type=Path, default=FIXTURE_DIR)
+    ap.add_argument("--repeat", type=int, default=1,
+                    help="run every case N times and report the spread (default 1)")
     args = ap.parse_args()
 
     print(f"Running fact-checker eval against {AGENT_PATH.name} on {MODEL}\n")
-    summary = evaluate(args.case, args.fixtures, args.show_report)
-    print_summary(summary)
-    # Under-severity does not fail the run; an undetected defect does.
-    return 0 if not summary["missed"] else 1
+    runs = []
+    for i in range(max(1, args.repeat)):
+        if args.repeat > 1:
+            print(f"\nrun {i + 1} of {args.repeat}")
+        summary = evaluate(args.case, args.fixtures, args.show_report)
+        print_summary(summary)
+        runs.append(summary)
+    if len(runs) > 1:
+        print(eval_spread.format_spread(runs))
+    # Under-severity does not fail the run; an undetected defect does. Across
+    # repeats a defect missed in any run can still reach an employer.
+    return 0 if not any(r["missed"] for r in runs) else 1
 
 
 if __name__ == "__main__":

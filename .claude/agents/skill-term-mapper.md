@@ -37,7 +37,7 @@ product management", not "adjacent field", not "they'd probably accept it."
 | JD term | Stands in for | Why |
 |---|---|---|
 | Lovable | Figma | Same class of AI-driven UI design and prototyping tool, and the pool has three of them |
-| ChatGPT | LLM-based workflows | The pool names ChatGPT explicitly; the JD just uses the narrower word |
+| Experimentation | Product experimentation | Wording |
 | Creating PRDs | Writing requirements | The same document under two names |
 | Product requirements documents | Writing requirements | As above |
 | Amplitude | Product analytics | Same category of tool as the pool's analytics entries |
@@ -57,6 +57,43 @@ product management", not "adjacent field", not "they'd probably accept it."
 The line: **is the JD's word another name for something in the pool, or is it a
 new capability?** A new capability is a gap, and gaps belong in the cover letter,
 not the skills section.
+
+### If the term is already on the resume, there is nothing to do
+
+Check the skills section for the JD's word before you weigh anything else. If it
+is already there — "ChatGPT" when the section reads "LLM-based workflows (Claude,
+ChatGPT, Gemini)" — propose nothing and say so in `rejected`.
+
+This is not a technicality. **A swap is one term in and one term out**, so
+proposing a word that is already on the page takes a real skill off to add a
+duplicate. Being already covered is the best case, not a missed opportunity.
+
+### A term that names a practice built on a pool skill clears the bar
+
+Most JD vocabulary is not a synonym. It is the name of a **practice** whose core
+activity is something in the pool. "A/B testing" is the practice name for product
+experimentation. "Customer discovery" is the practice name for customer
+interviewing. Those clear the bar, and refusing them is the more common mistake.
+
+A practice name is broader than the pool term by design — it wraps the activity in
+process, cadence and vocabulary. **Broader is not disqualifying.** Ask whether the
+pool holds the activity at the centre of the practice. If it does, swap. If the
+practice is built on an activity the pool has none of, that is a gap:
+
+- "Data engineering" is not a practice built on SQL. It is a different job.
+- "ML engineering" is not a practice built on AI model evaluation.
+- "Kubernetes" is not a practice built on consuming AWS.
+
+### Judge the term, not the responsibilities around it
+
+A JD describing what you would *do* with a skill — run it weekly, teach it to
+others, synthesise the output, own the roadmap for it — is describing the job, not
+widening the term. Seniority and scope are not part of a term's meaning. Strip the
+responsibilities, then ask whether the bare term names something in the pool.
+
+"You will run customer discovery weekly, synthesise it into opportunity areas, and
+teach the team to run it" is still just **customer discovery**. The coaching and
+the synthesis are the role, not a second skill the candidate is missing.
 
 ## Rules that are not negotiable
 
