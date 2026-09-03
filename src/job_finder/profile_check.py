@@ -71,6 +71,13 @@ def check() -> list[str]:
             # instructions) is fine.
             if re.search(r":\s*`?<FILL IN", path.read_text(encoding="utf-8", errors="replace")):
                 issues.append(f"{path.name} still has fields set to <FILL IN>")
+    if not config.writing_style.exists():
+        issues.append(f"writing-style.md not found at {config.writing_style} — the "
+                      "fact-checker reads it as the voice authority and the letter "
+                      "linter enforces a subset of it (SETUP.md §3)")
+    if not config.claims_ground_truth.exists():
+        issues.append(f"claims_ground_truth.md not found at {config.claims_ground_truth} — "
+                      "the tailoring and fact-checking workflows read it (SETUP.md §3)")
     if not config.resume_skill.exists():
         issues.append(f"resume generator not found at {config.resume_skill} — copy "
                       "profile.example/generate_resume.py and edit its RESUME_DATA block")

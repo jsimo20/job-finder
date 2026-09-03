@@ -47,7 +47,7 @@ class Config:
         self.resume_skill = resume_skill
         # Voice rules for anything written as the user. Must live inside the
         # repo: a surface that mounts only the repo cannot read a copy outside it.
-        self.writing_style = writing_style or (inputs_dir / "steering" / "writing-style.md")
+        self.writing_style = writing_style or (inputs_dir / "writing-style.md")
         # Optional and unset by default: finished folders live in
         # applications_dir permanently. Set [paths].applications_archive_dir only
         # if you want archive_applications() to move them somewhere else.
@@ -100,8 +100,7 @@ def load_config(profile: Mapping[str, Any] | None = None) -> Config:
     return Config(
         inputs_dir=_resolve("inputs_dir", base),
         applications_dir=_resolve("applications_dir", base / "applications"),
-        writing_style=_resolve("writing_style_path",
-                               base / "inputs" / "steering" / "writing-style.md"),
+        writing_style=_resolve("writing_style_path", base / "writing-style.md"),
         claims_ground_truth=_resolve("claims_ground_truth_path",
                                     base / "claims_ground_truth.md"),
         resume_skill=_resolve("resume_skill_path", base / "generate_resume.py"),

@@ -14,12 +14,12 @@ CLEAN = {
         "Most security companies make the trust case after someone is already a "
         "customer. The Directory makes it in public, first, which puts the weight "
         "on how the product feels before anyone has committed to anything. At "
-        "Spectrum that weight lands on our consumer cybersecurity product.",
+        "Sample Co that weight lands on our consumer cybersecurity product.",
         "Neither of those is really a security problem. Both are onboarding "
         "problems, and onboarding is where most of my work has been.",
         "All of that is retention work under a different name. Analytiks is where "
         "I learned to see it that way.",
-        "Getting to work on any of that means leaving Spectrum. I look forward "
+        "Getting to work on any of that means leaving Sample Co. I look forward "
         "to discussing this opportunity in greater detail with you.",
     ],
 }
@@ -45,7 +45,7 @@ def test_paragraph_opening_on_i_is_critical():
 
 def test_mid_paragraph_i_is_fine():
     """The rule bans "I" as the first word, not the pronoun."""
-    letter = {**CLEAN, "paragraphs": ["At Spectrum I led the launch."]}
+    letter = {**CLEAN, "paragraphs": ["At Sample Co I led the launch."]}
     assert severities(letter, "paragraph_starts_with_i") == []
 
 
@@ -118,7 +118,7 @@ def test_a_gloss_is_advisory_never_critical():
 
 def test_a_legitimate_which_clause_still_reports_as_a_candidate():
     letter = {**CLEAN, "paragraphs": [
-        "The Directory is public. Spectrum does not support remote work, which is "
+        "The Directory is public. Sample Co does not support remote work, which is "
         "what started my search."]}
     findings = [f for f in L.lint(letter) if f.check == "gloss_candidate"]
     assert findings and all(f.severity == L.ADVISORY for f in findings)
@@ -166,7 +166,7 @@ def test_the_fixed_final_line_passes():
 def test_any_other_final_line_blocks():
     letter = {**CLEAN, "paragraphs": [
         *CLEAN["paragraphs"][:-1],
-        "Getting to work on any of that means leaving Spectrum. Happy to talk whenever.",
+        "Getting to work on any of that means leaving Sample Co. Happy to talk whenever.",
     ]}
     assert severities(letter, "wrong_final_line") == [L.CRITICAL]
 
@@ -175,7 +175,7 @@ def test_the_retired_curiosity_close_blocks():
     """The old rule asked for exactly this; it is now the violation."""
     letter = {**CLEAN, "paragraphs": [
         *CLEAN["paragraphs"][:-1],
-        "Getting to work on any of that means leaving Spectrum. If we end up "
+        "Getting to work on any of that means leaving Sample Co. If we end up "
         "talking, I am curious how you are thinking about the Directory.",
     ]}
     found = severities(letter, "curiosity_close")

@@ -1,0 +1,5 @@
+# Shell scripts run under sh on Linux (Docker, the Cowork device VM), which
+# mounts this Windows checkout as-is. With core.autocrlf=true and no pin, a
+# checkout writes CRLF and dash fails on the first line with `set: Illegal option -`.
+*.sh       text eol=lf
+Dockerfile text eol=lf

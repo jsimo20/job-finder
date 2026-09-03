@@ -11,7 +11,8 @@ pipeline to configure.
 
 ## 0. Prerequisites
 
-- Python 3.10 or newer
+- Python 3.10 or newer (on Debian/Ubuntu also `python3-venv`; the stock
+  interpreter there cannot create a virtualenv)
 - `git`, and the `gh` CLI logged into your GitHub account
 - `uv` (`pip install uv`) — or plain pip, adjusting the commands below
 - An Anthropic API key with credit (console.anthropic.com) — the pipeline's
@@ -57,6 +58,12 @@ uv pip install -e ".[apply]"
 playwright install chromium
 ```
 
+The Playwright MCP server accepts file uploads only from its `--output-dir` and
+its cwd, so that argument has to be **this clone's** `.playwright-mcp` folder as
+an absolute path; a wrong one rejects every resume as "outside allowed roots".
+Set it in `.mcp.json` (Claude Code) and, if you will use Cowork, in
+`cowork-plugin/.mcp.json` as well before building the plugin (§8).
+
 Sanity check — the suite must pass on a fresh clone with no profile:
 
 ```sh
@@ -91,13 +98,26 @@ Then edit, in this order:
 2. **`profile/resume_master.md`** — your real history. This is ground truth:
    the fact-checker flags anything in a draft that doesn't trace to it.
 3. **`profile/personal_statement.md`** — a page in your own voice.
-4. **`profile/standard_answers.md`** — contact block + stock screening answers.
-5. **`profile/fit_profile.md`** — what a great role looks like for you.
-6. **`profile/generate_resume.py`** — edit only the RESUME_DATA block.
-7. **`profile/qa_checklist.md`** and **`profile/claims_ground_truth.md`** — grow
+4. **`profile/writing-style.md`** — the voice rules for anything written as
+   you. The fact-checker reads all of it and runs its self-check list against
+   every letter; `letter_linter` enforces a fixed subset in code (no em-dashes,
+   no paragraph opening on "I", the closing "Thanks," and the fixed final
+   sentence), so keep those or change the linter with them. The default is
+   usable as-is; make it yours over time.
+5. **`profile/standard_answers.md`** — contact block + stock screening answers.
+6. **`profile/fit_profile.md`** — what a great role looks like for you.
+7. **`profile/generate_resume.py`** — edit only the RESUME_DATA block.
+8. **`profile/qa_checklist.md`** and **`profile/claims_ground_truth.md`** — grow
    these over time; the defaults work on day one.
 
-**Do not skip 2–4.** The tailoring, fact-checking, and autofill workflows all
+Every path above is where the tooling looks when `profile.toml` has no
+`[paths]` table. Keep any of them elsewhere by naming it there
+(`inputs_dir`, `writing_style_path`, `claims_ground_truth_path`,
+`resume_skill_path`); relative paths resolve against the repo root. Nothing
+outside `profile.toml` may assume a layout, so the Claude-side prompts resolve
+these paths through `job_apply.load_config()` rather than naming them.
+
+**Do not skip 2–5.** The tailoring, fact-checking, and autofill workflows all
 read those files; with placeholders still in them you'd be submitting
 applications carrying example data. When you think you're done, prove it:
 
@@ -194,7 +214,9 @@ skim anyway:
 Skip this if you only use Claude Code; everything works there already.
 
 Cowork does not index a project's `.claude/skills/`, so the weekly batch is also
-packaged as a plugin in `cowork-plugin/`. Build the archive:
+packaged as a plugin in `cowork-plugin/`. Set `--output-dir` in
+`cowork-plugin/.mcp.json` to this clone's absolute `.playwright-mcp` path (§2),
+then build the archive:
 
 ```sh
 python scripts/build_cowork_plugin.py

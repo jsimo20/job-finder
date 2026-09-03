@@ -99,7 +99,7 @@ def _strip_html(raw: str) -> str:
 
 def held_out_postings(n: int, *, db_path=state.DEFAULT_STATE_DB,
                       seed: int | None = None) -> list[dict[str, Any]]:
-    """Live PM postings at tracked companies James has not applied to."""
+    """Live PM postings at tracked companies the user has not applied to."""
     applied_ids = applied.applied_external_ids(db_path=db_path)
     companies = [c for c in state.list_companies(db_path)
                  if (c.get("ats_provider") or "").lower() in BOARDS]
