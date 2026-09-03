@@ -100,6 +100,8 @@ and each has a bucket that is a backlog rather than a failure.
 .venv/Scripts/python.exe -m job_finder.eval_factcheck
 # Does the drafter write a good letter unattended? (spends tokens, live JDs)
 .venv/Scripts/python.exe -m job_finder.eval_generation --n 3
+# Does SETUP.md work on a clone that has only the tracked files? (zero tokens, Docker)
+sh scripts/fresh_clone_docker.sh
 ```
 
 **Interactive runs are graded after the fact; unattended runs have to be able
@@ -189,6 +191,24 @@ fact-checker and `--gate`, which is why both are measured rather than trusted.
   cases that flipped between runs. **A change smaller than the spread is not a
   result.** Shared implementation in `eval_spread.py` so the three evals agree on
   what a spread means.
+- **`scripts/fresh_clone_check.sh` is the setup eval.** `scripts/fresh_clone_docker.sh`
+  runs it in `python:3.10-slim` (the floor, which no machine here has installed)
+  from a context built with `git ls-files`, tracked plus untracked-not-ignored, so
+  nothing gitignored can mask a gap and a file you forgot to `git add` is tested
+  before you commit it. It takes the working-tree bytes, CRLF included, because
+  that is what a Cowork device VM sees when it mounts the Windows checkout. It
+  follows SETUP.md's steps in order and asserts each one's documented outcome
+  (the suite passes with no profile, `profile_check` refuses an unedited example,
+  the companies import lands, `render()` writes the folder on the example profile),
+  then two stages about the prompts rather than the code: the exit codes the
+  batch skill reads on an empty clone (**3 = nothing to check, never a pass**),
+  and the **ground-truth paths**: every file the apply loop reads must exist
+  where `job_apply.load_config()` resolves it on a SETUP.md-built profile, and no
+  prompt under `.claude/` or `cowork-plugin/` may name a `profile/<dir>/` layout
+  of its own. A prompt that hard-codes one user's folders is what the next user
+  hits on their first weekly run with nobody watching. It exits 2 rather
+  than run on a tree with local state, so it can never touch a real `profile/`.
+  `COLLECT=1` also polls the three example boards. About two minutes, zero tokens.
 - **Digest markdown is a parsed interface now.** Changing the `### [Score N] Company — [Title](url)`
   header or the `- Domain: … · Stage: …` detail line in `digest.py` breaks
   `eval_calibration.parse_digest` against every already-archived digest, and
@@ -224,7 +244,7 @@ resume **in place of** a pool term that already names it — never in addition.
 
 - **`config/pipeline.toml`** — gitignored (template: `config/pipeline.example.toml`). Location scope, metro tiers, commute thresholds/notes, title targeting, domain + stage weights, comp floor, YoE cap, stale days. `settings.pipeline_config()` loads it, falling back to the example on a fresh clone. The pipeline runs locally, so edits take effect on the next run — no sync step.
 - **`profile/`** — gitignored. Identity, EEO answers, `[paths]` to the driving docs, fit profile, QA checklist, the resume generator.
-  **The driving docs live inside `profile/` as real files**, not as links or absolute paths pointing outside the repo: `profile/inputs/` (resume_master, personal_statement, standard_answers, qa_checklist, steering, cover_letter_examples), `profile/ai_skills/` (claims_ground_truth.md, the resume and cover-letter generators), and `profile/applications/`, where `render()` writes and where finished folders **stay permanently**. `profile/` is gitignored and synced nowhere, which is an accepted tradeoff; there is no backup step and none should be added. **Applications sent before 2026-08-26 live in `OneDrive/Documents/Job Search/2026/applications` and stay there** — the history is split on purpose, so do not reconcile the two. **`profile/` is the source of truth — edit the docs here.** Copies still sitting in OneDrive and `~/.claude/ai_skills` are stale the moment you change one; editing those instead is the failure mode to watch for. Junctions do not work here: Cowork's device bridge resolves a junction to its real target before applying its folder grant, so a linked path reads as the outside folder and fails. Keep these as real files. Relative `[paths]` resolve against the repo root, never the cwd — `job_apply.load_config()` enforces that so the scheduled task keeps working.
+  **The driving docs live inside `profile/` as real files**, not as links or absolute paths pointing outside the repo. Where exactly is whatever `profile/profile.toml [paths]` names. With no `[paths]` table every doc sits at `profile/<name>`, which is the layout `profile.example/` ships and the one `job_apply.load_config()` defaults to; this machine's profile is nested instead (`profile/inputs/`, `profile/ai_skills/`), entirely through `[paths]`. **Nothing outside `profile.toml` may assume either layout**: prompts and scripts resolve the paths through `load_config()` (see the batch skill's preflight), and `tests/test_job_apply.py` pins that the example ships every file the defaults resolve. `render()` writes to `profile/applications/`, where finished folders **stay permanently**. `profile/` is gitignored and synced nowhere, which is an accepted tradeoff; there is no backup step and none should be added. **Applications sent before 2026-08-26 live in `OneDrive/Documents/Job Search/2026/applications` and stay there** — the history is split on purpose, so do not reconcile the two. **`profile/` is the source of truth — edit the docs here.** Copies still sitting in OneDrive and `~/.claude/ai_skills` are stale the moment you change one; editing those instead is the failure mode to watch for. Junctions do not work here: Cowork's device bridge resolves a junction to its real target before applying its folder grant, so a linked path reads as the outside folder and fails. Keep these as real files. Relative `[paths]` resolve against the repo root, never the cwd — `job_apply.load_config()` enforces that so the scheduled task keeps working.
 - Handing the repo to a new user: plain `git clone`; SETUP.md §1 resets the owner's ledgers and digests. History is scrubbed of PII and MUST stay that way — no personal data in commits, ever; the committed ledgers are the only owner-specific tracked state.
 
 ## Location scope and the commute warning
@@ -285,8 +305,8 @@ No GitHub Actions secrets are needed — the repo runs no workflows. Paste keys 
 - **Grade every fill batch**: `python -m job_finder.fill_grader --date <YYYY-MM-DD>` letter-grades the audit manifests (Layer 1, zero tokens). Its `no_rule` output is the backlog — turn entries into `[[custom_combos]]` answers in `profile/profile.toml`. `python -m job_finder.profile_check` is the profile doctor (placeholder/missing-doc detection); SETUP.md tells new users to run it.
 - **Every fill captures a before/after field inventory** to `data/fill_audits/<date>_<slug>.{pre,post}.json` (gitignored — the `value` column holds contact details). Both fill paths use `form_inventory.py` so their output is comparable; the deterministic script writes them directly, the agent via `browser_evaluate`. Capture is best-effort and never blocks a fill. Redact with `form_inventory.redact()` before promoting a manifest to `tests/fixtures/`. Design: `.claude/context/form-fill-evals.md`.
 - **Playwright MCP is project-scoped** (`.mcp.json`). Its `mcp__playwright__*` tools only load when the Claude session is rooted in this directory — autofill won't work from a session started in the parent `dev/` directory.
-- **Uploaded filenames are exactly what `render()` wrote** — `James_Simonelli_Resume_<company>.pdf` and
-  `James_Simonelli_CoverLetter_<company>.pdf`. The ATS shows the uploaded filename to the hiring manager,
+- **Uploaded filenames are exactly what `render()` wrote** — `<Name>_Resume_<company>.pdf` and
+  `<Name>_CoverLetter_<company>.pdf`. The ATS shows the uploaded filename to the hiring manager,
   so it never carries a role slug, a date, or any other staging artifact. Keeping two same-company roles
   apart is what the staging **folder** is for: `<uploads root>/<role-slug>/<filename>`. A `role-slug__`
   filename prefix shipped to a live Greenhouse form on 2026-08-25; the rule now lives in

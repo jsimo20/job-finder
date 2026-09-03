@@ -53,19 +53,25 @@ report and carry on: liveness treats unknown as live, so losing it costs tokens
 on dead postings rather than correctness. Losing `reportlab` is different and
 does stop the run, because `render()` cannot write a PDF without it.
 
-Confirm you can read every ground-truth file and print the absolute path of
-each:
+Confirm you can read every ground-truth file. Their locations come from
+`profile/profile.toml [paths]` and default into `profile/`, so resolve them the
+way the code does rather than naming them; a layout that is right for one user
+is wrong for the next:
 
-- `profile/inputs/resume_master.md`
-- `profile/inputs/personal_statement.md`
-- `profile/inputs/standard_answers.md`
-- `profile/ai_skills/claims_ground_truth.md`
-- the writing-style file named by `[paths].writing_style_path`
-- the resume generator at `[paths].resume_skill_path`
+```sh
+PYTHONPATH=".cowork-deps:src" python3 -c "
+from job_finder import job_apply, settings
+c = job_apply.load_config(settings.require_profile())
+for p in (c.resume_master_md, c.personal_statement_md, c.standard_answers_md,
+          c.claims_ground_truth, c.writing_style, c.resume_skill):
+    print('ok     ' if p.exists() else 'MISSING', p)
+"
+```
 
-All of them live inside the repo. **If any is unreadable, stop and say so
-before doing any work.** Nothing drafted against an unreachable source pool can
-be traced, and no revision pass will reach CLEAN.
+Print that output in the report. All six resolve inside the repo when `[paths]`
+is relative or absent. **If any is MISSING, stop and say so before doing any
+work.** Nothing drafted against an unreachable source pool can be traced, and
+no revision pass will reach CLEAN.
 
 Then check the digest is current:
 

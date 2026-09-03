@@ -18,6 +18,7 @@ reads it; only the local apply workflow does.
 | `profile.toml` | everything apply-side | Identity on PDFs, autofill contact values, EEO defaults, paths |
 | `resume_master.md` | tailoring + fact-checker | Ground truth: every resume bullet must trace to it |
 | `personal_statement.md` | tailoring + fact-checker | Your narrative voice; cover letters are checked against its tone |
+| `writing-style.md` | cover-letter drafting + fact-checker + `letter_linter` | The voice rules for anything written as you; the fact-checker runs its self-check list, the linter enforces a fixed subset in code |
 | `standard_answers.md` | form autofill + autofill agent | Contact block plus your stock answers to common screening questions |
 | `fit_profile.md` | digest-triager agent | What "a great role for you" means, so triage can rank the digest |
 | `qa_checklist.md` | `job_apply.render()` | Per-application checklist written into every apply.md |

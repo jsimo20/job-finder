@@ -48,8 +48,9 @@ the batch needs something that refuses rather than something that describes.
 **Layer 2 — LLM (small input, one call per form, if ever built).** Grades
 only judgment, reading the inventory diff, never the raw page: is this value
 semantically right for this label; does short-answer text match the user's
-voice (`~/.claude/rules/writing-style.md` is the rubric — a user-global path,
-so Layer 2 stays off CI); was a custom question answered by guessing.
+voice (the file at `[paths].writing_style_path` is the rubric; it lives in the
+gitignored profile, so Layer 2 stays off CI); was a custom question answered by
+guessing.
 
 ## Scope limits
 
