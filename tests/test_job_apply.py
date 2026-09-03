@@ -138,6 +138,24 @@ def test_load_config_defaults_into_profile_dir():
     assert cfg.inputs_dir == base
     assert cfg.applications_dir == base / "applications"
     assert cfg.resume_skill == base / "generate_resume.py"
+    assert cfg.claims_ground_truth == base / "claims_ground_truth.md"
+    assert cfg.writing_style == base / "writing-style.md"
+
+
+def test_profile_example_ships_every_file_the_default_paths_resolve():
+    """`cp -r profile.example profile` with no [paths] table must give the apply
+    loop every ground-truth file it reads, at the path load_config resolves.
+    A default pointing at a file the example does not ship is a gap every new
+    user hits on their first run."""
+    from job_finder import settings
+
+    cfg = job_apply.load_config(profile={})
+    base = settings.profile_dir()
+    for path in (cfg.resume_master_md, cfg.personal_statement_md, cfg.standard_answers_md,
+                 cfg.qa_checklist_md, cfg.claims_ground_truth, cfg.writing_style,
+                 cfg.resume_skill):
+        shipped = settings.PROFILE_EXAMPLE_DIR / path.relative_to(base)
+        assert shipped.exists(), f"profile.example lacks {shipped.name}"
 
 
 def test_load_config_reads_profile_paths(tmp_path):
