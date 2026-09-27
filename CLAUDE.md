@@ -28,7 +28,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 - SQLite at `data/jobs.db` — gitignored, ephemeral, rebuilt every pipeline run.
 - Company tiers: `greenhouse`/`lever`/`ashby`/`workday` rows are polled by collect; `manual` rows (no pollable ATS — SuccessFactors, Phenom, iCIMS, Eightfold, custom sites) carry only a careers URL and surface in the digest's **Manual check** section for a weekly hand check.
 - **Per-company freshness override:** `companies.max_age_days` narrows the digest for one company below the global `STALE_DAYS` — set it on high-volume boards worth watching but not worth re-reading (`companies add --max-age-days 14`). Applied in `digest.drop_stale_for_company()`, which **fails closed**: an override company's posting with no `posted_at` is dropped, because `first_seen_at` is always "now" and would defeat the filter.
-- Durable state lives in `data/state.db` (gitignored SQLite; `state.py`): tracked companies, no-auto-apply blocklist, applied ledger, seen ledger, digest archive. `first_seen_at` in jobs.db is always "now" and must never be used to distinguish new from carried — that's the seen table's job. Manage via `job-finder companies|no-auto|applied|digest-archive`; never edit the DB files directly, and never commit anything under `data/` or `digests/`.
+- Durable state lives in `data/state.db` (gitignored SQLite; `state.py`): tracked companies, no-auto-apply blocklist, applied ledger, seen ledger, digest archive, discovered companies. `first_seen_at` in jobs.db is always "now" and must never be used to distinguish new from carried — that's the seen table's job. Manage via `job-finder companies|no-auto|applied|digest-archive|discover`; never edit the DB files directly, and never commit anything under `data/` or `digests/`.
 
 ## Key files
 
@@ -41,6 +41,8 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 - `src/job_finder/filter.py` — hard filter rules (Stage 1 + Stage 3)
 - `src/job_finder/score.py` — deterministic scoring
 - `src/job_finder/review.py` — interactive picker for the CLI `review` subcommand
+- `src/job_finder/builtin_discovery.py` — weekly scan of Built In category pages for untracked companies hiring the target role (see Company discovery)
+- `src/job_finder/ats_probe.py` — which Greenhouse/Lever/Ashby boards answer for a company name, with each board's posting titles; used by discovery and `scripts/discover_companies.py`
 - `src/job_finder/form_inventory.py` — ATS-agnostic form field inventory (label/type/required/value/options per control) plus the audit-manifest writer; shared by the deterministic filler and the autofill agent
 - `data/state.db` — all durable personal state (see above); `config/companies.example.json` is the neutral starter list
 
@@ -246,6 +248,28 @@ resume **in place of** a pool term that already names it — never in addition.
 - **`profile/`** — gitignored. Identity, EEO answers, `[paths]` to the driving docs, fit profile, QA checklist, the resume generator.
   **The driving docs live inside `profile/` as real files**, not as links or absolute paths pointing outside the repo. Where exactly is whatever `profile/profile.toml [paths]` names. With no `[paths]` table every doc sits at `profile/<name>`, which is the layout `profile.example/` ships and the one `job_apply.load_config()` defaults to; this machine's profile is nested instead (`profile/inputs/`, `profile/ai_skills/`), entirely through `[paths]`. **Nothing outside `profile.toml` may assume either layout**: prompts and scripts resolve the paths through `load_config()` (see the batch skill's preflight), and `tests/test_job_apply.py` pins that the example ships every file the defaults resolve. `render()` writes to `profile/applications/`, where finished folders **stay permanently**. `profile/` is gitignored and synced nowhere, which is an accepted tradeoff; there is no backup step and none should be added. **Applications sent before 2026-08-26 live in `OneDrive/Documents/Job Search/2026/applications` and stay there** — the history is split on purpose, so do not reconcile the two. **`profile/` is the source of truth — edit the docs here.** Copies still sitting in OneDrive and `~/.claude/ai_skills` are stale the moment you change one; editing those instead is the failure mode to watch for. Junctions do not work here: Cowork's device bridge resolves a junction to its real target before applying its folder grant, so a linked path reads as the outside folder and fails. Keep these as real files. Relative `[paths]` resolve against the repo root, never the cwd — `job_apply.load_config()` enforces that so the scheduled task keeps working.
 - Handing the repo to a new user: plain `git clone`; SETUP.md §1 resets the owner's ledgers and digests. History is scrubbed of PII and MUST stay that way — no personal data in commits, ever; the committed ledgers are the only owner-specific tracked state.
+
+## Company discovery
+
+The tracked list is a fixed seed, so `job-finder run` also scans the Built In
+sites in `config/pipeline.toml [discovery]` (none in the example config) for
+companies posting the target role that are not tracked. Zero tokens.
+
+- **It proposes, never adds.** Candidates land in the `discovered` table and the
+  digest's **New companies to review** section. `job-finder discover add
+  "Name"` tracks one, `--all` tracks every specific match, `dismiss` records a
+  no. A company is proposed once, whatever the answer.
+- **`pending` requires the company's board to list the role Built In showed.**
+  Slug guessing collides (`relay`, `general`), and the title match is the proof.
+  A match on a bare level plus role noun ("Senior Product Manager") is recorded
+  as `generic`, flagged in the digest, and skipped by `--all`.
+- **Built In's page order is not newest-first.** The window comes from its
+  `daysSinceUpdated` filter (1, 3, 7 or 30), never from stopping at an old card.
+- **A discovery failure never costs the digest.** `_cmd_run` prints it and moves
+  on; a failed ATS probe leaves the company unrecorded so next week retries it.
+- A site takes about five minutes for 18 days of listings, most of it probing.
+- `eval_calibration.parse_digest` treats every `##` header other than the queues
+  as unscored, so a new digest section cannot be read as queue entries.
 
 ## Location scope and the commute warning
 
