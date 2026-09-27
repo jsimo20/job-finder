@@ -162,3 +162,33 @@ def test_dash_separated_non_us_remote_is_discarded():
     for loc in ("Canada - Remote", "Remote - Canada", "Canada, Remote"):
         r = stage1(title="Senior Product Manager", location=loc, workplace_type="remote")
         assert r.reason == "discard:non_us_remote", loc
+
+
+def test_stage1_keeps_a_pm_title_with_no_level_word():
+    r = stage1(title="Product Manager, Growth", location="Farport, EX", workplace_type="hybrid")
+    assert r.keep and r.reason == "keep"
+
+
+def test_stage1_still_rejects_an_explicitly_junior_title():
+    r = stage1(title="Product Manager II", location="Farport, EX", workplace_type="hybrid")
+    assert not r.keep and r.reason == "discard:too_junior"
+
+
+def test_stage3_untitled_role_asking_enough_experience_reaches_main():
+    r = stage3(yoe_required=6, comp_base_min=None, comp_base_max=None, comp_source=None, titled=False)
+    assert r.keep and r.queue == "main"
+
+
+def test_stage3_untitled_role_asking_little_experience_goes_to_stretch():
+    r = stage3(yoe_required=3, comp_base_min=None, comp_base_max=None, comp_source=None, titled=False)
+    assert r.keep and r.queue == "stretch" and r.reason == "untitled_yoe_required:3"
+
+
+def test_stage3_untitled_role_with_no_stated_experience_goes_to_stretch():
+    r = stage3(yoe_required=None, comp_base_min=None, comp_base_max=None, comp_source=None, titled=False)
+    assert r.keep and r.queue == "stretch"
+
+
+def test_stage3_untitled_role_below_comp_floor_is_still_discarded():
+    r = stage3(yoe_required=6, comp_base_min=110000, comp_base_max=130000, comp_source="posted", titled=False)
+    assert not r.keep and r.queue == "discard"

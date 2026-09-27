@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 from . import db
-from .filter import stage3
+from .filter import has_seniority_marker, stage3
 from .taxonomy import COMP_SCORE_THRESHOLDS, DOMAIN_WEIGHTS, STAGE_WEIGHTS
 
 
@@ -33,7 +33,7 @@ def run(db_path: Path = db.DEFAULT_DB_PATH) -> dict:
         rows = conn.execute(
             """
             SELECT e.posting_id, e.yoe_required, e.comp_base_min, e.comp_base_max,
-                   e.comp_source, e.domain_tags, e.company_stage
+                   e.comp_source, e.domain_tags, e.company_stage, p.title
             FROM extractions e
             JOIN postings p ON p.id = e.posting_id
             WHERE p.closed_at IS NULL
@@ -52,6 +52,7 @@ def run(db_path: Path = db.DEFAULT_DB_PATH) -> dict:
                 comp_base_min=r["comp_base_min"],
                 comp_base_max=r["comp_base_max"],
                 comp_source=r["comp_source"],
+                titled=has_seniority_marker(r["title"]),
             )
             queue = verdict.queue
             stats[queue] += 1
