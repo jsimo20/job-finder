@@ -1,14 +1,8 @@
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
 import httpx
 
-_SPEC = importlib.util.spec_from_file_location(
-    "discover_companies", Path(__file__).parents[1] / "scripts" / "discover_companies.py")
-discover = importlib.util.module_from_spec(_SPEC)
-_SPEC.loader.exec_module(discover)
+from job_finder import ats_probe as discover
 
 
 def _client(handler):

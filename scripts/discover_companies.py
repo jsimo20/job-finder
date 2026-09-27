@@ -23,95 +23,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
-import time
+
 
 import httpx
 
-GREENHOUSE = "https://api.greenhouse.io/v1/boards/{slug}/jobs"
-LEVER = "https://api.lever.co/v0/postings/{slug}?mode=json"
-ASHBY_URL = "https://jobs.ashbyhq.com/api/non-user-graphql"
-ASHBY_QUERY = (
-    "query ApiJobBoardWithTeams($organizationHostedJobsPageName: String!) {"
-    " jobBoard: jobBoardWithTeams(organizationHostedJobsPageName: $organizationHostedJobsPageName) {"
-    " jobPostings { id title } } }"
-)
-
-
-def slug_variants(name: str) -> list[str]:
-    base = re.sub(r"[^a-z0-9 ]", "", name.lower()).strip()
-    joined = base.replace(" ", "")
-    hyphenated = re.sub(r"\s+", "-", base)
-    variants = [joined, hyphenated]
-    # drop common suffixes: "Acme Health Inc" -> "acmehealth", "acme"
-    words = base.split()
-    if len(words) > 1:
-        variants.append("".join(words[:-1]))
-        variants.append(words[0])
-    seen: list[str] = []
-    for v in variants:
-        if v and len(v) >= 3 and v not in seen:
-            seen.append(v)
-    return seen
-
-
-PROVIDERS = ("greenhouse", "lever", "ashby")
-
-
-def _probe_provider(client: httpx.Client, provider: str, slug: str) -> int | None:
-    """Live posting count if `slug` has a board on `provider`, None if it has none.
-
-    Network and parse failures raise: a failed request says nothing about
-    whether the board exists, so it must not read as "no board".
-    """
-    if provider == "greenhouse":
-        r = client.get(GREENHOUSE.format(slug=slug))
-        if r.status_code == 404:
-            return None
-        r.raise_for_status()
-        jobs = r.json().get("jobs")
-        return len(jobs) if isinstance(jobs, list) else None
-    if provider == "lever":
-        r = client.get(LEVER.format(slug=slug))
-        if r.status_code == 404:
-            return None
-        r.raise_for_status()
-        body = r.json()
-        return len(body) if isinstance(body, list) else None
-    r = client.post(ASHBY_URL, json={
-        "operationName": "ApiJobBoardWithTeams",
-        "query": ASHBY_QUERY,
-        "variables": {"organizationHostedJobsPageName": slug},
-    })
-    r.raise_for_status()
-    board = (r.json().get("data") or {}).get("jobBoard")
-    return len(board.get("jobPostings") or []) if board else None
-
-
-def probe_name(client: httpx.Client, name: str, pause: float = 0.2) -> tuple[list[dict], list[str]]:
-    """Every board `name` answers on, across all providers, plus any probe errors.
-
-    All providers are checked because a company that moved ATS often leaves the
-    old board up with a posting or two; stopping at the first answer reports the
-    dead board. Within one provider the first slug variant that answers wins.
-    """
-    hits: list[dict] = []
-    errors: list[str] = []
-    for provider in PROVIDERS:
-        for slug in slug_variants(name):
-            try:
-                count = _probe_provider(client, provider, slug)
-            except (httpx.HTTPError, ValueError) as e:
-                errors.append(f"{provider}:{slug} {type(e).__name__}")
-                continue
-            finally:
-                time.sleep(pause)
-            if count is not None:
-                hits.append({"provider": provider, "slug": slug, "count": count})
-                break
-    hits.sort(key=lambda h: h["count"], reverse=True)
-    return hits, errors
+from job_finder.ats_probe import probe_name
 
 
 def main() -> int:
@@ -145,7 +62,7 @@ def main() -> int:
                 found.append({"name": name, "ats_provider": best["provider"],
                               "ats_slug": best["slug"], "careers_url": "", "sector_tags": [],
                               "size_band": "", "_live_postings": best["count"],
-                              "_other_boards": hits[1:]})
+                              "_other_boards": [{k: h[k] for k in ("provider", "slug", "count")} for h in hits[1:]]})
             elif errors:
                 failed.append(name)
                 print(f"ERROR  {name:32s} {'; '.join(errors[:3])}")
