@@ -7,7 +7,7 @@ from pathlib import Path
 
 from . import applied, db, seen, state
 from . import filter as filter_mod
-from .taxonomy import STALE_DAYS, YOE_MAIN_QUEUE_MAX
+from .taxonomy import STALE_DAYS, UNTITLED_MIN_YOE, YOE_MAIN_QUEUE_MAX
 
 DEFAULT_DIGEST_DIR = Path(__file__).resolve().parents[2] / "digests"
 CARRY_FORWARD_CAP = 20
@@ -187,7 +187,8 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
         else:
             lines.append("_(none)_\n")
 
-    stretch_blurb = f"YOE above {YOE_MAIN_QUEUE_MAX}; review only."
+    stretch_blurb = (f"YOE above {YOE_MAIN_QUEUE_MAX}, or no level word in the title and under "
+                     f"{UNTITLED_MIN_YOE} years asked; review only.")
     lines: list[str] = [f"# Job Digest — {target}", ""]
     _section("Main queue — new", "Sorted by score desc.", main_rows)
     _section(
