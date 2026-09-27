@@ -56,32 +56,62 @@ def slug_variants(name: str) -> list[str]:
     return seen
 
 
-def probe(client: httpx.Client, slug: str) -> tuple[str, int] | None:
-    """(provider, live_posting_count) if slug answers on any ATS, else None."""
-    try:
+PROVIDERS = ("greenhouse", "lever", "ashby")
+
+
+def _probe_provider(client: httpx.Client, provider: str, slug: str) -> int | None:
+    """Live posting count if `slug` has a board on `provider`, None if it has none.
+
+    Network and parse failures raise: a failed request says nothing about
+    whether the board exists, so it must not read as "no board".
+    """
+    if provider == "greenhouse":
         r = client.get(GREENHOUSE.format(slug=slug))
-        if r.status_code == 200 and isinstance(r.json().get("jobs"), list):
-            return "greenhouse", len(r.json()["jobs"])
-    except Exception:
-        pass
-    try:
+        if r.status_code == 404:
+            return None
+        r.raise_for_status()
+        jobs = r.json().get("jobs")
+        return len(jobs) if isinstance(jobs, list) else None
+    if provider == "lever":
         r = client.get(LEVER.format(slug=slug))
-        if r.status_code == 200 and isinstance(r.json(), list):
-            return "lever", len(r.json())
-    except Exception:
-        pass
-    try:
-        r = client.post(ASHBY_URL, json={
-            "operationName": "ApiJobBoardWithTeams",
-            "query": ASHBY_QUERY,
-            "variables": {"organizationHostedJobsPageName": slug},
-        })
-        board = r.status_code == 200 and (r.json().get("data") or {}).get("jobBoard")
-        if board:
-            return "ashby", len(board.get("jobPostings") or [])
-    except Exception:
-        pass
-    return None
+        if r.status_code == 404:
+            return None
+        r.raise_for_status()
+        body = r.json()
+        return len(body) if isinstance(body, list) else None
+    r = client.post(ASHBY_URL, json={
+        "operationName": "ApiJobBoardWithTeams",
+        "query": ASHBY_QUERY,
+        "variables": {"organizationHostedJobsPageName": slug},
+    })
+    r.raise_for_status()
+    board = (r.json().get("data") or {}).get("jobBoard")
+    return len(board.get("jobPostings") or []) if board else None
+
+
+def probe_name(client: httpx.Client, name: str, pause: float = 0.2) -> tuple[list[dict], list[str]]:
+    """Every board `name` answers on, across all providers, plus any probe errors.
+
+    All providers are checked because a company that moved ATS often leaves the
+    old board up with a posting or two; stopping at the first answer reports the
+    dead board. Within one provider the first slug variant that answers wins.
+    """
+    hits: list[dict] = []
+    errors: list[str] = []
+    for provider in PROVIDERS:
+        for slug in slug_variants(name):
+            try:
+                count = _probe_provider(client, provider, slug)
+            except (httpx.HTTPError, ValueError) as e:
+                errors.append(f"{provider}:{slug} {type(e).__name__}")
+                continue
+            finally:
+                time.sleep(pause)
+            if count is not None:
+                hits.append({"provider": provider, "slug": slug, "count": count})
+                break
+    hits.sort(key=lambda h: h["count"], reverse=True)
+    return hits, errors
 
 
 def main() -> int:
@@ -100,33 +130,37 @@ def main() -> int:
     if not names:
         ap.error("no candidate names given")
 
-    found, missed = [], []
-    with httpx.Client(timeout=10, follow_redirects=True,
+    found, missed, failed = [], [], []
+    with httpx.Client(timeout=30, follow_redirects=True,
                       headers={"User-Agent": "job-finder-seed-probe"}) as client:
         for name in names:
-            hit = None
-            for slug in slug_variants(name):
-                hit = probe(client, slug)
-                if hit:
-                    provider, count = hit
-                    print(f"FOUND  {name:32s} {provider:10s} slug={slug:24s} {count} live postings")
-                    found.append({"name": name, "ats_provider": provider, "ats_slug": slug,
-                                  "careers_url": "", "sector_tags": [], "size_band": "",
-                                  "_live_postings": count})
-                    break
-                time.sleep(0.2)
-            if not hit:
+            hits, errors = probe_name(client, name)
+            if hits:
+                best = hits[0]
+                print(f"FOUND  {name:32s} {best['provider']:10s} slug={best['slug']:24s} "
+                      f"{best['count']} live postings")
+                for other in hits[1:]:
+                    print(f"       {'':32s} {other['provider']:10s} slug={other['slug']:24s} "
+                          f"{other['count']} live postings  (second board: verify which is current)")
+                found.append({"name": name, "ats_provider": best["provider"],
+                              "ats_slug": best["slug"], "careers_url": "", "sector_tags": [],
+                              "size_band": "", "_live_postings": best["count"],
+                              "_other_boards": hits[1:]})
+            elif errors:
+                failed.append(name)
+                print(f"ERROR  {name:32s} {'; '.join(errors[:3])}")
+            else:
                 missed.append(name)
                 print(f"none   {name}")
 
     print(f"\n{len(found)} found, {len(missed)} without a public board "
-          "(likely Workday/ICIMS/Taleo — no API).")
+          f"(likely Workday/ICIMS/Taleo — no API), {len(failed)} errored (re-run those).")
     if args.json and found:
         with open(args.json, "w", encoding="utf-8") as f:
             json.dump(found, f, indent=2)
         print(f"wrote {args.json} — curate sector_tags/size_band and VERIFY each "
               "careers page before merging into data/companies.json")
-    return 0
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
