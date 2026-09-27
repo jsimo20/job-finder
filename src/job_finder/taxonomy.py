@@ -24,4 +24,6 @@ COMP_SCORE_THRESHOLDS: list[int] = sorted(_cfg["filters"]["comp_score_thresholds
 
 YOE_MAIN_QUEUE_MAX: int = _cfg["filters"]["yoe_main_queue_max"]
 
+UNTITLED_MIN_YOE: int = _cfg["filters"]["untitled_min_yoe"]
+
 STALE_DAYS: int = _cfg["filters"]["stale_days"]
