@@ -52,6 +52,26 @@ CREATE TABLE IF NOT EXISTS seen (
   first_seen TEXT NOT NULL
 );
 
+-- Companies found hiring on a job aggregator but not yet tracked. status is
+-- 'pending' (a board was found and its postings include the role seen, so it
+-- is ready to add), 'no_board' (nothing pollable, or no board matched the
+-- role), 'added' or 'dismissed'. Kept after a decision so the same company is
+-- never proposed twice. title_match is 'specific' when the matched role title
+-- names a product area, 'generic' when it is only a level and the role noun
+-- ("Senior Product Manager"), which many unrelated boards also list.
+CREATE TABLE IF NOT EXISTS discovered (
+  name TEXT PRIMARY KEY,
+  status TEXT NOT NULL,
+  ats_provider TEXT,
+  ats_slug TEXT,
+  live_postings INTEGER,
+  title_match TEXT,
+  sample_title TEXT,
+  sample_url TEXT,
+  source TEXT,
+  first_seen TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS digests (
   date TEXT PRIMARY KEY,
   body TEXT NOT NULL,
@@ -67,6 +87,9 @@ def _migrate(conn: sqlite3.Connection) -> None:
     have = {r["name"] for r in conn.execute("PRAGMA table_info(companies)")}
     if "max_age_days" not in have:
         conn.execute("ALTER TABLE companies ADD COLUMN max_age_days INTEGER")
+    have = {r["name"] for r in conn.execute("PRAGMA table_info(discovered)")}
+    if "title_match" not in have:
+        conn.execute("ALTER TABLE discovered ADD COLUMN title_match TEXT")
 
 
 @contextmanager
@@ -215,3 +238,44 @@ def list_digests(db_path: Path = DEFAULT_STATE_DB) -> list[str]:
     with connect(db_path) as conn:
         return [r["date"] for r in
                 conn.execute("SELECT date FROM digests ORDER BY date").fetchall()]
+
+
+# ── Discovered companies ─────────────────────────────────────────────────────
+
+DISCOVERED_STATUSES = ("pending", "no_board", "added", "dismissed")
+
+
+def record_discovered(row: dict[str, Any], db_path: Path = DEFAULT_STATE_DB) -> None:
+    """Insert a newly discovered company; an existing name is left untouched."""
+    if row["status"] not in DISCOVERED_STATUSES:
+        raise ValueError(f"unknown discovered status {row['status']!r}")
+    with connect(db_path) as conn:
+        conn.execute(
+            """INSERT OR IGNORE INTO discovered (name, status, ats_provider, ats_slug,
+                 live_postings, title_match, sample_title, sample_url, source, first_seen)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (row["name"], row["status"], row.get("ats_provider"), row.get("ats_slug"),
+             row.get("live_postings"), row.get("title_match"),
+             row.get("sample_title"), row.get("sample_url"),
+             row.get("source"), row["first_seen"]),
+        )
+
+
+def list_discovered(status: str | None = None,
+                    db_path: Path = DEFAULT_STATE_DB) -> list[dict[str, Any]]:
+    with connect(db_path) as conn:
+        if status:
+            rows = conn.execute("SELECT * FROM discovered WHERE status = ? ORDER BY name",
+                                (status,)).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM discovered ORDER BY name").fetchall()
+    return [dict(r) for r in rows]
+
+
+def set_discovered_status(name: str, status: str, db_path: Path = DEFAULT_STATE_DB) -> bool:
+    if status not in DISCOVERED_STATUSES:
+        raise ValueError(f"unknown discovered status {status!r}")
+    with connect(db_path) as conn:
+        cur = conn.execute("UPDATE discovered SET status = ? WHERE lower(name) = lower(?)",
+                           (status, name))
+    return cur.rowcount > 0

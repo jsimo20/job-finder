@@ -132,3 +132,15 @@ definition = "Public/private mega-corp with 10K+ employees, slower but stable"
 [stages.seed_series_a]
 weight = 1
 definition = "Seed or Series A, usually founder-led PM"
+
+# ── Company discovery ────────────────────────────────────────────────────────
+# Each weekly run scans these Built In regional sites for companies posting the
+# target role that the tracked list is missing, and lists them in the digest
+# for a yes/no. [] disables it. Example: "https://www.builtinboston.com".
+
+[discovery]
+builtin_sites = []
+builtin_category = "product-management"
+# Only listings posted within this many days are considered.
+max_age_days = 7
+max_pages = 60
