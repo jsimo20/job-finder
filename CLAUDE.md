@@ -303,6 +303,7 @@ No GitHub Actions secrets are needed — the repo runs no workflows. Paste keys 
   no backup anywhere. The pragma does not persist (only WAL is written to the
   file header), so any new code opening `sqlite3.connect()` directly reintroduces
   the bug; go through the two `connect()` helpers.
+- **A PM title with no level word passes Stage 1.** Stage 3 sends it to main only when the JD asks for at least `[filters].untitled_min_yoe` years, and to stretch otherwise, so the stretch queue holds below-band roles as well as above-band ones. `eval_calibration`'s stretch apply rate mixes the two.
 - **Don't auto-run the pipeline** to test changes — it spends real Anthropic tokens (~$$). The scheduled task owns the weekly run; prefer targeted unit tests via pytest.
 - **Commit subjects and PR titles are one plain sentence stating what the change does** — imperative, lowercase start, no `type(scope):` prefixes, no "Type of change" checklists. The body (optional) explains why.
 - **PRs are the norm**, not direct-to-main — for the audit trail, not for review gating. Nothing reviews them automatically. When a change is worth a second pass, dispatch the `python-code-reviewer` agent, or use the built-in `/code-review`.
