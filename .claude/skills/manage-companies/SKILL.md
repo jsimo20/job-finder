@@ -52,6 +52,15 @@ a weekly hand check.
 - Broken slug: re-probe variants (name+`inc`/`hq`, no-spaces, the other
   ATSes), then `companies add` with the same name to upsert in place.
 
+### Companies found by discovery
+
+`job-finder run` proposes untracked companies from Built In in the digest's
+**New companies to review** section. `job-finder discover list` shows them;
+`job-finder discover add "Name"` (or `--all` for every specific title match)
+tracks one; `job-finder discover dismiss "Name"` stops it being proposed.
+Discovered rows arrive with no sector tags and `size_band` unknown; fill them
+with `companies add` when it matters for the digest.
+
 ### Bulk expansion (new geography or industry)
 
 1. Build a candidate list of employer names from any regional source.

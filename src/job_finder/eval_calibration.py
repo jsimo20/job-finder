@@ -53,7 +53,10 @@ _MIDDOT = "·"
 
 SECTION_RE = re.compile(
     rf"^##\s+(Main|Stretch)\s+queue\s*{_DASH}\s*(new|carried forward)", re.I)
-OTHER_SECTION_RE = re.compile(r"^##\s+(Closed|Stats|Manual check)", re.I)
+# Any other second-level header ends the scored sections (Manual check, New
+# companies to review, Closed, Stats), so a section added later cannot be
+# read as part of the queue above it.
+OTHER_SECTION_RE = re.compile(r"^##\s")
 ENTRY_RE = re.compile(
     rf"^###\s+\[Score\s+(-?\d+)\]\s+(.+?)\s+{_DASH}\s+\[(.+?)\]\((\S+?)\)\s*$")
 # Stage slugs carry digits (mega_corp_10k), so the class cannot be letters only.
@@ -83,7 +86,7 @@ def _band_label(lo: int | None, hi: int | None) -> str:
 def parse_digest(body: str) -> list[dict[str, Any]]:
     """Extract the pending role entries from one rendered digest, in reading order.
 
-    Closed, Stats and Manual check sections carry no score, so they are not part
+    Every section other than the queues carries no score, so they are not part
     of the ranking being graded and are skipped.
     """
     entries: list[dict[str, Any]] = []

@@ -12,8 +12,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from . import (applied, collect, db, digest, emailer, extract, job_apply, outreach,
-               review, score, state)
+from . import (applied, builtin_discovery, collect, db, digest, emailer, extract, job_apply,
+               outreach, review, score, state)
 
 load_dotenv(override=True)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -182,6 +182,13 @@ def _cmd_run(args: argparse.Namespace) -> int:
     print(json.dumps(extract.run(db_path=db_path), indent=2))
     print("== score ==")
     print(json.dumps(score.run(db_path=db_path), indent=2))
+    print("== discover ==")
+    # Discovery only proposes companies for the digest; a failure here must not
+    # cost the week's digest, so it is reported and the run continues.
+    try:
+        print(json.dumps(builtin_discovery.run(), indent=2))
+    except Exception as exc:
+        print(f"DISCOVERY FAILED: {exc}", file=sys.stderr)
     print("== digest ==")
     out = digest.render(db_path=db_path)
     print(f"wrote {out}")
@@ -196,6 +203,48 @@ def _cmd_run(args: argparse.Namespace) -> int:
             print(f"EMAIL FAILED: {exc}", file=sys.stderr)
             return 1
     return 0
+
+
+def _cmd_discover(args: argparse.Namespace) -> int:
+    cmd = args.discover_cmd
+    if cmd == "run":
+        cfg = builtin_discovery.settings()
+        if args.max_age_days:
+            cfg["max_age_days"] = args.max_age_days
+        stats = builtin_discovery.run(config=cfg)
+        print(json.dumps(stats, indent=2))
+        return 1 if stats["errors"] else 0
+    if cmd == "list":
+        rows = state.list_discovered(None if args.status == "all" else args.status)
+        for d in rows:
+            board = f"{d['ats_provider']}:{d['ats_slug']}" if d["ats_provider"] else "no board"
+            print(f"{d['status']:9s} {d['name']}  [{board}]  {d['sample_title']}  {d['sample_url']}")
+        print(f"{len(rows)} {args.status}")
+        return 0
+    names = args.names
+    if getattr(args, "all", False):
+        # A generic title match ("Senior Product Manager") does not prove the
+        # board is theirs, so those are only ever added by name.
+        pending = state.list_discovered("pending")
+        names = [d["name"] for d in pending if d["title_match"] == "specific"]
+        for d in pending:
+            if d["title_match"] != "specific":
+                print(f"skipped (generic title match, add by name): {d['name']}")
+    failed = 0
+    for name in names:
+        if cmd == "add":
+            try:
+                c = builtin_discovery.promote(name)
+                print(f"tracked: {c['name']} [{c['ats_provider']}:{c['ats_slug']}]")
+            except KeyError as exc:
+                print(exc, file=sys.stderr)
+                failed += 1
+        elif state.set_discovered_status(name, "dismissed"):
+            print(f"dismissed: {name}")
+        else:
+            print(f"no discovered company named {name!r}", file=sys.stderr)
+            failed += 1
+    return 1 if failed else 0
 
 
 def _cmd_companies(args: argparse.Namespace) -> int:
@@ -342,6 +391,24 @@ def main(argv: list[str] | None = None) -> int:
     ce = csub.add_parser("export", help="write the list to a JSON file")
     ce.add_argument("path")
     ce.set_defaults(func=_cmd_companies)
+
+    p = sub.add_parser("discover", help="untracked companies hiring on Built In")
+    dsc = p.add_subparsers(dest="discover_cmd", required=True)
+    dr = dsc.add_parser("run", help="scan the configured Built In sites now")
+    dr.add_argument("--max-age-days", type=int, help="override [discovery].max_age_days")
+    dr.set_defaults(func=_cmd_discover)
+    dl = dsc.add_parser("list")
+    dl.add_argument("--status", default="pending",
+                    choices=["pending", "no_board", "added", "dismissed", "all"])
+    dl.set_defaults(func=_cmd_discover)
+    da = dsc.add_parser("add", help="track pending discovered companies")
+    da.add_argument("names", nargs="*")
+    da.add_argument("--all", action="store_true",
+                    help="every pending company with a specific title match")
+    da.set_defaults(func=_cmd_discover)
+    dd = dsc.add_parser("dismiss", help="never propose these companies again")
+    dd.add_argument("names", nargs="+")
+    dd.set_defaults(func=_cmd_discover)
 
     p = sub.add_parser("no-auto", help="companies never auto-applied to")
     nsub = p.add_subparsers(dest="no_auto_cmd", required=True)
