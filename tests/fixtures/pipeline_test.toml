@@ -13,6 +13,7 @@
 comp_floor_usd = 140000
 # Roles asking for more years than this route to the stretch queue.
 yoe_main_queue_max = 7
+untitled_min_yoe = 5
 # Postings open longer than this are dropped as likely evergreen reqs.
 stale_days = 30
 # Posted base-salary minimums at or above each threshold add one point to the

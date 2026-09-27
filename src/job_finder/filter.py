@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 
 from .settings import pipeline_config
-from .taxonomy import COMP_FLOOR_USD, YOE_MAIN_QUEUE_MAX
+from .taxonomy import COMP_FLOOR_USD, UNTITLED_MIN_YOE, YOE_MAIN_QUEUE_MAX
 
 # Location scope and title targeting live in config/pipeline.toml — per-user
 # preferences. configure() compiles what a config declares; tests call it
@@ -136,11 +136,11 @@ def stage1(*, title: str, location: str | None, workplace_type: str | None) -> F
             return FilterResult(False, "discard:engineering_or_ic_role")
         return FilterResult(False, "discard:not_pm_title")
 
-    # Seniority floor
+    # Seniority floor. A title with no level word ("Product Manager, Growth")
+    # is kept: many companies title every level that way, so Stage 3 decides
+    # its queue from the experience the JD asks for.
     if SENIORITY_REJECT_RE.search(title):
         return FilterResult(False, "discard:too_junior")
-    if not SENIORITY_KEEP_RE.search(title):
-        return FilterResult(False, "discard:no_seniority_marker")
 
     # Location
     loc_text = location or ""
@@ -162,9 +162,19 @@ class Stage3Result:
     reason: str
 
 
+def has_seniority_marker(title: str) -> bool:
+    """True when the title names a level in the target band ("Senior", "Staff")."""
+    return bool(SENIORITY_KEEP_RE.search(title))
+
+
 def stage3(*, yoe_required: int | None, comp_base_min: int | None,
-           comp_base_max: int | None, comp_source: str | None) -> Stage3Result:
+           comp_base_max: int | None, comp_source: str | None,
+           titled: bool = True) -> Stage3Result:
     """Post-extraction hard filters. Routes to main vs stretch queue.
+
+    `titled` is False for a title with no level word. Such a role reaches the
+    main queue only when the JD asks for at least UNTITLED_MIN_YOE years; with
+    fewer, or none stated, it may be a mid-level role and goes to stretch.
 
     Comp gating uses the *top* of the posted range. A wide range like $136-204K
     spans the floor; the actual offer can land anywhere inside it, so we only
@@ -176,4 +186,6 @@ def stage3(*, yoe_required: int | None, comp_base_min: int | None,
             return Stage3Result(False, "discard", f"comp_ceiling_below_floor:{ceiling}")
     if yoe_required is not None and yoe_required > YOE_MAIN_QUEUE_MAX:
         return Stage3Result(True, "stretch", f"yoe_required:{yoe_required}")
+    if not titled and (yoe_required is None or yoe_required < UNTITLED_MIN_YOE):
+        return Stage3Result(True, "stretch", f"untitled_yoe_required:{yoe_required}")
     return Stage3Result(True, "main", "keep")
