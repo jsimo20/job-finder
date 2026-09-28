@@ -39,9 +39,8 @@ Also run `job-finder no-auto list`. Any role whose company matches an entry (cas
 
 ### 2. Score each pending role against the user's fit profile
 
-Read `profile/fit_profile.md` (fall back to `profile.example/fit_profile.md`
-only to learn the expected shape — if the real file is missing, say so in your
-report rather than ranking against placeholder preferences). Apply its
+Read `profile/fit_profile.md`. If it is missing, say so in your report and
+rank on digest score alone rather than guessing at preferences. Apply its
 signal buckets in order: strong positive, mild positive, mild negative
 (deprioritize but don't drop), strong negative (drop from top N unless the
 score is otherwise overwhelming).

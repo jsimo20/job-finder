@@ -1,5 +1,5 @@
-"""Profile doctor: verify the gitignored profile/ is filled in, not a copy of
-the example. Run it after setup and before the first real application:
+"""Profile doctor: verify the gitignored profile/ is filled in, not still the
+starting values from SETUP.md §3. Run it after setup and before the first real application:
 
     python -m job_finder.profile_check
 
@@ -13,7 +13,7 @@ import sys
 from . import settings
 from .job_apply import load_config
 
-# Values that mean "still the example template".
+# Values that mean "still the starting values from SETUP.md §3".
 PLACEHOLDERS = {
     "name": {"alex sample", ""},
     "email_domains": {"example.com"},
@@ -38,7 +38,7 @@ def check() -> list[str]:
 
     real = settings.PROFILE_DIR / "profile.toml"
     if not real.exists():
-        return ["profile/profile.toml does not exist — run `cp -r profile.example profile` "
+        return ["profile/profile.toml does not exist — run `python -m job_finder.profile_init` "
                 "and fill it in (SETUP.md §3)"]
 
     profile = settings.load_profile(real)
@@ -79,8 +79,9 @@ def check() -> list[str]:
         issues.append(f"claims_ground_truth.md not found at {config.claims_ground_truth} — "
                       "the tailoring and fact-checking workflows read it (SETUP.md §3)")
     if not config.resume_skill.exists():
-        issues.append(f"resume generator not found at {config.resume_skill} — copy "
-                      "profile.example/generate_resume.py and edit its RESUME_DATA block")
+        issues.append(f"resume generator not found at {config.resume_skill} — "
+                      "`python -m job_finder.profile_init` writes it; then edit its "
+                      "RESUME_DATA block (SETUP.md §3)")
     if not (settings.PROFILE_DIR / "fit_profile.md").exists():
         issues.append("profile/fit_profile.md missing — the digest triager ranks roles with it")
 

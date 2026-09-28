@@ -148,8 +148,8 @@ Do not fill base-salary, total-comp, or expected-pay fields, **even when marked 
 Read `profile/profile.toml` `[eeo]`. Fill exactly the questions that table
 sets a non-empty value for, matching each value against the form's option
 text. An empty value means the user answers that question by hand — leave it
-blank and list it in the report. Never fall back to `profile.example/` for
-EEO values.
+blank and list it in the report. Never supply an EEO value the profile does
+not set.
 
 Use only these defaults. If the user prefers "Decline to self-identify" they'll say so in the dispatching prompt; otherwise apply the defaults.
 

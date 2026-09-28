@@ -145,9 +145,8 @@ def build_combo_fields(profile: dict) -> list[tuple[str, list[str]]]:
     return combos
 
 
-# Module-level default for tests and callers that pass no combos explicitly.
-# Falls back to profile.example/ on a fresh clone, whose [answers] defaults
-# keep the structure intact while its empty [eeo] emits no EEO rows. main()
+# Module-level default for callers that pass no combos explicitly. With no
+# profile yet it holds only the rows that need no personal answer. main()
 # rebuilds this from the user's real profile before touching a form.
 COMBO_FIELDS: list[tuple[str, list[str]]] = build_combo_fields(settings.load_profile())
 
