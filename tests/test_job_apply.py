@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from job_finder import job_apply
+from job_finder import job_apply, profile_init
 
 
 @pytest.fixture
@@ -98,12 +98,16 @@ def isolated_config(tmp_path: Path) -> job_apply.Config:
     session_ctx = tmp_path / "session_ctx.md"
     session_ctx.write_text("# anti-overstatement rules\n", encoding="utf-8")
 
-    # The vendored template ships with the repo, so render tests never skip.
+    # The generator SETUP.md §3 gives every new user, so render tests never skip.
+    generator = tmp_path / "generate_resume.py"
+    generator.write_text(profile_init.profile_blocks(
+        profile_init.SETUP_MD.read_text(encoding="utf-8"))["generate_resume.py"],
+        encoding="utf-8")
     return job_apply.Config(
         inputs_dir=inputs,
         applications_dir=apps,
         claims_ground_truth=session_ctx,
-        resume_skill=job_apply.REPO_ROOT / "profile.example" / "generate_resume.py",
+        resume_skill=generator,
     )
 
 
@@ -140,22 +144,6 @@ def test_load_config_defaults_into_profile_dir():
     assert cfg.resume_skill == base / "generate_resume.py"
     assert cfg.claims_ground_truth == base / "claims_ground_truth.md"
     assert cfg.writing_style == base / "writing-style.md"
-
-
-def test_profile_example_ships_every_file_the_default_paths_resolve():
-    """`cp -r profile.example profile` with no [paths] table must give the apply
-    loop every ground-truth file it reads, at the path load_config resolves.
-    A default pointing at a file the example does not ship is a gap every new
-    user hits on their first run."""
-    from job_finder import settings
-
-    cfg = job_apply.load_config(profile={})
-    base = settings.profile_dir()
-    for path in (cfg.resume_master_md, cfg.personal_statement_md, cfg.standard_answers_md,
-                 cfg.qa_checklist_md, cfg.claims_ground_truth, cfg.writing_style,
-                 cfg.resume_skill):
-        shipped = settings.PROFILE_EXAMPLE_DIR / path.relative_to(base)
-        assert shipped.exists(), f"profile.example lacks {shipped.name}"
 
 
 def test_load_config_reads_profile_paths(tmp_path):

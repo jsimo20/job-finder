@@ -39,8 +39,8 @@ config/pipeline.toml
 data/
 digests/
 
-# Personal profile — identity, EEO answers, driving docs. The committed
-# template lives in profile.example/. Never commit the real thing.
+# Personal profile — identity, EEO answers, driving docs. SETUP.md §3 defines
+# its starting files. Never commit the real thing.
 profile/
 
 

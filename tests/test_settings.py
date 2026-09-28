@@ -14,25 +14,6 @@ def test_pipeline_config_parses_and_has_required_tables():
         assert {"weight", "definition"} <= set(spec)
 
 
-def test_profile_example_is_a_loadable_fallback():
-    example = settings.load_profile(settings.PROFILE_EXAMPLE_DIR / "profile.toml")
-    assert example["identity"]["name"]
-    # The example must never carry EEO answers — an unconfigured clone
-    # falling back to it must not fill those questions with someone else's
-    # defaults.
-    assert all(v == "" for v in example["eeo"].values())
-
-
-def test_combo_fields_from_example_profile_have_no_eeo_rows():
-    example = settings.load_profile(settings.PROFILE_EXAMPLE_DIR / "profile.toml")
-    combos = build_combo_fields(example)
-    patterns = [p for p, _ in combos]
-    assert r"sponsor" in patterns          # authorized + no sponsorship in example
-    assert r"gender" not in patterns
-    assert r"disabilit" not in patterns
-    assert r"pronoun" not in patterns
-
-
 def test_combo_fields_include_eeo_rows_only_when_set():
     profile = {
         "answers": {"work_authorized": True, "requires_sponsorship": False},
