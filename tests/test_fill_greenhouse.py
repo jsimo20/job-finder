@@ -52,8 +52,11 @@ def test_sponsorship_veto_allows_a_plain_negation():
     assert not _re.search(veto, "i do not require sponsorship.", _re.I)
 
 
+AUTHORIZED = {"answers": {"work_authorized": True, "requires_sponsorship": False}}
+
+
 def test_authorized_candidate_resolves_the_real_liveform_options():
-    cands = next(c for pat, c in fg.COMBO_FIELDS if pat == r"sponsor")
+    cands = next(c for pat, c in fg.build_combo_fields(AUTHORIZED) if pat == r"sponsor")
     assert fg.match_option(POSITIVE_PHRASED_OPTIONS, cands[0]) == 0
 
 
@@ -70,7 +73,7 @@ def test_specific_candidate_resolves_liveform_sponsorship():
 def test_sponsorship_candidates_are_ordered_specific_first():
     # Ordering is load-bearing. "no" must stay last: on one live form's options it
     # matches uniquely and wrongly, so anything specific has to be tried first.
-    cands = next(c for pat, c in fg.COMBO_FIELDS if pat == r"sponsor")
+    cands = next(c for pat, c in fg.build_combo_fields(AUTHORIZED) if pat == r"sponsor")
     assert cands[0] == "legally authorized to work"
     assert "do not require sponsorship" in cands
     assert cands[-1] == "no"

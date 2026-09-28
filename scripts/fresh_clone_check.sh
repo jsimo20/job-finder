@@ -84,12 +84,15 @@ expect_exit "job-finder status with nothing configured" 0 job-finder status
 expect_output "status says no digest yet" 'none archived'
 expect_output "status says no pipeline run yet" 'no pipeline run recorded'
 expect_exit "profile_check with no profile exits 1" 1 python -m job_finder.profile_check
-expect_output "profile_check points at the copy step" 'cp -r profile\.example profile'
+expect_output "profile_check points at the create step" 'job_finder\.profile_init'
 
 # ── SETUP.md §3 Profile ──────────────────────────────────────────────────────
-stage "SETUP.md §3: profile from the example"
-expect_exit "cp -r profile.example profile" 0 cp -r profile.example profile
-expect_exit "an unedited example copy is refused" 1 python -m job_finder.profile_check
+stage "SETUP.md §3: profile from SETUP.md's file blocks"
+expect_exit "python -m job_finder.profile_init" 0 python -m job_finder.profile_init
+expect_output "profile_init wrote the generator" 'wrote +profile/generate_resume\.py'
+expect_exit "profile_init a second time" 0 python -m job_finder.profile_init
+expect_output "a second run leaves existing files alone" 'kept +profile/profile\.toml'
+expect_exit "an unedited starting profile is refused" 1 python -m job_finder.profile_check
 expect_output "profile_check names the placeholder identity" 'placeholder'
 expect_output "profile_check names the missing pipeline.toml" 'pipeline\.toml not found'
 expect_output "profile_check names the empty company list" 'no tracked companies'
@@ -115,8 +118,8 @@ expect_exit "letter_linter --date today" 3 python -m job_finder.letter_linter --
 expect_exit "fill_grader --date today --gate" 3 python -m job_finder.fill_grader --date "$TODAY" --gate
 expect_exit "skill_terms --folder <absent>" 3 python -m job_finder.skill_terms --folder profile/applications/none
 
-# ── render() end to end on the example profile, zero tokens ──────────────────
-stage "job_apply.render() on the example profile"
+# ── render() end to end on the starting profile, zero tokens ─────────────────
+stage "job_apply.render() on the starting profile"
 cat >"$OUT.render.py" <<'PY'
 from job_finder import job_apply
 
@@ -206,7 +209,7 @@ show 10
 if [ "$got" -eq 0 ]; then
     pass "every file load_config() resolves exists"
 else
-    fail "load_config() resolves to files the example does not ship"
+    fail "load_config() resolves to files SETUP.md does not define"
 fi
 
 # The prompts must resolve these paths the same way and never name a layout: a
