@@ -127,6 +127,7 @@ example values, so edit them in this order:
 | `fit_profile.md` | digest-triager agent | What a great role is for you, so triage can rank the digest |
 | `qa_checklist.md` | `job_apply.render()` | Per-application checklist written into every apply.md |
 | `claims_ground_truth.md` | tailoring | Per-claim framing rules and metrics the drafter must not inflate |
+| `story_bank.md` (optional, no starting block) | drafting, fact-checker, free-text answers | STAR stories from past interviews; untagged details count as ground truth, and a detail tagged `[confirm]` is never used until you confirm it |
 | `generate_resume.py` | `job_apply.render()` | Resume PDF generator |
 
 EEO values are voluntary; an empty value is always left for you to answer.
