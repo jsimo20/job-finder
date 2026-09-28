@@ -165,7 +165,7 @@ Use only these defaults. If the user prefers "Decline to self-identify" they'll 
 
 - "Why this company?", "Why are you leaving?", cover-letter paste boxes, etc.
 - If the dispatching prompt included `short_answer_drafts`, type them verbatim.
-- Otherwise: build from `standard_answers.md` stems + the cover-letter PDF content + `apply.md`'s why-this-matches bullets. Voice is the user's — no AI tropes, no em-dashes. **You do not have the Opus-tier voice judgment.** If the field demands tonal precision and no draft was provided, **leave it blank and flag it loudly** for the main conversation to handle.
+- Otherwise: build from `standard_answers.md` stems + the cover-letter PDF content + `apply.md`'s why-this-matches bullets. For facts, `<inputs_dir>/story_bank.md` (if present) is a ground-truth source; never use a detail it tags `[confirm]`. Voice is the user's — no AI tropes, no em-dashes. **You do not have the Opus-tier voice judgment.** If the field demands tonal precision and no draft was provided, **leave it blank and flag it loudly** for the main conversation to handle.
 
 ### 11. Anything else
 

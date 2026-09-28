@@ -62,6 +62,11 @@ class Config:
         return self.inputs_dir / "personal_statement.md"
 
     @property
+    def story_bank_md(self) -> Path:
+        """Optional: STAR stories whose untagged details count as ground truth."""
+        return self.inputs_dir / "story_bank.md"
+
+    @property
     def standard_answers_md(self) -> Path:
         return self.inputs_dir / "standard_answers.md"
 
@@ -489,6 +494,8 @@ def tailor(posting_row: Mapping[str, Any], *, config: Config | None = None,
 
     resume_master = config.resume_master_md.read_text(encoding="utf-8")
     personal_statement = config.personal_statement_md.read_text(encoding="utf-8")
+    story_bank = (config.story_bank_md.read_text(encoding="utf-8")
+                  if config.story_bank_md.exists() else "(no story bank)")
     session_ctx = (
         config.claims_ground_truth.read_text(encoding="utf-8")
         if config.claims_ground_truth.exists() else "(claims ground truth not found)"
@@ -501,6 +508,7 @@ def tailor(posting_row: Mapping[str, Any], *, config: Config | None = None,
         f"```\n{posting_row.get('jd_text') or '(no jd_text in DB — fall back to title + company)'}\n```\n\n"
         f"## Master resume\n\n{resume_master}\n\n"
         f"## Personal statement\n\n{personal_statement}\n\n"
+        f"## Story bank (details tagged [confirm] are unverified)\n\n{story_bank}\n\n"
         f"## Anti-overstatement rules (session context)\n\n{session_ctx}\n"
     )
 

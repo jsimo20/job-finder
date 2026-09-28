@@ -28,6 +28,7 @@ everything lives in `profile/` directly.
 
 - `<inputs_dir>/resume_master.md` — canonical experience and metrics.
 - `<inputs_dir>/personal_statement.md` — narrative voice + supplementary context.
+- `<inputs_dir>/story_bank.md`, if present — STAR stories. Its untagged details are ground truth like the two files above. **A detail tagged `[confirm]` is unverified: any claim resting on one is CRITICAL.** Where a story overlaps a claims-ground-truth rule, the rule's framing wins.
 - `<claims_ground_truth_path>` — per-claim framing rules, skill source pool, factual baselines.
 - the writing-style file at `[paths].writing_style_path` — the user's voice rules, and **the authority for every voice check in §5**. Read it in full; §5's inline list is a summary of its §2, not a substitute for the rest of it. It carries rules the inline list does not: show the work rather than claim the match (§8), plain words over writerly metaphor-nouns (§9), no self-grading (§5), no triadic lists built for rhythm (§2), and a numbered self-check to run before you report.
 
@@ -46,7 +47,7 @@ missing, report that as a finding rather than inventing rules.
 
 For every bullet in `resume_data["experience"][*]["bullets"]`, verify:
 
-- **The fact is traceable** to `resume_master.md` or `personal_statement.md`. If not, flag.
+- **The fact is traceable** to `resume_master.md`, `personal_statement.md`, or an untagged detail in `story_bank.md`. If not, flag.
 - **Every metric is verbatim** (or a tighter wording of) the source. Numbers must match exactly — never rounded up, never a projection presented as delivered.
 - **Every anti-overstatement rule in the session-context file holds** — these are per-claim framing rules ("say Phase 1, not shipped"; "this metric is modeled"; "never claim X as zero-to-one"). Enforce each one literally.
 - **Cohesion**: no orphan claims that don't connect to an employer/project the source files describe.
@@ -82,7 +83,7 @@ For every bullet in `resume_data["experience"][*]["bullets"]`, verify:
 - **Opening and close.** The style guide's "Writing the opening" section is a build procedure; check the letter against its output, not its vocabulary. The first sentence states how the category normally works. The second names this product's departure and ends on a consequence. The third opens on that consequence and states the user's work. Flag an opening that announces his reaction instead ("your posting caught my attention", "the part I keep coming back to"), one whose main verb is "excited", "passionate", "thrilled" or "drawn to", one that explains the parallel rather than letting the repeated noun carry it, and one that could be pasted into a letter to a different company. The last sentence must be exactly "I look forward to discussing this opportunity in greater detail with you." A curiosity question in its place, or anywhere in the closing paragraph, is a finding: that pattern was retired because it reads as constructed once several letters are seen together. MEDIUM each.
 - **First person throughout.** The user is the subject. Opening a paragraph with "I" is allowed; the rule banning it was removed 2026-09-28. Flag the opposite failure: paragraph openers handed to abstractions or demonstrative pronouns with no person in them.
 - **Closing is "Thanks,"** — no alternatives.
-- Every factual claim is traceable to `resume_master.md` or `personal_statement.md`. Same metric verification as resume bullets.
+- Every factual claim is traceable to `resume_master.md`, `personal_statement.md`, or an untagged detail in `story_bank.md`. Same metric verification as resume bullets.
 - **Voice cohesion**: paragraphs read like the personal statement's tone (conversational, declarative, occasionally self-deprecating, not overwrought). Flag any paragraph that drifts corporate.
 
 ### 6. JD-keyword alignment (optional, only if `jd_text` provided)
