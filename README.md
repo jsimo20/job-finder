@@ -14,9 +14,9 @@ configuration, not code:
   applied and seen ledgers, and the digest archive. Managed via
   `job-finder companies|no-auto|applied|digest-archive` subcommands.
 - **`profile/`** (gitignored) — who you are: identity, EEO answers, stock
-  screening answers, master resume, writing voice. Copied from
-  `profile.example/`; `python -m job_finder.profile_check` verifies it's
-  filled in.
+  screening answers, master resume, writing voice. Created from the file
+  blocks in SETUP.md §3 (`python -m job_finder.profile_init`);
+  `python -m job_finder.profile_check` verifies it's filled in.
 
 New user? Follow **[SETUP.md](SETUP.md)** top to bottom — written so you can
 hand it to a Claude Code session and let it drive.
