@@ -203,9 +203,13 @@ Never open a paragraph on a fresh topic with no backward reference.
 
 ## Voice mode (writing as you)
 
-### Never start a paragraph with "I"
+### Stay in first person
 
-Restructure the opening clause. Mid-sentence "I" is fine and expected.
+Write as yourself, with yourself as the subject. "I" is the default, including
+as the first word of a paragraph. Openers handed to an abstraction or a
+demonstrative pronoun are the failure to watch for. Vary the openers among
+first-person shapes ("I taught myself...", "My first move was...", "Following
+my time at <previous employer>, I...") rather than away from first person.
 
 ### One number does the heavy lifting
 
@@ -255,11 +259,15 @@ yes, step 2 has not been done.**
   > I look forward to discussing this opportunity in greater detail with you.
 
   Verbatim, every time, nothing after it. It closes the final paragraph rather
-  than standing as its own, so the rule against opening a paragraph on "I"
-  still holds. Do not end on a curiosity question; across a stack of letters the
+  than standing as its own. Do not end on a curiosity question; across a stack of letters the
   constructed question is the tell.
-- Name a disqualifying gap in paragraph 1, then drop it. No reframe, no
-  mitigation (§10).
+- Never name a gap. No sentence whose content is the absence of experience:
+  not a domain that is not your background, not a requirement you miss, not a
+  part of the role you would be learning. The reader has the resume and the
+  posting and will find the delta themselves. Put the next strongest piece of
+  real work in the slot instead. This bans volunteering the gap, not accuracy:
+  a direct question on a form still gets a direct answer, and nothing may imply
+  experience you do not have.
 - Let paragraphs end flat, on the limitation. "It is still in pilot, so there
   are no results to point at yet." Resist adding "but the early signal is
   strong."
