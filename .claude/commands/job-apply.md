@@ -26,6 +26,7 @@ Argument: `$ARGUMENTS`.
 a. **Load context** (read these files once and keep in memory for the whole session; all paths come from `profile/profile.toml` `[paths]`, defaulting into `profile/`):
    - `<inputs_dir>/resume_master.md`
    - `<inputs_dir>/personal_statement.md`
+   - `<inputs_dir>/story_bank.md`, if present — STAR stories from past interviews. Pick one or two by what the JD needs, never by the label a story was filed under. Untagged details are ground truth; a detail tagged `[confirm]` is not usable until the user confirms it, so phrase around it or ask.
    - the claims-ground-truth file at `[paths].claims_ground_truth_path` (default `profile/claims_ground_truth.md`) — per-claim framing rules, skill source pool
    - the writing-style file at `[paths].writing_style_path` — the voice rules for anything written as the user. Read it before drafting the cover letter, not after. Its Voice-mode section and its §8 (show the work, don't claim the match) are what keep a letter from reading AI-written.
    - the resume generator at `[paths].resume_skill_path` (default `profile/generate_resume.py`); read any SKILL.md or design notes sitting next to it, if present
@@ -67,11 +68,11 @@ d. **Draft the cover letter** as a dict matching `job_apply._render_cover_letter
      "title_subtitle": "<must match the title subtitle in resume_data>",
    }
    ```
-   Voice: the user's. Source: personal statement + master resume. Every claim must be traceable. No em-dashes anywhere. No AI tropes ("spearheaded," "leveraged," "delve," "navigate the landscape," etc.). Show the user the draft, accept feedback.
+   Voice: the user's. Source: personal statement + master resume + story bank. Every claim must be traceable. No em-dashes anywhere. No AI tropes ("spearheaded," "leveraged," "delve," "navigate the landscape," etc.). Show the user the draft, accept feedback.
 
 e. **Draft 3–5 `why_this_matches` bullets** — short, factual, JD-keyword aligned. These go into `apply.md` for future reference.
 
-f. **Dispatch the `materials-fact-checker` subagent** (Sonnet) with `resume_data`, `cover_letter`, `jd_text`, `company` inline in the prompt. The agent cross-checks every claim against `resume_master.md`, `personal_statement.md`, and the session-context file's anti-overstatement rules; returns severity-tagged findings (CRITICAL / MEDIUM / LOW / NIT).
+f. **Dispatch the `materials-fact-checker` subagent** (Sonnet) with `resume_data`, `cover_letter`, `jd_text`, `company` inline in the prompt. The agent cross-checks every claim against `resume_master.md`, `personal_statement.md`, `story_bank.md`, and the session-context file's anti-overstatement rules; returns severity-tagged findings (CRITICAL / MEDIUM / LOW / NIT).
    - If the verdict is **CLEAN**, proceed to step g.
    - If **FLAGS PRESENT**, surface the findings to the user, propose one-line fixes for each, and revise after they confirm. Re-dispatch the fact-checker on the revised drafts if any CRITICAL finding was edited. Loop until CLEAN.
    - If **BLOCK** (a fabricated metric or banned framing slipped in), do not proceed to render — fix the underlying claim first.
@@ -141,7 +142,7 @@ If the user said `all` or multiple ids, process them sequentially. Between roles
 
 - **The ATS never gates prep — only who pushes Submit.** Every role with a readable JD gets the full loop (tailor, fact-check, render). Autofill runs when the form is reachable; when it isn't, the loop ends with a complete package plus an `APPLY_NOTES.md` handoff, never with a skipped role.
 - **Honor the no-auto-apply list.** `job-finder no-auto list` names companies the user handles through their own contacts. Never draft, render, or autofill an application for any role whose company is on that list — surface it for awareness and stop. This gate is non-negotiable even if they pass the role's `external_id` directly.
-- **Never invent facts.** Every claim must be in `resume_master.md` or `personal_statement.md` or something the user said in this conversation.
+- **Never invent facts.** Every claim must be in `resume_master.md`, `personal_statement.md`, an untagged detail of `story_bank.md`, or something the user said in this conversation. Free-text answers on a form follow the same rule: draft them from the story bank rather than leaving the autofill agent to improvise.
 - **Anti-overstatement.** Read the session-context file named in `profile/profile.toml [paths]` and apply every rule in it literally (per-claim framing rules, the fixed skill-category count, the skill source pool). The `materials-fact-checker` subagent will also enforce these — they're belt-and-suspenders.
 - **Show before render.** Always show the user the RESUME_DATA changes and cover letter draft, then run the fact-checker, then surface findings. They get the last word on every revision before render() fires.
 - **Don't auto-mark applied.** The user submits by hand and runs `mark-applied` after.
