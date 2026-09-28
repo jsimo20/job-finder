@@ -295,6 +295,23 @@ It checks structure, not judgment. A swap the `skill-term-mapper` rationalized
 passes this and still reaches an employer, so put the agent's `rejected` list in
 the report: those are the gaps the letter should be naming.
 
+**Free-text typed into a form is not covered by the letter linter.** It only
+reads `cover_letter.json`, so a "Why this company?" box, a "describe a developer
+experience" box, or any other essay field would otherwise go out unchecked.
+
+So every free-text answer you type gets written into the per-app folder as
+`form_answers.json` and linted:
+
+```sh
+PYTHONPATH=".cowork-deps:src" python3 scripts/lint_form_answers.py --date <today>
+```
+
+    [{"question": "Why Anthropic?", "paragraphs": ["...", "..."]}]
+
+Same exit codes, same checks, minus the two that are letter-specific (a form
+answer has no "Thanks," closing and no fixed final line). **4 means a voice rule
+broke: fix the text and re-paste it into the form before moving on.**
+
 Then, after the last fill:
 
 ```sh
