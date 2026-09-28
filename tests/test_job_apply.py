@@ -144,6 +144,12 @@ def test_load_config_defaults_into_profile_dir():
     assert cfg.resume_skill == base / "generate_resume.py"
     assert cfg.claims_ground_truth == base / "claims_ground_truth.md"
     assert cfg.writing_style == base / "writing-style.md"
+    assert cfg.story_bank_md == base / "story_bank.md"
+
+
+def test_story_bank_follows_inputs_dir(tmp_path):
+    cfg = job_apply.load_config(profile={"paths": {"inputs_dir": str(tmp_path)}})
+    assert cfg.story_bank_md == tmp_path / "story_bank.md"
 
 
 def test_load_config_reads_profile_paths(tmp_path):

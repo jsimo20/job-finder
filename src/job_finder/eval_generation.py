@@ -140,7 +140,11 @@ def ground_truth(config: job_apply.Config) -> dict[str, str]:
     if missing:
         raise SystemExit("Cannot grade the drafter without its inputs:\n  "
                          + "\n  ".join(missing))
-    return {k: v.read_text(encoding="utf-8") for k, v in docs.items()}
+    gt = {k: v.read_text(encoding="utf-8") for k, v in docs.items()}
+    # Optional, so a profile without one grades the same as before.
+    gt["story_bank"] = (config.story_bank_md.read_text(encoding="utf-8")
+                        if config.story_bank_md.is_file() else "(no story bank)")
+    return gt
 
 
 def draft_prompt(posting: dict[str, Any], gt: dict[str, str]) -> str:
@@ -168,6 +172,10 @@ them.
 <personal_statement.md>
 {gt['personal_statement']}
 </personal_statement.md>
+
+<story_bank.md>
+{gt['story_bank']}
+</story_bank.md>
 
 company: {posting['company']}
 role: {posting['title']}
@@ -215,6 +223,10 @@ in this run, so treat these as the complete source of truth.
 <personal_statement.md>
 {gt['personal_statement']}
 </personal_statement.md>
+
+<story_bank.md>
+{gt['story_bank']}
+</story_bank.md>
 
 <claims_ground_truth.md>
 {gt['claims_ground_truth']}
