@@ -10,6 +10,7 @@ import json
 import pytest
 
 from job_finder import eval_factcheck as ef
+from job_finder import settings
 
 
 def test_strip_frontmatter_removes_yaml_header():
@@ -177,11 +178,21 @@ def test_prompt_inlines_every_ground_truth_file():
     assert "Northwind Logistics" in prompt
 
 
+def _owner_canaries() -> set[str]:
+    """Identity markers from the local profile; empty on a clone without one."""
+    identity = settings.load_profile().get("identity", {})
+    canaries = {w.lower() for w in str(identity.get("name", "")).split() if len(w) > 2}
+    for key in ("email", "phone", "linkedin", "github"):
+        if identity.get(key):
+            canaries.add(str(identity[key]).lower())
+    return canaries
+
+
 def test_fixtures_carry_no_real_identity():
     """The eval must never reach for the real profile; canary the owner's markers."""
-    blob = json.dumps(ef.load_cases()) + json.dumps(ef.load_ground_truth())
-    for canary in ("Sample", "jsimo", "Contoso", "gmail.com"):
-        assert canary not in blob.lower()
+    blob = (json.dumps(ef.load_cases()) + json.dumps(ef.load_ground_truth())).lower()
+    for canary in _owner_canaries() | {"gmail.com"}:
+        assert canary not in blob
 
 
 @pytest.mark.parametrize("case_id", [
