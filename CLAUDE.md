@@ -49,7 +49,7 @@ digest (digest.py, jinja2)                       →  digests/YYYY-MM-DD.md
 ## Commands
 
 ```sh
-# Run tests (should all pass; ~180 and growing)
+# Run tests (should all pass; 500+)
 .venv/Scripts/python.exe -m pytest -q
 
 # Run pipeline locally — MAKES REAL CLAUDE API CALLS, don't run casually
@@ -137,7 +137,7 @@ fact-checker and `--gate`, which is why both are measured rather than trusted.
   reason past it. Nine benign labels are pinned as a false-positive guard.
 - **`letter_linter.py`** reads a rendered letter's `cover_letter.json` and flags
   the voice rules that survive as patterns. **CRITICAL blocks and ADVISORY never
-  does**, because a flat ban (em-dash, a paragraph opening on "I", an opening that
+  does**, because a flat ban (em-dash, a volunteered gap, an opening that
   announces a reaction rather than stating a fact about the company, a feeling
   verb, a trope, a closing that is not "Thanks,") has no legitimate exception,
   while a trailing-gloss candidate does: "which is what started my search" carries
@@ -159,21 +159,27 @@ fact-checker and `--gate`, which is why both are measured rather than trusted.
   **JDs are live, not fixtures**: a frozen JD goes stale while quietly becoming
   the thing the prompt was tuned against, so runs are not reproducible and the
   report names the postings used. Any posting in the applied ledger is held out.
-  ~25k tokens per case. **Neither grader can tell whether the opening's contrast
-  is true** — a manufactured departure passes every check, so read one letter.
+  About 42k input tokens per draft on Opus 5, plus thinking, which counts against
+  `max_tokens` (hence 16000). Measured 2026-10-01, one run: 3/3 drafted, 1/3 passed,
+  grade F; the two failures were fact-checker CRITICALs the eval did not yet name.
+  **Neither grader can tell whether a claim about the company is true**, so read
+  one letter.
 - **`eval_factcheck.py`** measures the `materials-fact-checker`, the last
   automated step before a claim reaches an employer. Each case is a clean draft
   plus one planted defect (invented metric, rounded metric, claimed direct
   reports, banned Phase-1 framing, unsourced skill, em-dash, AI trope). It reads
   the system prompt straight from the agent definition, so it grades the shipped
-  prompt, not a copy. **Half the suite is clean controls** — a checker that
+  prompt, not a copy. **The suite includes clean controls** — a checker that
   flags everything has perfect recall and is useless, so the grade is the
   harmonic mean of recall and precision. Ground truth is a synthetic person in
   `tests/fixtures/factcheck/`; the real profile is never read. **Detection and
   severity are reported separately** — a defect nobody named can reach an
   employer, while one filed a rung too low still reaches the report, so only
-  the former fails the run. First live run: grade B, 14/14 detected, 12/14 at
-  the expected severity, 2/2 clean controls untouched.
+  the former fails the run. Measured 2026-10-01, one complete run: grade B, 18/19
+  detected, 15/19 at the expected severity, 2/2 clean controls untouched;
+  `trailing_gloss` was the one miss. **The fixture's clean letter and its
+  `claims_ground_truth.md` must follow the current voice rules**: when a rule is
+  retired, a clean control still carrying it fails every run.
 - **`eval_skill_terms.py`** measures the `skill-term-mapper`'s judgment, which
   `skill_terms.py` cannot. Each case is one JD built around a single repeated
   term. Three kinds: `swap` (the pool holds the same thing under another name),
@@ -182,8 +188,8 @@ fact-checker and `--gate`, which is why both are measured rather than trusted.
   redundant swap would take a real skill off to add a word already there. Grade is
   the harmonic mean of swaps-taken and holds-refused, so a mapper that proposes
   nothing scores F. Ground truth is synthetic. **13 cases: 6 swaps, 6 gaps, 1 covered.** Measured
-  2026-09-01 at **1.00 across two runs, spread 0.00**, after the prompt gained a
-  practice-name rule and lost a self-contradiction the eval surfaced. Four of the
+  2026-10-01 at **median 1.00 across three runs, spread 0.09**;
+  `swap-stakeholder-management` flipped once and is noise until pinned. Four of the
   gaps exist to catch that looser rule going sloppy ("data engineering is a
   practice built on SQL"); they are the cases to watch when the prompt changes.
 - **Every LLM eval takes `--repeat N` and reports the spread.** They graded each

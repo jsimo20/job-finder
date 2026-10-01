@@ -162,3 +162,14 @@ def test_the_linter_and_the_eval_agree_on_what_blocks():
     assert letter_linter.CRITICAL == "CRITICAL"
     bad = {**CLEAN_LETTER, "paragraphs": ["A letter with an em-dash — right here."]}
     assert E.grade_one(bad, "- Verdict: CLEAN")["passed"] is False
+
+
+def test_finding_headings_names_each_finding_at_that_severity():
+    report = ("- Verdict: FLAGS PRESENT\n\n### CRITICAL — Invented metric\nbody\n"
+              "### MEDIUM — Trailing gloss\n### CRITICAL — Unsourced skill\n")
+    assert E.finding_headings(report, "CRITICAL") == [
+        "CRITICAL — Invented metric", "CRITICAL — Unsourced skill"]
+
+
+def test_finding_headings_falls_back_when_the_report_has_no_headings():
+    assert E.finding_headings("CRITICAL: something", "CRITICAL") == ["CRITICAL finding"]

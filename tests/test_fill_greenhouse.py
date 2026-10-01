@@ -129,6 +129,23 @@ def test_self_referential_manager_questions_are_not_trapped(label):
     assert fg.NAME_TRAP_PATTERN.search(label) is None
 
 
+@pytest.mark.parametrize("label", ["References", "Professional reference name",
+                                   "Reference 1 email", "Please list a reference"])
+def test_reference_requests_are_trapped(label):
+    assert fg.NAME_TRAP_PATTERN.search(label)
+
+
+# "Reference" as an imperative verb in an essay prompt asks about the
+# applicant, not a third party.
+@pytest.mark.parametrize("label", [
+    "Why is this role interesting to you? Reference one part of the role charter.",
+    "Reference a specific project you led.",
+    "Reference the job description in your answer.",
+])
+def test_reference_as_a_verb_is_not_trapped(label):
+    assert fg.NAME_TRAP_PATTERN.search(label) is None
+
+
 def _main(argv, monkeypatch):
     monkeypatch.setattr("sys.argv", ["fill_greenhouse", *argv])
     return fg.main()

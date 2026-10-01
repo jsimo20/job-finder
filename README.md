@@ -24,13 +24,19 @@ hand it to a Claude Code session and let it drive.
 ## Find — the weekly digest
 
 A local scheduled task (Mondays 09:00; `scripts/install_schedule.ps1`
-registers it, with catch-up at next boot) collects postings from each tracked
-company's public ATS endpoint (Greenhouse, Lever, Ashby), hard-filters on
-title, seniority, and location, extracts structured signals with one Claude
+registers it and wakes the machine for it) collects postings from each tracked
+company's public ATS endpoint (Greenhouse, Lever, Ashby, Workday), hard-filters
+on title, seniority, and location, extracts structured signals with one Claude
 Haiku call per surviving JD (YOE, comp, domains, onsite days), scores
 deterministically, archives the ranked digest to `data/state.db`, and emails
 it. Everything runs on your machine; nothing personal round-trips through
 git or any cloud.
+
+Companies with no pollable board are tracked as `manual` and listed in the
+digest's **Manual check** section. If `[discovery]` in `config/pipeline.toml`
+names Built In sites, each run also proposes untracked companies posting your
+target role; `job-finder discover add` tracks one, and nothing is added
+without you.
 
 The working DB (`data/jobs.db`) is rebuilt every run; durable state lives in
 `data/state.db`: the company list, the applied ledger that suppresses roles
@@ -83,10 +89,18 @@ permanent improvements — wrong answers become code fixes with regression
 tests, unanswered questions get asked once and stored in your profile, so
 the next batch starts where the last one left off.
 
+`letter_linter` (zero tokens) blocks a drafted cover letter that breaks a flat
+voice rule before it reaches a form. The rest of the eval suite is manual:
+`eval_calibration` checks whether the score predicts what you apply to (zero
+tokens), and `eval_factcheck`, `eval_skill_terms` and `eval_generation` grade
+the fact-checker, the resume term mapper and the letter drafter (these spend
+tokens). CLAUDE.md lists the commands.
+
 ## Run
 
 ```bash
 job-finder run --email                   # full pipeline + digest email (spends API tokens)
+job-finder status                        # last run, schedule, digest age, applied count
 job-finder review                        # interactive picker: applied/dismissed
 job-finder companies list                # the tracked-company universe
 job-finder digest-archive show           # latest digest from the archive
@@ -96,12 +110,13 @@ python -m job_finder.fill_grader --date <YYYY-MM-DD> --suggest
 pytest                                    # no network, keys, or profile needed
 ```
 
-Credentials live in a local `.env` (`ANTHROPIC_API_KEY`, `GMAIL_USER`,
-`GMAIL_APP_PASSWORD`) — see SETUP.md §2. No GitHub secrets are needed; the
-repo runs no CI workflows.
+Credentials (`ANTHROPIC_API_KEY`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`) go in a
+local `.env` or in user environment variables, never both; see SETUP.md §2. No
+GitHub secrets are needed; the repo runs no CI workflows.
 
 ## Handing this repo to someone else
 
-`git clone`, then follow SETUP.md. There is nothing to reset: the repo
+`git clone`, then follow SETUP.md, which keeps the original as an `upstream`
+remote so later fixes can be pulled. There is nothing to reset: the repo
 tracks no one's search state (all of `data/` and `digests/` is gitignored),
 and history is kept clean of personal data on purpose.

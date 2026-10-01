@@ -35,12 +35,14 @@ human first — everything else it can do from this document:
 
 ```sh
 git clone <repo-url> my-job-finder && cd my-job-finder
-git remote set-url origin git@github.com:<your-user>/my-job-finder.git
-gh repo create <your-user>/my-job-finder --private --source=. --push
+git remote rename origin upstream
+gh repo create <your-user>/my-job-finder --private --source=. --remote=origin --push
 ```
 
-Nothing to reset: the repo contains no one's search state. Everything
-personal is created locally in the steps below and never committed.
+`upstream` keeps the repo you cloned from, so later fixes arrive with
+`git pull upstream main`. Nothing to reset: the repo contains no one's search
+state. Everything personal is created locally in the steps below and never
+committed.
 
 ## 2. Install
 
@@ -83,6 +85,11 @@ GMAIL_APP_PASSWORD=xxxxxxxxxxxxxxxx
 myaccount.google.com/apppasswords (requires 2FA). `GMAIL_USER` is both the
 sender and the recipient of the digest.
 
+User environment variables work too (`setx GMAIL_USER ...` on Windows), and the
+scheduled task inherits them. Keep each key in one place only: the CLI loads
+`.env` with override on, so a stale copy there silently wins over a working
+environment variable.
+
 ## 3. Create your profile
 
 `profile/` is gitignored and holds everything personal: identity, EEO answers,
@@ -108,8 +115,8 @@ example values, so edit them in this order:
 4. **`profile/writing-style.md`** — the voice rules for anything written as
    you. The fact-checker reads all of it and runs its self-check list against
    every letter; `letter_linter` enforces a fixed subset in code (no em-dashes,
-   no paragraph opening on "I", the closing "Thanks," and the fixed final
-   sentence), so keep those or change the linter with them. The default is
+   the trope list, no volunteered gaps, the closing "Thanks," and the fixed
+   final sentence), so keep those or change the linter with them. The default is
    usable as-is; make it yours over time.
 5. **`profile/standard_answers.md`** — contact block + stock screening answers.
 6. **`profile/fit_profile.md`** — what a great role looks like for you.
@@ -310,9 +317,11 @@ Two things to know before you do:
   number (§1, §2, §3, §5, §8, §9, §12, §13, §14). Reword any section, but if you
   renumber or delete one, update that prompt too.
 - `letter_linter` enforces a fixed subset of this file in code, so removing a
-  rule here does not lift it there: no em-dashes, no paragraph opening on "I",
-  no opening that announces a reaction, no feeling verbs, the trope ban list,
-  the closing "Thanks," and the fixed final sentence in the Voice mode section.
+  rule here does not lift it there: no em-dashes, no opening that announces a
+  reaction, no feeling verbs, the trope ban list, no sentence that volunteers a
+  gap, no paragraph that disowns the text before it ("None of that is why I am
+  writing"), the closing "Thanks," and the fixed final sentence in the Voice
+  mode section.
   Change those in `src/job_finder/letter_linter.py` alongside this file.
 
 The style sample is `personal_statement.md`: when a draft does not sound like
@@ -522,25 +531,27 @@ conversation, let me know." No stacked hedge, no thank-you trailer.
 
 ### Writing the opening
 
-The opening is built, not brainstormed. Run these in order.
+Open on yourself, at your current employer, with a quantified claim about the
+thing the posting is about:
 
-1. **Name the surface, not the mission.** The specific product or bet the JD is
-   hiring for is the subject. A mission statement never is.
-2. **Find the departure.** Write how the category normally works as a full
-   sentence, then this product's version. Without the baseline the departure
-   does not land.
-3. **End that sentence on the consequence.** What the departure demands or
-   costs, as a concrete noun. That noun is the pivot.
-4. **Open the next sentence on the pivot noun, then state your work.** Plain
-   fact, no commentary. Never explain the parallel; the repeated noun is the
-   whole argument (§8).
-5. **One more sentence on what your time actually goes to.**
+> At [employer], [a proportion] of my job involved [the posting's subject]
+> across [scope].
 
-The shape:
+The reader knows who is writing, where, and how much of your work maps to the
+role before they have to work it out. Then "Specifically," and the mechanism:
+what you handled (standards or tools in parentheses), the detail that proves
+you did it yourself, then one figure.
 
-> [How the category normally works]. [Their departure], which [consequence].
-> At [employer] that [pivot noun] lands on [your product]. [What your time
-> goes to].
+- **Three paragraphs.** What you own that matches the posting, a second body of
+  work, then everything else (patents, certificates, the move) and the close.
+- **You do the verb.** "I handled", "I launched". Never "the platform was
+  separate work".
+- **Say why you are leaving, and keep it positive.** Without it the reader
+  supplies their own reason.
+
+A contrast opening (how the category usually works, then how this product
+differs) is still available when the product genuinely does something unusual.
+It is never the default and never worth delaying your first sentence for.
 
 Two ways this goes wrong. **Opening on your reaction** ("your posting caught my
 attention", "I came across", "I'm reaching out because") announces that you
@@ -548,8 +559,8 @@ noticed something instead of saying the thing. **Naming the feeling**: any
 sentence whose main verb is "excited", "passionate", "thrilled" or "drawn to".
 The specificity carries the enthusiasm; the word never does.
 
-**Test: could this opening be pasted into a letter to a different company? If
-yes, step 2 has not been done.**
+**Test: could this opening be pasted into a letter for a different posting? If
+yes, it is not about this role's subject yet.**
 
 ### Closing
 
@@ -929,6 +940,19 @@ verify the hits, and `job-finder companies import hits.json`. The
 `manage-companies` skill drives all of this from plain English in a Claude
 Code session.
 
+`job-finder companies add` takes a `--provider` of `greenhouse`, `lever`,
+`ashby`, `workday` (slug format `tenant/wdN/site`) or `manual`. A `manual`
+company has no pollable board, so it carries only `--careers-url` and appears in
+the digest's **Manual check** section for a weekly look by hand. Add
+`--max-age-days 14` to a high-volume board to show only its recent postings.
+
+To find companies you are missing, list Built In regional sites under
+`[discovery] builtin_sites` in `config/pipeline.toml` (for example
+`"https://www.builtinboston.com"`). Each run then proposes untracked companies
+posting your target role in the digest's **New companies to review** section.
+It never adds them: `job-finder discover add "Name"` tracks one, `--all` tracks
+every specific match, and `job-finder discover dismiss` records a no.
+
 ## 6. Schedule the weekly run
 
 ```powershell
@@ -939,14 +963,17 @@ Registers a Windows Scheduled Task: `job-finder run --email` every Monday at
 09:00 local. Test it once by hand first (`job-finder run --email` — this spends
 real API tokens).
 
-The task is registered with **`WakeToRun`**, which matters more than it sounds.
-`StartWhenAvailable` is also on and covers a powered-off machine, but on
-2026-08-31 the machine was merely **asleep** at 09:00 and no catch-up run ever
-fired: 24 minutes after wake the task still reported one missed run and a next
-run a week out. Sleep is the common case, so waking for the trigger is the fix.
+The task is registered with **`WakeToRun`**: a machine asleep at 09:00 gets no
+catch-up run, so the task wakes it. `StartWhenAvailable` covers a machine that
+was powered off.
 
 Confirm afterwards with `job-finder status`, which prints the task's next run
-and whether it will wake the machine.
+and whether it will wake the machine. To pause the weekly run and the digest
+email without losing the schedule:
+
+```powershell
+Disable-ScheduledTask -TaskName "job-finder weekly"   # Enable-ScheduledTask to resume
+```
 
 No GitHub Actions secrets are required: the repo runs no CI workflows. Code
 review is on demand: dispatch the `python-code-reviewer` agent, or use the
@@ -995,9 +1022,8 @@ service-side, so nothing on your machine can compare the repo against what is
 installed — `~/.claude/plugins/data/job-finder-inline/` is empty and
 `.claude.json` holds only a usage counter.
 
-That gap is not theoretical. On 2026-08-31 the repo's `.mcp.json` was correct and
-the installed plugin was months older; every file upload was rejected, and seven
-applications were filed with no resume and no cover letter attached.
+A stale install rejects every file upload, so applications go out with no
+resume or cover letter attached.
 
 Two checks exist, and you need both:
 
@@ -1046,6 +1072,7 @@ python -m pytest -q                              # tests
 job-finder status                          # did the last run work? both halves
 python -m job_finder.profile_check         # is my profile complete?
 job-finder review                          # interactive digest review
+job-finder discover list                   # companies proposed by discovery
 job-finder applied add --external-id ...   # record an application
 python -m job_finder.fill_greenhouse \
     --url <apply url> --folder <per-app folder>   # deterministic fill (not on Cowork)

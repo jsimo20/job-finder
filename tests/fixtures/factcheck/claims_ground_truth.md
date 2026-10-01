@@ -34,6 +34,6 @@ Spell "zero-to-one" out. Never the arrow glyph.
 ## §4 Voice
 
 - No em-dashes anywhere in the cover letter body.
-- No paragraph begins with the word "I".
+- The last sentence is exactly "I look forward to discussing this opportunity in greater detail with you."
 - Closing is "Thanks," with no alternatives.
 - No punchy one-sentence resolution lines.

@@ -66,10 +66,10 @@
       "recipient": "Meridian Freight Hiring Team\nMeridian Freight\nPortland, OR",
       "salutation": "To the Meridian Freight Hiring Team,",
       "paragraphs": [
-        "Most carrier integrations get built one at a time and maintained forever. Meridian is turning them into configuration, which moves the weight onto onboarding instead of the integration code. That weight is what I have spent three years on at Northwind Logistics.",
-        "The work there is unglamorous and it touches real money. Carrier integration serves 340 freight partners, and the piece I would point at is the self-serve onboarding flow, which moved 61% of new partners off manual setup. The automated exception handling is in a controlled pilot with twelve partners. It is Phase 1 and still in beta, so there is not much to point at yet.",
+        "At Northwind Logistics, I have worked on carrier integration since 2022, owning the platform 340 freight partners connect through. Specifically, I shipped the self-serve onboarding flow that moved 61% of new partners off manual setup.",
+        "The work there is unglamorous and it touches real money, so mistakes are expensive and slow to surface. I also cut average dispatch confirmation time from 14 minutes to 9 across the partner network. The automated exception handling is in a controlled pilot with twelve partners. It is Phase 1 and still in beta, so there is not much to point at yet.",
         "Before Northwind, a shipment-tracking app at Cascade Freight was the first thing I owned end to end. We thought people wanted a map. They wanted one sentence telling them whether the thing was late, and rewriting that copy cut support tickets 18%.",
-        "If we end up talking, the part I would ask about is how far you want configuration to go before a partner needs a human."
+        "Carrier onboarding is the work I would bring to Meridian first. I look forward to discussing this opportunity in greater detail with you."
       ],
       "closing": "Thanks,",
       "title_subtitle": "Senior Product Manager | Logistics Platforms | zero-to-one and scale"
@@ -314,21 +314,22 @@
       ]
     },
     {
-      "id": "paragraph_starts_with_i",
-      "defect": "A paragraph opening with the word I.",
+      "id": "curiosity_close",
+      "defect": "A curiosity question in place of the fixed final sentence.",
       "expect": {
-        "min_severity": "LOW",
+        "min_severity": "MEDIUM",
         "keywords": [
-          "begins with",
-          "starts with",
-          "paragraph",
-          "\"I\""
+          "curiosity",
+          "question",
+          "final sentence",
+          "last sentence",
+          "look forward"
         ]
       },
       "patch": [
         {
           "path": "cover_letter.paragraphs.3",
-          "value": "I would be happy to talk if you are open to a short conversation."
+          "value": "Carrier onboarding is the work I would bring to Meridian first. If we end up talking, I am curious how far you want configuration to go before a partner needs a human."
         }
       ]
     },

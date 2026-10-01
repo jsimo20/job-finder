@@ -341,11 +341,11 @@ describe forms as verified when nothing verified them.
    role took, deterministic script or autofill agent; that is the run's largest
    cost and the report is the only place it is visible.
 6. **One cover letter, quoted in full.** Pick the role you are least sure of and
-   paste its four paragraphs. **Neither gate can tell whether the opening's
-   contrast is true.** "Most companies do X, this one does Y" passes the linter
-   and the fact-checker both while being something you invented about the
-   category, and a build procedure makes that failure more likely rather than
-   less. One letter read by a human per batch is the only check on it.
+   paste every paragraph. **Neither gate can tell whether a claim about the
+   company or its category is true.** "Most companies do X, this one does Y"
+   passes the linter and the fact-checker both while being something invented
+   about the category. One letter read by a human per batch is the only check
+   on it.
 7. **`mark-applied` commands** for everything in section 2, ready to paste.
 
 ## Hard rules

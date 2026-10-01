@@ -171,9 +171,12 @@ def veto_for(label: str) -> str | None:
 # label actually asks for a manager's identity. "supervisor" and "recruiter"
 # stay bare because neither doubles as a title the applicant would claim here.
 _MANAGER_TRAP = r"\bmanagers?(?:['\u2019]s)?\s+(?:name|e-?mail|phone|contact|title)\b"
+# "Reference" followed by a determiner is an essay prompt's imperative
+# ("Reference one part of the role charter"), not a request for a reference.
+_REFERENCE_TRAP = r"\breferences?\b(?!\s+(?:one|a|an|the|your|any|specific)\b)"
 
 NAME_TRAP_PATTERN = re.compile(
-    r"\brefer(r|red|ence|ral)|\bemergency\b|\bsupervisor\b|"
+    r"\brefer(r|red|ral)|" + _REFERENCE_TRAP + r"|\bemergency\b|\bsupervisor\b|"
     + _MANAGER_TRAP +
     r"|\bspouse\b|\bguardian\b|next of kin|who told you|\brecruiter\b",
     re.I,
