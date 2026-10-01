@@ -52,7 +52,9 @@ from . import (applied, eval_factcheck, eval_spread, job_apply, letter_linter,
                settings, state)
 
 DRAFT_MODEL = "claude-opus-5"
-DRAFT_MAX_TOKENS = 3000
+# Opus 5 thinks by default and thinking counts against max_tokens; at 3000 the
+# whole budget went to thinking and no letter text came back.
+DRAFT_MAX_TOKENS = 16000
 TITLE_RE = re.compile(r"product manager", re.I)
 GRADE_BANDS = [(0.95, "A"), (0.85, "B"), (0.70, "C"), (0.50, "D"), (0.0, "F")]
 
@@ -185,7 +187,7 @@ role: {posting['title']}
 </jd_text>
 
 Return ONLY a JSON object, no prose around it, with keys: date, recipient,
-salutation, paragraphs (a list of 4 strings), closing, title_subtitle."""
+salutation, paragraphs (a list of 3 to 5 strings), closing, title_subtitle."""
 
 
 def parse_letter(text: str) -> dict[str, Any] | None:
@@ -204,6 +206,9 @@ def draft(client: anthropic.Anthropic, posting: dict[str, Any],
     resp = client.messages.create(
         model=model, max_tokens=DRAFT_MAX_TOKENS,
         messages=[{"role": "user", "content": draft_prompt(posting, gt)}])
+    if resp.stop_reason == "max_tokens":
+        print(f"  {posting['company']}: hit max_tokens ({DRAFT_MAX_TOKENS}) "
+              "before the letter finished", file=sys.stderr)
     return parse_letter("".join(b.text for b in resp.content if b.type == "text"))
 
 
@@ -280,6 +285,14 @@ def grade(results: list[dict[str, Any]]) -> dict[str, Any]:
                         for r in results]}
 
 
+def finding_headings(report: str, severity: str) -> list[str]:
+    """The fact-checker's finding titles at one severity, or a bare marker if
+    the report used no headings for it."""
+    pattern = re.compile(rf"^[ \t]*#+[ \t]*{severity}\b.*$", re.M)
+    return [m.group(0).lstrip("# ").strip() for m in pattern.finditer(report)] \
+        or [f"{severity} finding"]
+
+
 def print_report(results: list[dict[str, Any]], summary: dict[str, Any],
                  show_letter: bool) -> None:
     print("\n=== cover letter generation eval ===\n")
@@ -294,9 +307,11 @@ def print_report(results: list[dict[str, Any]], summary: dict[str, Any],
         if g["lint_critical"]:
             print(f"    linter CRITICAL: {', '.join(g['lint_critical'])}")
         if g["check_critical"]:
-            print("    fact-checker: CRITICAL finding")
+            for heading in finding_headings(r["report"], "CRITICAL"):
+                print(f"    fact-checker: {heading}")
         elif g["check_medium"]:
-            print("    fact-checker: MEDIUM finding (does not fail)")
+            for heading in finding_headings(r["report"], "MEDIUM"):
+                print(f"    fact-checker: {heading} (does not fail)")
         if g["lint_advisory"]:
             print(f"    advisory: {', '.join(g['lint_advisory'])}")
         if show_letter:
