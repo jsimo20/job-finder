@@ -50,12 +50,12 @@ from dotenv import load_dotenv
 
 from . import (applied, eval_factcheck, eval_spread, job_apply, letter_linter,
                settings, state)
+from . import filter as filter_mod
 
 DRAFT_MODEL = "claude-opus-5"
 # Opus 5 thinks by default and thinking counts against max_tokens; at 3000 the
 # whole budget went to thinking and no letter text came back.
 DRAFT_MAX_TOKENS = 16000
-TITLE_RE = re.compile(r"product manager", re.I)
 GRADE_BANDS = [(0.95, "A"), (0.85, "B"), (0.70, "C"), (0.50, "D"), (0.0, "F")]
 
 _BOM = chr(0xfeff)
@@ -119,7 +119,7 @@ def held_out_postings(n: int, *, db_path=state.DEFAULT_STATE_DB,
                 print(f"  skipped {company['name']}: {exc}", file=sys.stderr)
                 continue
             for job in jobs:
-                if (TITLE_RE.search(job["title"]) and len(job["jd"]) > 800
+                if (filter_mod.ROLE_TITLE_RE.search(job["title"]) and len(job["jd"]) > 800
                         and job["external_id"] not in applied_ids):
                     out.append({**job, "company": company["name"]})
                     break

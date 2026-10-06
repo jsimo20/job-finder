@@ -148,7 +148,7 @@ def is_generic_title(title: str) -> bool:
     """True for a title that is only a level and the role noun ("Senior Product
     Manager"): many unrelated boards list it, so matching it proves little."""
     core = filters.SENIORITY_KEEP_RE.sub(" ", title)
-    role_noun = pipeline_config()["extraction"]["role_noun"]
+    role_noun = pipeline_config().get("extraction", {}).get("role_noun", "product manager")
     return _normalize_title(core) == _normalize_title(role_noun)
 
 

@@ -10,7 +10,7 @@ import webbrowser
 from pathlib import Path
 
 from . import applied, db
-from .taxonomy import STALE_DAYS
+from .taxonomy import CURRENCY_SYMBOL, STALE_DAYS
 
 PENDING_SQL = f"""
     SELECT p.id, p.external_id, p.title, p.location, p.workplace_type, p.url,
@@ -43,7 +43,7 @@ def _render(idx: int, total: int, row) -> None:
     if row["comp_source"] == "posted" and row["comp_base_min"]:
         lo = row["comp_base_min"] // 1000
         hi = (row["comp_base_max"] or row["comp_base_min"]) // 1000
-        comp = f"${lo}-{hi}K"
+        comp = f"{CURRENCY_SYMBOL}{lo}-{hi}K"
     print()
     print("=" * 78)
     print(f"  [{idx + 1}/{total}]  Score {row['total_score']}  Queue: {row['queue']}")

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from . import applied, db, seen, state
 from . import filter as filter_mod
-from .taxonomy import STALE_DAYS, UNTITLED_MIN_YOE, YOE_MAIN_QUEUE_MAX
+from .taxonomy import CURRENCY_SYMBOL, STALE_DAYS, UNTITLED_MIN_YOE, YOE_MAIN_QUEUE_MAX
 
 DEFAULT_DIGEST_DIR = Path(__file__).resolve().parents[2] / "digests"
 CARRY_FORWARD_CAP = 20
@@ -19,10 +19,10 @@ def _fmt_comp(lo: int | None, hi: int | None, source: str | None) -> str:
     if source != "posted":
         return "Comp not posted"
     if lo and hi:
-        return f"Comp ${lo // 1000}–{hi // 1000}K"
+        return f"Comp {CURRENCY_SYMBOL}{lo // 1000}–{hi // 1000}K"
     if lo:
-        return f"Comp ≥${lo // 1000}K"
-    return f"Comp ≤${hi // 1000}K"
+        return f"Comp ≥{CURRENCY_SYMBOL}{lo // 1000}K"
+    return f"Comp ≤{CURRENCY_SYMBOL}{hi // 1000}K"
 
 
 def _row_md(row) -> str:
@@ -41,7 +41,7 @@ def _row_md(row) -> str:
     commute = filter_mod.commute_warning(
         row["location"],
         row["onsite_days_per_week"],
-        remote_us_ok=bool(row["remote_us_ok"]),
+        remote_ok=bool(row["remote_ok"]),
     )
     commute_line = f"- ⚠️ **Commute:** {commute}\n" if commute else ""
     return (
@@ -58,7 +58,7 @@ _BASE_COLS = """
     c.name AS company_name,
     e.yoe_required, e.comp_base_min, e.comp_base_max, e.comp_source,
     e.domain_tags, e.company_stage, e.stretch_reason,
-    e.remote_us_ok, e.onsite_days_per_week,
+    e.remote_ok, e.onsite_days_per_week,
     s.total_score
 """
 

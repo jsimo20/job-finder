@@ -7,7 +7,7 @@ from job_finder.fill_greenhouse import build_combo_fields
 
 def test_pipeline_config_parses_and_has_required_tables():
     cfg = settings.pipeline_config()
-    assert cfg["filters"]["comp_floor_usd"] > 0
+    assert cfg["filters"]["comp_floor"] > 0
     assert cfg["location"]["in_scope_patterns"]
     assert set(cfg["location"]["tiers"]) == {"near", "mid", "far"}
     for spec in cfg["domains"].values():

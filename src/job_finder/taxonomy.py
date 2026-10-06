@@ -18,7 +18,11 @@ STAGE_DEFINITIONS: dict[str, str] = {
     name: spec["definition"] for name, spec in _cfg["stages"].items()
 }
 
-COMP_FLOOR_USD: int = _cfg["filters"]["comp_floor_usd"]
+COMP_FLOOR: int = _cfg["filters"]["comp_floor"]
+
+CURRENCY: str = _cfg["filters"].get("currency", "USD")
+
+CURRENCY_SYMBOL: str = _cfg["filters"].get("currency_symbol", "$")
 
 COMP_SCORE_THRESHOLDS: list[int] = sorted(_cfg["filters"]["comp_score_thresholds"])
 

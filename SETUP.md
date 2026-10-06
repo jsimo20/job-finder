@@ -913,11 +913,16 @@ cp config/pipeline.example.toml config/pipeline.toml
 
 Edit **`config/pipeline.toml`**. What to edit:
 
-- `[location]` — replace the metro regexes with your own target geography,
-  and the commute tiers/notes with drive times from where you live.
+- `[location]` — the scope is always your geography plus remote roles you can
+  take. Set `country`, replace the metro regexes with your own target
+  geography, and the commute tiers/notes with drive times from where you
+  live. `remote_exclude_patterns` names the markets a remote role must not be
+  tagged with; outside the US also set `remote_require_patterns`, because a
+  bare "Remote" on a US-based board usually means US-only.
 - `[domains.*]` / `[stages.*]` — reweight to your background; definitions
   feed the extraction prompt, so keep them concrete.
-- `[filters]` — your comp floor, comp score thresholds, and years-of-experience cap.
+- `[filters]` — your comp floor and its currency, comp score thresholds, and
+  years-of-experience cap.
 
 - `[titles]` — which job titles count as target roles, adjacent tracks to
   exclude, and the seniority band. This is the industry knob: replace the

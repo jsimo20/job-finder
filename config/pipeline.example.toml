@@ -9,7 +9,11 @@
 # either file — those live in profile/.
 
 [filters]
-comp_floor_usd = 140000
+# Annual base pay. Every pay number here is in `currency`; `currency_symbol`
+# is how the digest prints them.
+comp_floor = 140000
+currency = "USD"
+currency_symbol = "$"
 # Roles asking for more years than this route to the stretch queue.
 yoe_main_queue_max = 7
 # A title with no level word ("Product Manager, Growth") reaches the main queue
@@ -44,20 +48,38 @@ role_noun = "product manager"
 senior_scope = "a typical Senior/Staff PM scope"
 
 # ── Location scope ───────────────────────────────────────────────────────────
-# in_scope_patterns: a posting passes the location gate when its location
-# string matches ANY pattern (case-insensitive), or the role is US-remote.
+# The scope is always your geography plus remote roles you can take:
+# in_scope_patterns: a posting passes when its location string matches ANY
+# pattern (case-insensitive).
+# remote: a remote posting passes unless its location names somewhere else
+# (remote_exclude_patterns), or, when remote_require_patterns is set, unless it
+# names your market.
 # tiers: drive-time buckets from your home base, used only for the commute
 # warning in the digest. Checked far-first, because a distant city often also
 # matches a nearby state token ("Boston, MA" matches the MA that places
 # Springfield).
 
 [location]
-# Replace with your own metros. A posting passes when its location matches any
-# pattern (case-insensitive) or the role is US-remote. Placeholders below are
-# obviously fictional so nothing steers you before you edit.
+# The country you can work from. The extraction prompt asks whether a remote
+# role allows working from here.
+country = "United States"
+# Replace with your own metros. Placeholders below are obviously fictional so
+# nothing steers you before you edit.
 in_scope_patterns = [
     '\b(examplecity|nearbytown|midtown|EX)\b',
 ]
+# Boards tag remote roles outside their home market like "Remote - EMEA" or
+# "Canada - Remote"; a bare "Remote" is read as in-country. Edit for your
+# country: a user in Canada removes canada and adds the US.
+remote_exclude_patterns = [
+    '\b(emea|apac|latam|uk only|europe only|eu only|india only|canada only)\b',
+    '\bremote\s*[-,]\s*(uk|emea|eu|europe|india|canada|australia|new\s*zealand|japan|philippines|vietnam|singapore|hong\s*kong|israel|brazil|mexico|argentina|colombia|chile|costa\s*rica|germany|france|spain|italy|netherlands|poland|portugal|sweden|denmark|norway|finland|ireland|united\s*kingdom|switzerland)\b',
+    '\b(canada|united\s*kingdom|ireland|germany|france|spain|italy|netherlands|poland|portugal|sweden|denmark|norway|finland|switzerland|japan|philippines|vietnam|singapore|hong\s*kong|israel|india|brazil|mexico|argentina|colombia|chile|costa\s*rica|australia|new\s*zealand)[-,\s]+remote\b',
+]
+# Outside the US, a bare "Remote" on a US-based board usually means US-only.
+# When this list is non-empty a remote role must also match one of these, so a
+# UK user would set ['\b(uk|united kingdom|europe|emea)\b'].
+remote_require_patterns = []
 
 [location.tiers]
 # Drive-time buckets from your home base, used only for the commute warning.

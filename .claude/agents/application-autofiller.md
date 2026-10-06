@@ -135,9 +135,16 @@ For autocomplete-style comboboxes (long lists like Country or City), type to fil
 
 ### 6. Work authorization
 
+Read `profile/profile.toml` `[answers]`. Only when `work_authorized = true` AND
+`requires_sponsorship = false` answer:
+
 - "Authorized to work" → **Yes** (or the closest "Yes, no restriction" option).
 - "Require sponsorship" → **No**.
-- Citizenship → US Citizen.
+
+Any other combination leaves both blank for the user; a wrong answer here is
+unrecoverable. Citizenship and nationality questions are answered only from the
+Work authorization section of `standard_answers.md`; with nothing there, leave
+them blank and list them in the report.
 
 ### 7. Salary — ALWAYS leave blank
 
