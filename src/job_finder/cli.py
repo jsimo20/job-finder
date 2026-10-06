@@ -189,6 +189,8 @@ def _cmd_run(args: argparse.Namespace) -> int:
         print(json.dumps(builtin_discovery.run(), indent=2))
     except Exception as exc:
         print(f"DISCOVERY FAILED: {exc}", file=sys.stderr)
+    for name in builtin_discovery.track_specific():
+        print(f"tracked: {name}")
     print("== digest ==")
     out = digest.render(db_path=db_path)
     print(f"wrote {out}")

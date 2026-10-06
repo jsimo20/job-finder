@@ -65,6 +65,8 @@ def finish(db_path: Path = db.DEFAULT_DB_PATH, state_db: Path = state.DEFAULT_ST
             out["discover"] = builtin_discovery.run(state_db=state_db)
         except Exception as exc:
             out["discover_error"] = str(exc)
+    from . import builtin_discovery
+    out["tracked"] = builtin_discovery.track_specific(state_db)
     out["digest"] = str(digest.render(db_path=db_path, digest_dir=digest_dir, state_db=state_db))
     stamp = _now().isoformat(timespec="seconds")
     state.set_meta(LAST_RUN_KEY, stamp, state_db)

@@ -279,14 +279,13 @@ PYTHONPATH=".cowork-deps:src" python3 -c "
 import json
 from job_finder import builtin_discovery, state
 print(json.dumps(builtin_discovery.run(), indent=1))
-for d in state.list_discovered('pending'):
-    if d['title_match'] == 'specific':
-        print('tracked', builtin_discovery.promote(d['name'])['name'])
+print('tracked', builtin_discovery.track_specific())
 "
 ```
 
-From then on every weekly run repeats the scan and lists new companies in
-the digest for a yes or no.
+From then on every weekly run repeats the scan, tracks every company whose
+board lists the role by a specific title, and lists only the ambiguous ones
+in the digest for a yes or no.
 
 Tell them how many are tracked, split into boards the engine reads
 automatically and sites it will list for a weekly look. Numbers only; the
