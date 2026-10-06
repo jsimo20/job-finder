@@ -1,6 +1,6 @@
 ---
 name: job-finder-setup
-description: Set up job-finder for a new person from inside Cowork, with no terminal, no git and no Python knowledge on their side. Installs the engine into the connected folder, builds their profile and search settings through a plain-language interview, finds the companies they named, and proves the first collect runs. Use when someone says "set me up", "set up job finder", "get started", or has just installed this plugin.
+description: Set up job-finder for a new person from inside Cowork, with no terminal, no git and no Python knowledge on their side. Installs the engine into the connected folder, builds their profile and search settings through a plain-language interview, builds and probes a company list they only have to prune, and proves the first collect runs. Use when someone says "set me up", "set up job finder", "get started", or has just installed this plugin.
 ---
 
 # job-finder-setup
@@ -201,9 +201,20 @@ in Y would be dropped") and adjust until it matches what they meant.
 
 ## 4. The companies
 
-Ask for 20 to 40 employers they would want to work for, by name. Write them
-one per line to `candidates.txt` in `$ROOT`, then probe which ones have a
-job board the engine can read:
+They will not have 40 employer names in their head, so you build the list and
+they prune it.
+
+1. Ask for up to five employers they already admire or have applied to.
+   Optional; "none" is fine.
+2. Build 40 to 60 candidates yourself from what step 3 captured (industry,
+   company size, region, remote stance), seeded by any names they gave. Use
+   web search where this session has it; otherwise draw on what you know.
+   Over-generate on purpose: only companies on Greenhouse, Lever or Ashby
+   answer the probe below, and that is roughly half of any list.
+3. Show the list as plain names, grouped by what they do, and ask them to
+   strike any they would never want to work for. A yes or a no, never recall.
+4. Write the survivors one per line to `candidates.txt` in `$ROOT` and probe
+   which ones have a job board the engine can read:
 
 ```sh
 PYTHONPATH=".cowork-deps:src" python3 scripts/discover_companies.py --file candidates.txt --json hits.json
@@ -214,9 +225,9 @@ print(state.import_companies(Path('hits.json')), 'companies tracked')
 "
 ```
 
-Tell them which names were found and which were not. A company not found
-has no public board; ask for its careers page address and add it as a manual
-check:
+Tell them how many landed. Under 20, offer one more round of suggestions
+and probe again. A company they named that was not found has no public
+board; ask for its careers page address and add it as a manual check:
 
 ```sh
 PYTHONPATH=".cowork-deps:src" python3 -c "
