@@ -237,3 +237,17 @@ def promote(name: str, db_path: Path = state.DEFAULT_STATE_DB) -> dict:
     state.upsert_company(company, db_path)
     state.set_discovered_status(d["name"], "added", db_path)
     return company
+
+
+def track_specific(db_path: Path = state.DEFAULT_STATE_DB) -> list[str]:
+    """Track every pending discovery whose board lists a specific role title.
+
+    A specific match is the proof the board is the company's own, so these
+    need no human yes. Generic matches ("Senior Product Manager" on a board
+    that may belong to someone else) stay pending for the digest.
+    """
+    names = [d["name"] for d in state.list_discovered("pending", db_path)
+             if d.get("title_match") == "specific"]
+    for name in names:
+        promote(name, db_path)
+    return names

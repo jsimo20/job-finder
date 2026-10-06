@@ -6,6 +6,7 @@ import pytest
 from job_finder import db, extract, state, weekly
 
 
+
 @pytest.fixture
 def jobs_db(tmp_path):
     path = tmp_path / "jobs.db"
@@ -109,3 +110,18 @@ def test_finish_renders_a_digest_and_stamps_the_run(jobs_db, tmp_path):
 def test_prompt_subcommand_prints_the_extraction_instructions(capsys):
     assert weekly.main(["prompt"]) == 0
     assert "Return STRICT JSON only" in capsys.readouterr().out
+
+
+def test_finish_tracks_specific_discoveries_and_leaves_generic_ones(jobs_db, tmp_path):
+    sdb = tmp_path / "state.db"
+    for name, match in (("Specific Co", "specific"), ("Generic Co", "generic")):
+        state.record_discovered({"name": name, "status": "pending", "ats_provider": "lever",
+                                 "ats_slug": name.lower().replace(" ", ""), "live_postings": 3,
+                                 "title_match": match, "sample_title": "Senior Product Manager",
+                                 "sample_url": "https://x/1", "source": "test",
+                                 "first_seen": "2026-10-05"}, db_path=sdb)
+    out = weekly.finish(db_path=jobs_db, state_db=sdb, digest_dir=tmp_path / "digests",
+                        discover=False)
+    assert out["tracked"] == ["Specific Co"]
+    assert [c["name"] for c in state.list_companies(sdb)] == ["Specific Co"]
+    assert [d["name"] for d in state.list_discovered("pending", sdb)] == ["Generic Co"]

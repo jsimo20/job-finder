@@ -261,10 +261,12 @@ The tracked list is a fixed seed, so `job-finder run` also scans the Built In
 sites in `config/pipeline.toml [discovery]` (none in the example config) for
 companies posting the target role that are not tracked. Zero tokens.
 
-- **It proposes, never adds.** Candidates land in the `discovered` table and the
-  digest's **New companies to review** section. `job-finder discover add
-  "Name"` tracks one, `--all` tracks every specific match, `dismiss` records a
-  no. A company is proposed once, whatever the answer.
+- **A specific title match is tracked by the run itself** (`track_specific()`,
+  called by both `job-finder run` and `weekly finish`): the board listing the
+  exact role Built In showed is the proof it is the company's own. Only
+  `generic` matches land in the digest's **New companies to review** section;
+  `job-finder discover add "Name"` tracks one, `dismiss` records a no. A
+  company is proposed once, whatever the answer.
 - **`pending` requires the company's board to list the role Built In showed.**
   Slug guessing collides (`relay`, `general`), and the title match is the proof.
   A match on a bare level plus role noun ("Senior Product Manager") is recorded
