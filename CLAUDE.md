@@ -448,6 +448,15 @@ skill; two copies of that procedure would drift.
   collect, and schedules the weekly skill as a daily local task. **Never
   names a `profile/<dir>/` layout** (the fresh-clone eval greps for that).
 
+**The Playwright server runs on the user's machine via `npx`, so Node.js has
+to exist there**; without it the session simply has no `playwright` tools.
+Nothing in the VM can install it, so the setup skill checks its own tool list
+and walks the user through the nodejs.org LTS installer when the tools are
+absent. The server fetches its own browser build (`mcp-chrome-*` in the
+Playwright cache); a missing build is fixed by the `browser_install` tool,
+which the autofiller and the batch skill call on a missing-browser error. No
+system Chrome or Safari is involved.
+
 **Install it, do not add the folder as context.** A connected folder is just
 files on disk, so `.mcp.json` never runs and the failure looks like a broken
 plugin. Cowork tab → Customize → Plugins → upload. Full reference, including

@@ -134,7 +134,15 @@ not a bug to work around.
 If the tools are missing, that is not a reason to stop: carry on with
 tailoring, fact-checking and rendering for every role, write `APPLY_NOTES.md`
 into each folder, and say plainly in the report that every role is prepped and
-waiting on a hand-submit.
+waiting on a hand-submit. On Cowork the usual cause is no Node.js on the
+user's computer; the setup skill walks them through installing it, so the
+report should say "run set up again" rather than explain Node.
+
+If the tools are present but the first navigate fails with a missing-browser
+error ("not installed", "Executable doesn't exist", a prompt to run `playwright
+install`), call the tool whose name contains `browser_install` once, then
+retry. That is the server fetching its own browser build; it is not something
+the user has to do and it never goes in the report as an action for them.
 
 For Greenhouse specifically, `python -m job_finder.fill_greenhouse` is cheaper
 than the agent by roughly 30x and drives its own browser too. Prefer it in Claude
