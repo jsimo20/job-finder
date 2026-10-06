@@ -37,6 +37,32 @@ git --version || true  # optional; the tarball route below works without it
 If Python is older than 3.10 or missing, stop and say the tool cannot run on
 this setup yet. Do not improvise an install.
 
+Then check the form-filling half. The browser that fills applications runs on
+their computer, not in your environment, and it needs Node.js there. You
+cannot see their computer, but you can see the result: **look through your
+own tool list for any tool whose name contains `playwright`** (the exact
+prefix varies by surface; match on the word, never on a fixed prefix).
+
+- **Present:** say nothing about it and carry on.
+- **Absent:** Node.js is not installed on their computer, and nothing you can
+  run will install it for them. Walk them through it, one message, no jargon:
+
+  > One small install first, so I can fill application forms for you later.
+  > Open https://nodejs.org in your browser and click the big green button
+  > marked **LTS** to download it. Open the downloaded file and click Next
+  > until it finishes; the defaults are fine. Then quit the Claude app
+  > completely and open it again, come back to this folder, and tell me
+  > "set me up" again. I will pick up where we left off.
+
+  Then stop and wait. Every step below skips what already exists, so the
+  second run resumes rather than restarts. If the tools are still absent on
+  the second run, say that form filling will not work on this computer yet
+  and that everything else will, and carry on; the weekly run prepares every
+  application either way and leaves the form for them to fill by hand.
+
+Never ask them what Node is, whether they have it, or to run anything. The
+tool list is the only check, and the install is the only ask.
+
 ## 1. Put the engine in the folder
 
 Skip this step when `$ROOT/pyproject.toml` already exists and names
