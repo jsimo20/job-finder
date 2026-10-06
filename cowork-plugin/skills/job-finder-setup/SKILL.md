@@ -183,8 +183,7 @@ an interview. Ask, in this order:
    `comp_floor`, `currency`, `currency_symbol` and the two
    `comp_score_thresholds` above it.
 
-Leave `[discovery] builtin_sites` empty unless they are in a US metro Built
-In covers; then add that site.
+Leave `[discovery]` as shipped for now; step 4 fills it.
 
 Validate the file by importing the filter, which compiles every pattern:
 
@@ -252,10 +251,46 @@ Only a company whose careers page you genuinely cannot find is skipped, and
 that goes in one line at the end ("I could not find a jobs page for X and
 Y"), never as a question.
 
-Then tell them how many are tracked, split into boards the engine reads
-automatically and sites it will list for a weekly look. Under 20 in total,
-run one more round of suggestions and probe again before moving on; do not
-ask them for more names.
+**The floor is 25 companies with a board the engine polls** (`greenhouse`,
+`lever` or `ashby`; manual checks do not count). Three polled boards means an
+empty digest for weeks and the user will not know why. Under 25, run another
+round of suggestions and probe again, up to three rounds, without asking them
+for names.
+
+Then add the second source. Built In lists who is hiring by role in these
+US metros: Austin, Boston, Chicago, Colorado, Los Angeles, New York, San
+Francisco, Seattle (`https://www.builtin<metro>.com`, for example
+`builtincolorado.com`, `builtinnyc.com`, `builtinsf.com`), plus
+`https://builtin.com` nationally for remote roles. If one covers their
+metro, or they are remote-first:
+
+1. Fetch `<site>/jobs` and read the category links (`/jobs/marketing`,
+   `/jobs/product-management`, `/jobs/design-ux`, `/jobs/sales`,
+   `/jobs/dev-engineering`, `/jobs/data-analytics`, `/jobs/finance`,
+   `/jobs/hr`, `/jobs/operations`, `/jobs/content`, ...). Pick the one that
+   names their role.
+2. Set `[discovery] builtin_sites = ["<site>"]` and `builtin_category =
+   "<slug>"` in `config/pipeline.toml`.
+3. Run discovery once now (about five minutes, zero tokens) and track every
+   specific match:
+
+```sh
+PYTHONPATH=".cowork-deps:src" python3 -c "
+import json
+from job_finder import builtin_discovery, state
+print(json.dumps(builtin_discovery.run(), indent=1))
+for d in state.list_discovered('pending'):
+    if d['title_match'] == 'specific':
+        print('tracked', builtin_discovery.promote(d['name'])['name'])
+"
+```
+
+From then on every weekly run repeats the scan and lists new companies in
+the digest for a yes or no.
+
+Tell them how many are tracked, split into boards the engine reads
+automatically and sites it will list for a weekly look. Numbers only; the
+mechanics above are yours.
 
 Delete `candidates.txt` and `hits.json` when done.
 
@@ -319,8 +354,11 @@ Tell them, in this order and nothing more:
    "run my weekly job search" (or `/job-finder-weekly`). The first run reads
    every job description the collect found, so it is the longest; later runs
    read only what is new.
-3. How to come back: "set me up again" to change anything above, or "add
-   companies" to grow the list.
+3. How to come back: "set me up again" to change anything above; "add
+   companies: Acme, Globex" to track named employers; "find me more
+   companies" to run another round of suggestions. Say plainly that they
+   never need to send a link: a company without a readable board gets its
+   careers page found and listed for a weekly look.
 
 ## Hard rules
 
