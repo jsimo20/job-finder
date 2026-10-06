@@ -65,7 +65,8 @@ English.
 ### Unattended batches
 
 From Cowork, build and install the plugin in `cowork-plugin/` (SETUP.md §8) and
-run `/job-apply-weekly 5`. From Claude Code,
+run `/job-finder-weekly 3`, which also does the pipeline half in-session with
+no API key. From Claude Code,
 `/job-apply-batch --top 5` runs the whole loop over several roles without
 stopping between them and reports once at the end, for a session you are not
 watching. It is the same per-role loop as `/job-apply` with the approval gates

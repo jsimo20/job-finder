@@ -77,6 +77,13 @@ CREATE TABLE IF NOT EXISTS digests (
   body TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Small durable facts about the pipeline itself, such as when the weekly run
+-- last finished. Never personal data.
+CREATE TABLE IF NOT EXISTS meta (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
 """
 
 
@@ -232,6 +239,18 @@ def get_digest(date: str | None = None, db_path: Path = DEFAULT_STATE_DB) -> dic
         else:
             row = conn.execute("SELECT * FROM digests ORDER BY date DESC LIMIT 1").fetchone()
     return dict(row) if row else None
+
+
+def get_meta(key: str, db_path: Path = DEFAULT_STATE_DB) -> str | None:
+    with connect(db_path) as conn:
+        row = conn.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+    return row["value"] if row else None
+
+
+def set_meta(key: str, value: str, db_path: Path = DEFAULT_STATE_DB) -> None:
+    with connect(db_path) as conn:
+        conn.execute("INSERT INTO meta (key, value) VALUES (?, ?) "
+                     "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (key, value))
 
 
 def list_digests(db_path: Path = DEFAULT_STATE_DB) -> list[str]:

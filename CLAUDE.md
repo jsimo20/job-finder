@@ -345,6 +345,25 @@ No GitHub Actions secrets are needed — the repo runs no workflows. Paste keys 
   `.claude/agents/application-autofiller.md` and the batch skill.
 - **Batch autofill = one Chrome instance, one tab per app** (never a separate browser per app). Dispatch a single `application-autofiller` with the full list of `(url, folder)` pairs; it opens each app in a new tab and leaves them all open, unsubmitted, for review. Rule lives in the Batch mode section of `.claude/agents/application-autofiller.md`.
 
+## The weekly run without an API key (`weekly.py`)
+
+`job-finder run` needs `ANTHROPIC_API_KEY` for the extraction stage. The
+session-mode path does not: `python -m job_finder.weekly collect` polls the
+boards and writes the surviving JDs to `data/weekly/pending_extractions.jsonl`;
+the driving session (or its subagents, 25 JDs each) reads them against
+`weekly prompt` (the same `extract.SYSTEM_PROMPT`) and writes answers as JSON
+lines; `weekly import-extractions` stores them through the same
+`extract.store()` the API path uses; `weekly finish` scores, runs discovery,
+renders the digest and stamps `last_weekly_run` in `state.db`'s `meta` table.
+`weekly status` reports `due` (seven days since the stamp), which is what
+makes a daily trigger a no-op most days. `weekly.py` imports neither
+`anthropic` nor `python-dotenv`, so it runs under `.cowork-deps`; `extract.py`
+imports `anthropic` lazily inside `run()` for the same reason.
+`.claude/skills/job-finder-weekly/SKILL.md` is the procedure that drives it,
+then hands to the batch skill below. **Cowork fires no `SessionStart` or plugin
+hooks** (anthropic/claude-code#40495), so the trigger is a daily local
+scheduled task, which only fires while the app is open.
+
 ## Running an unattended batch (Cowork, or any session that will not be watched)
 
 **Invoke it by file path, not by slash command:**
@@ -418,14 +437,14 @@ skill; two copies of that procedure would drift.
   duplicate of the repo-root `.mcp.json`:** Cowork does not read a project's
   `.mcp.json` at all (verified 2026-08-25), so a plugin-bundled server is the only
   way it gets one. The repo copy serves Claude Code.
-- `cowork-plugin/skills/job-apply-weekly/SKILL.md` — the launcher
+- `cowork-plugin/skills/job-finder-weekly/SKILL.md` — the launcher for
+  `.claude/skills/job-finder-weekly/SKILL.md`
 - `cowork-plugin/skills/job-finder-setup/SKILL.md` — first-run setup for a
   non-technical user: clones the public repo into the connected folder,
   bootstraps `.cowork-deps`, interviews for `profile/` and
-  `config/pipeline.toml`, probes their company names, and proves one
-  zero-token collect. **Never names a `profile/<dir>/` layout** (the
-  fresh-clone eval greps for that). Ends by pointing at SETUP.md §2/§6 for
-  the weekly run, which still needs an API key until the in-Cowork run exists.
+  `config/pipeline.toml`, probes their company names, proves one zero-token
+  collect, and schedules the weekly skill as a daily local task. **Never
+  names a `profile/<dir>/` layout** (the fresh-clone eval greps for that).
 
 **Install it, do not add the folder as context.** A connected folder is just
 files on disk, so `.mcp.json` never runs and the failure looks like a broken

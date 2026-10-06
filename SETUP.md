@@ -15,9 +15,9 @@ If you do not use a terminal, skip everything below. Download
 `job-finder-cowork-plugin.zip` from this repository's latest GitHub release,
 open the Claude desktop app, go to Cowork → Customize → Plugins and upload it,
 connect an empty folder, and say "set me up". The `job-finder-setup` skill does
-§1 to §5 by asking you questions; it needs nothing installed beyond the Claude
-desktop app (Pro plan or higher). §2's API key and §6's schedule still apply to
-the weekly run until the in-Cowork run replaces them.
+§1 to §5 by asking you questions and schedules the weekly run inside Cowork;
+it needs nothing installed beyond the Claude desktop app (Pro plan or higher),
+and no API key.
 
 ## 0. Prerequisites
 
@@ -1051,10 +1051,14 @@ Two checks exist, and you need both:
   drafting anything. It asks the running server rather than reading a file, so it
   is the only check that catches a stale install on its own.
 
-Once installed, `/job-apply-weekly` runs the batch. It takes a count:
-`/job-apply-weekly 3`, or `all`, defaulting to 5. The plugin is a launcher only
-— the procedure it follows is `.claude/skills/job-apply-batch/SKILL.md` in this
-repo, so **the repo still has to be the mounted folder for that session.**
+Once installed, `/job-finder-weekly` runs the whole weekly cycle with no API
+key: collect, in-session extraction, digest, then the apply batch. It takes a
+count: `/job-finder-weekly 3`, or `all`, defaulting to 3; `--pipeline-only`
+and `--apply-only` run one half. The plugin is a launcher only — the procedure
+it follows is `.claude/skills/job-finder-weekly/SKILL.md` in this repo, so
+**the repo still has to be the mounted folder for that session.** It is safe
+to schedule daily: the pipeline half runs only when the last one is seven or
+more days old.
 
 Three things worth knowing before you rely on it:
 

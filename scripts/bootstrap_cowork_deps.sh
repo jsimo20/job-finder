@@ -21,11 +21,12 @@
 # The default set is pure Python with zero compiled extensions, so it survives a
 # Python minor-version bump:
 #
-#   httpx      liveness, and every ATS adapter
-#   tomli      settings, on 3.10 where tomllib does not exist
-#   reportlab  job_apply.render(). Not needed to import job_apply, only to call
-#              it, which is why an import-only check passes without it and the
-#              batch then fails at the render step.
+#   httpx          liveness, and every ATS adapter
+#   tomli          settings, on 3.10 where tomllib does not exist
+#   reportlab      job_apply.render(). Not needed to import job_apply, only to
+#                  call it, which is why an import-only check passes without it
+#                  and the batch then fails at the render step.
+#   beautifulsoup4 builtin_discovery, which weekly.finish runs
 #
 # --cli adds anthropic and python-dotenv, which `job_finder.cli` imports at module
 # level. That is the only way to reach `job-finder digest-archive list` and
@@ -41,7 +42,7 @@ set -eu
 
 cd "$(dirname "$0")/.."
 
-PACKAGES="httpx tomli reportlab"
+PACKAGES="httpx tomli reportlab beautifulsoup4"
 if [ "${1:-}" = "--cli" ]; then
     PACKAGES="$PACKAGES anthropic python-dotenv"
 fi
@@ -51,7 +52,8 @@ python3 -m pip install --quiet --disable-pip-version-check --target .cowork-deps
 
 PYTHONPATH=".cowork-deps:src" python3 -c "
 import job_finder.liveness, job_finder.letter_linter, job_finder.form_inventory
-import job_finder.job_apply, job_finder.fill_grader
+import job_finder.job_apply, job_finder.fill_grader, job_finder.weekly
+import job_finder.builtin_discovery  # weekly.finish imports it lazily
 import reportlab  # render() needs it, and an import-only check would miss that
 print('.cowork-deps ready')
 "
