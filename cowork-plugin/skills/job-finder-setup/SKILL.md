@@ -225,9 +225,20 @@ print(state.import_companies(Path('hits.json')), 'companies tracked')
 "
 ```
 
-Tell them how many landed. Under 20, offer one more round of suggestions
-and probe again. A company they named that was not found has no public
-board; ask for its careers page address and add it as a manual check:
+A company with no public board is not dropped and the user is never asked
+for a link. Find its careers page yourself: web search "<Name> careers" where
+this session has search, otherwise try the company's own site:
+
+```sh
+for u in https://<domain>/careers https://<domain>/jobs https://<domain>/join-us https://<domain>/about/careers; do
+  curl -fsSIL -o /dev/null -w "%{http_code} $u
+" "$u" 2>/dev/null
+done
+```
+
+Take the first page that answers 200 and plainly lists roles (fetch it and
+look; a 200 on a redirect to the home page is not a careers page). Add it as
+a manual check, which the digest surfaces every week for a hand look:
 
 ```sh
 PYTHONPATH=".cowork-deps:src" python3 -c "
@@ -236,6 +247,15 @@ state.upsert_company({'name': '<Name>', 'ats_provider': 'manual', 'ats_slug': No
                       'careers_url': '<url>', 'sector_tags': [], 'size_band': None})
 "
 ```
+
+Only a company whose careers page you genuinely cannot find is skipped, and
+that goes in one line at the end ("I could not find a jobs page for X and
+Y"), never as a question.
+
+Then tell them how many are tracked, split into boards the engine reads
+automatically and sites it will list for a weekly look. Under 20 in total,
+run one more round of suggestions and probe again before moving on; do not
+ask them for more names.
 
 Delete `candidates.txt` and `hits.json` when done.
 
