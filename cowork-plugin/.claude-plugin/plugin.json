@@ -1,7 +1,7 @@
 {
   "name": "job-finder",
-  "version": "0.3.0",
-  "description": "Set up job-finder for a new person from Cowork (job-finder-setup), then run the weekly job application loop: tailor, fact-check, render and fill the top pending roles, stopping before submit (job-apply-weekly). Bump the version on every change that must reach Cowork; the version shown in Cowork's plugin list is the only way to see whether the installed snapshot matches the repo.",
+  "version": "0.4.0",
+  "description": "Set up job-finder for a new person from Cowork (job-finder-setup), then run the whole weekly cycle with no API key: poll the boards, read the new job descriptions in-session, write the digest, and tailor, fact-check, render and fill the top roles, stopping before submit (job-finder-weekly). Bump the version on every change that must reach Cowork; the version shown in Cowork's plugin list is the only way to see whether the installed snapshot matches the repo.",
   "author": {
     "name": "job-finder"
   }

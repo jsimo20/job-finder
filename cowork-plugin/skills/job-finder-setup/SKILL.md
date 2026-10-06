@@ -256,19 +256,40 @@ loose.
 
 Run `profile_check` again; it must now pass.
 
-## 6. Hand off
+## 6. Schedule the weekly run
+
+The weekly cycle is the `job-finder-weekly` skill: it polls the boards, reads
+the new job descriptions here in Cowork, writes a digest, and prepares
+applications for the top roles, leaving every form open and unsubmitted for
+them to review. It needs no key and nothing installed. It is safe to call
+every day: it only does the pipeline half when the last run is seven or more
+days old.
+
+Ask which weekday morning they usually have the Claude app open. Then, if a
+scheduled-task tool is available in this session, create a task attached to
+this folder, daily at that hour, with the prompt:
+
+> Read `.claude/skills/job-finder-weekly/SKILL.md` in this folder and follow it.
+
+If no such tool is available, tell them to say to Claude, in this folder:
+"every weekday at 9am, read `.claude/skills/job-finder-weekly/SKILL.md` in
+this folder and follow it", and that Cowork will set it up.
+
+Say plainly: a task attached to a folder only runs while the Claude desktop
+app is open on this computer. A missed day costs nothing; the next open day
+catches up.
+
+## 7. Hand off
 
 Tell them, in this order and nothing more:
 
 1. What is in the folder now and that none of it is shared anywhere.
-2. The next piece is the weekly run that reads the job descriptions, scores
-   them and prepares applications. Today that step needs an Anthropic API
-   key with credit and a computer that is switched on at the scheduled time;
-   `SETUP.md` §2 and §6 describe it. Say plainly that this is the part being
-   replaced by a run inside Cowork, and that until then the key route is the
-   only one.
-3. How to come back: open this folder in Cowork and say "set me up again" to
-   change anything above, or "add companies" to grow the list.
+2. How to run the weekly cycle by hand: open this folder in Cowork and say
+   "run my weekly job search" (or `/job-finder-weekly`). The first run reads
+   every job description the collect found, so it is the longest; later runs
+   read only what is new.
+3. How to come back: "set me up again" to change anything above, or "add
+   companies" to grow the list.
 
 ## Hard rules
 

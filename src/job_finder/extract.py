@@ -1,7 +1,12 @@
-"""Stage 2: agentic extraction of structured signals from each surviving JD.
+"""Stage 2: extraction of structured signals from each surviving JD.
 
-One Claude Haiku call per posting. System prompt is cached so per-call cost
-is just the JD body.
+Two ways to run it against the same prompt and the same table:
+
+- `run()`: one Claude Haiku API call per posting, system prompt cached.
+- `export_pending()` / `import_results()`: the session that drives the weekly
+  skill does the reading itself (or hands batches to subagents) and writes the
+  answers back as JSON lines. No API key, no SDK; `anthropic` is imported only
+  inside `run()` so this module loads on a device VM without it.
 """
 from __future__ import annotations
 
@@ -10,8 +15,6 @@ import logging
 import os
 from pathlib import Path
 from typing import Any
-
-import anthropic
 
 from . import db
 from .settings import pipeline_config
@@ -25,6 +28,7 @@ _COUNTRY = pipeline_config().get("location", {}).get("country", "United States")
 logger = logging.getLogger(__name__)
 
 MODEL = "claude-haiku-4-5-20251001"
+JD_CHARS = 12000
 
 _DOMAIN_LIST = "\n".join(f"- {k}: {v}" for k, v in DOMAIN_DEFINITIONS.items())
 _STAGE_LIST = "\n".join(f"- {k}: {v}" for k, v in STAGE_DEFINITIONS.items())
@@ -84,12 +88,11 @@ Rules:
 Output ONLY the JSON object."""
 
 
-def _call_claude(client: anthropic.Anthropic, jd_text: str, title: str,
-                 company_name: str) -> dict[str, Any]:
+def _call_claude(client, jd_text: str, title: str, company_name: str) -> dict[str, Any]:
     jd_text = jd_text.replace(_BOM, "")
     title = title.replace(_BOM, "")
     user_msg = (
-        f"Company: {company_name}\nTitle: {title}\n\nJob description:\n{jd_text[:12000]}"
+        f"Company: {company_name}\nTitle: {title}\n\nJob description:\n{jd_text[:JD_CHARS]}"
     )
     resp = client.messages.create(
         model=MODEL,
@@ -105,7 +108,55 @@ def _call_claude(client: anthropic.Anthropic, jd_text: str, title: str,
     return json.loads(text)
 
 
+_PENDING_SQL = """
+    SELECT p.id, p.title, p.jd_text, c.name AS company_name
+    FROM postings p
+    JOIN companies c ON c.id = p.company_id
+    LEFT JOIN extractions e ON e.posting_id = p.id
+    WHERE p.hard_filter_verdict = 'keep'
+      AND p.closed_at IS NULL
+      AND e.posting_id IS NULL
+    ORDER BY p.first_seen_at DESC
+"""
+
+
+def _pending(conn, limit: int | None) -> list:
+    rows = conn.execute(_PENDING_SQL).fetchall()
+    return rows if limit is None else rows[:limit]
+
+
+def store(conn, posting_id: int, data: dict[str, Any], model: str) -> None:
+    """Write one extraction. `data` is the model's JSON object."""
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO extractions
+        (posting_id, yoe_required, yoe_confidence, comp_base_min, comp_base_max,
+         comp_source, domain_tags, company_stage, people_management, remote_ok,
+         onsite_days_per_week, stretch_reason, extracted_at, model)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            posting_id,
+            data.get("yoe_required"),
+            data.get("yoe_confidence"),
+            data.get("comp_base_min"),
+            data.get("comp_base_max"),
+            data.get("comp_source"),
+            json.dumps(data.get("domain") or []),
+            data.get("company_stage"),
+            1 if data.get("people_management") else 0,
+            1 if data.get("remote_ok") else 0,
+            _clamp_days(data.get("onsite_days_per_week")),
+            data.get("stretch_reason"),
+            db.now_iso(),
+            model,
+        ),
+    )
+
+
 def run(db_path: Path = db.DEFAULT_DB_PATH, *, limit: int | None = None) -> dict:
+    import anthropic
+
     api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip().replace(_BOM, "")
     if not api_key:
         raise RuntimeError("ANTHROPIC_API_KEY not set")
@@ -113,22 +164,7 @@ def run(db_path: Path = db.DEFAULT_DB_PATH, *, limit: int | None = None) -> dict
     stats = {"considered": 0, "extracted": 0, "skipped": 0, "errors": 0, "errors_detail": []}
 
     with db.connect(db_path) as conn:
-        rows = conn.execute(
-            """
-            SELECT p.id, p.title, p.jd_text, c.name AS company_name
-            FROM postings p
-            JOIN companies c ON c.id = p.company_id
-            LEFT JOIN extractions e ON e.posting_id = p.id
-            WHERE p.hard_filter_verdict = 'keep'
-              AND p.closed_at IS NULL
-              AND e.posting_id IS NULL
-            ORDER BY p.first_seen_at DESC
-            """
-        ).fetchall()
-        if limit is not None:
-            rows = rows[:limit]
-
-        for row in rows:
+        for row in _pending(conn, limit):
             stats["considered"] += 1
             if not row["jd_text"]:
                 stats["skipped"] += 1
@@ -140,31 +176,61 @@ def run(db_path: Path = db.DEFAULT_DB_PATH, *, limit: int | None = None) -> dict
                 stats["errors"] += 1
                 stats["errors_detail"].append(f"posting_id={row['id']}: {e}")
                 continue
-
-            conn.execute(
-                """
-                INSERT OR REPLACE INTO extractions
-                (posting_id, yoe_required, yoe_confidence, comp_base_min, comp_base_max,
-                 comp_source, domain_tags, company_stage, people_management, remote_ok,
-                 onsite_days_per_week, stretch_reason, extracted_at, model)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    row["id"],
-                    data.get("yoe_required"),
-                    data.get("yoe_confidence"),
-                    data.get("comp_base_min"),
-                    data.get("comp_base_max"),
-                    data.get("comp_source"),
-                    json.dumps(data.get("domain") or []),
-                    data.get("company_stage"),
-                    1 if data.get("people_management") else 0,
-                    1 if data.get("remote_ok") else 0,
-                    _clamp_days(data.get("onsite_days_per_week")),
-                    data.get("stretch_reason"),
-                    db.now_iso(),
-                    MODEL,
-                ),
-            )
+            store(conn, row["id"], data, MODEL)
             stats["extracted"] += 1
+    return stats
+
+
+def export_pending(path: Path, db_path: Path = db.DEFAULT_DB_PATH, *,
+                   limit: int | None = None) -> int:
+    """Write every posting still awaiting extraction as one JSON line:
+    {"posting_id", "company", "title", "jd_text"}. Returns the count."""
+    n = 0
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with db.connect(db_path) as conn, path.open("w", encoding="utf-8") as out:
+        for row in _pending(conn, limit):
+            if not row["jd_text"]:
+                continue
+            task = {
+                "posting_id": row["id"],
+                "company": row["company_name"].replace(_BOM, ""),
+                "title": row["title"].replace(_BOM, ""),
+                "jd_text": row["jd_text"].replace(_BOM, "")[:JD_CHARS],
+            }
+            out.write(json.dumps(task, ensure_ascii=False) + "\n")
+            n += 1
+    return n
+
+
+def import_results(path: Path, db_path: Path = db.DEFAULT_DB_PATH, *,
+                   model: str = "session") -> dict:
+    """Read JSON lines of {"posting_id": N, ...the schema in SYSTEM_PROMPT...}
+    and store each one. A line is skipped, and named in `errors_detail`, when it
+    is not valid JSON, carries no integer posting_id, or names a posting that is
+    not awaiting extraction (already stored, discarded, closed, or unknown)."""
+    stats = {"lines": 0, "imported": 0, "skipped": 0, "errors_detail": []}
+    with db.connect(db_path) as conn:
+        pending = {row["id"] for row in _pending(conn, None)}
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if not line.strip():
+                continue
+            stats["lines"] += 1
+            try:
+                data = json.loads(line)
+            except json.JSONDecodeError as e:
+                stats["skipped"] += 1
+                stats["errors_detail"].append(f"line {lineno}: not JSON ({e.msg})")
+                continue
+            if not isinstance(data, dict) or not isinstance(data.get("posting_id"), int):
+                stats["skipped"] += 1
+                stats["errors_detail"].append(f"line {lineno}: no integer posting_id")
+                continue
+            if data["posting_id"] not in pending:
+                stats["skipped"] += 1
+                stats["errors_detail"].append(
+                    f"line {lineno}: posting_id {data['posting_id']} is not awaiting extraction")
+                continue
+            store(conn, data["posting_id"], data, model)
+            pending.discard(data["posting_id"])
+            stats["imported"] += 1
     return stats
