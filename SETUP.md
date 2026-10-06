@@ -13,7 +13,7 @@ pipeline to configure.
 
 If you do not use a terminal, skip everything below. Download
 `job-finder-cowork-plugin.zip` from this repository's latest GitHub release,
-open the Claude desktop app, go to Cowork → Customize → Plugins and upload it,
+open the Claude desktop app, start a new chat, click the + next to the message box and add it as a plugin,
 connect an empty folder, and say "set me up". The `job-finder-setup` skill does
 §1 to §5 by asking you questions and schedules the weekly run inside Cowork;
 it needs nothing installed beyond the Claude desktop app (Pro plan or higher),
@@ -1022,7 +1022,7 @@ python scripts/build_cowork_plugin.py
 ```
 
 That writes `job-finder-cowork-plugin.zip` to your Downloads folder (`--out` to
-put it elsewhere). Then, in Cowork: **Customize -> Plugins -> upload** it.
+put it elsewhere). Then, in the Claude app: **the + next to the message box, or Customize -> Plugins -> upload** it.
 Uploading a plugin with the same `name` replaces the installed one.
 
 **Install it; do not add `cowork-plugin/` as a context folder.** A connected
