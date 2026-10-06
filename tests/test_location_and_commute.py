@@ -88,7 +88,7 @@ def test_near_metro_never_warns():
 
 
 def test_remote_never_warns():
-    assert f.commute_warning("Farport, EX", 5, remote_us_ok=True) is None
+    assert f.commute_warning("Farport, EX", 5, remote_ok=True) is None
 
 
 def test_unknown_schedule_never_warns():

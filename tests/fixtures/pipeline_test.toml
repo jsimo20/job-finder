@@ -10,7 +10,9 @@
 # either file — those live in profile/.
 
 [filters]
-comp_floor_usd = 140000
+comp_floor = 140000
+currency = "USD"
+currency_symbol = "$"
 # Roles asking for more years than this route to the stretch queue.
 yoe_main_queue_max = 7
 untitled_min_yoe = 5
@@ -44,17 +46,25 @@ senior_scope = "a typical Senior/Staff PM scope"
 
 # ── Location scope ───────────────────────────────────────────────────────────
 # in_scope_patterns: a posting passes the location gate when its location
-# string matches ANY pattern (case-insensitive), or the role is US-remote.
+# string matches ANY pattern (case-insensitive), or the role is remote and
+# not excluded below.
 # tiers: drive-time buckets from your home base, used only for the commute
 # warning in the digest. Checked far-first, because a distant city often also
 # matches a nearby state token ("Farport, EX" matches the EX that places
 # Nearville).
 
 [location]
+country = "United States"
 in_scope_patterns = [
     '\b(farport|bigcity|midway|nearville|centerton|EX)\b',
     '\b(east coast|northeast(?:ern)?)\b',
 ]
+remote_exclude_patterns = [
+    '\b(emea|apac|latam|uk only|europe only|eu only|india only|canada only)\b',
+    '\bremote\s*[-,]\s*(uk|emea|eu|europe|india|canada|australia|new\s*zealand|japan|philippines|vietnam|singapore|hong\s*kong|israel|brazil|mexico|argentina|colombia|chile|costa\s*rica|germany|france|spain|italy|netherlands|poland|portugal|sweden|denmark|norway|finland|ireland|united\s*kingdom|switzerland)\b',
+    '\b(canada|united\s*kingdom|ireland|germany|france|spain|italy|netherlands|poland|portugal|sweden|denmark|norway|finland|switzerland|japan|philippines|vietnam|singapore|hong\s*kong|israel|india|brazil|mexico|argentina|colombia|chile|costa\s*rica|australia|new\s*zealand)[-,\s]+remote\b',
+]
+remote_require_patterns = []
 
 [location.tiers]
 near = '\b(nearville|centerton|EX)\b'

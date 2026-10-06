@@ -281,7 +281,7 @@ companies posting the target role that are not tracked. Zero tokens.
 
 The committed config encodes the owner's home base and a deliberately different target metro; `standard_answers.md` may state the target metro as the location on purpose — that is positioning, not an error, so never "fix" it. The actual metro regexes, tiers, and warning text live in `config/pipeline.toml [location]`.
 
-- **In scope** (`filter.stage1`, via `in_scope_patterns`): Boston metro, NYC metro, all of CT, RI/Providence, western + central MA, southern NH, Albany, any "East Coast"/"Northeast" phrasing, and any US-remote role.
+- **In scope** (`filter.stage1`): the configured geography (`in_scope_patterns`) plus remote roles. A remote role is dropped when it names another market (`remote_exclude_patterns`) or, when `remote_require_patterns` is set, when it fails to name the user's. `country` feeds the extraction prompt's `remote_ok` question. Pay is read and printed in `[filters] currency` / `currency_symbol`.
 - **Metro tiers** (`filter.metro_tier`) are drive time from the configured home base, defined in `config/pipeline.toml [location.tiers]`. Checked far-first, because a far-metro string like "Boston, MA" also matches the state tokens that place near-metro cities.
 - **`filter.commute_warning`** flags `far` + 4-5 days onsite, and `mid` + 5 days. It **warns, never discards** — days-per-week is often negotiable and postings misstate it. Surfaced in the digest as a `⚠️ Commute:` line.
 - Depends on `onsite_days_per_week` from extraction (0-5 or null; null means the JD said nothing, and never warns). Validated at the boundary by `extract._clamp_days`, since the field feeds a user-facing warning.

@@ -7,26 +7,35 @@ import re
 from dataclasses import dataclass
 
 from .settings import pipeline_config
-from .taxonomy import COMP_FLOOR_USD, UNTITLED_MIN_YOE, YOE_MAIN_QUEUE_MAX
+from .taxonomy import COMP_FLOOR, UNTITLED_MIN_YOE, YOE_MAIN_QUEUE_MAX
 
 # Location scope and title targeting live in config/pipeline.toml — per-user
 # preferences. configure() compiles what a config declares; tests call it
 # with a fictional fixture geography so no real region is baked in anywhere.
 
 IN_SCOPE_RE = NEAR_METRO_RE = MID_METRO_RE = FAR_METRO_RE = None
+REMOTE_EXCLUDE_RE = REMOTE_REQUIRE_RE = None
 ROLE_TITLE_RE = EXCLUDE_TRACK_RE = EXCLUDE_ROLE_RE = None
 SENIORITY_KEEP_RE = SENIORITY_REJECT_RE = DIRECTOR_PLUS_RE = None
 _COMMUTE: dict = {}
 
 
+def _any_of(patterns: list[str]) -> re.Pattern | None:
+    if not patterns:
+        return None
+    return re.compile("|".join(f"(?:{p})" for p in patterns), re.IGNORECASE)
+
+
 def configure(cfg: dict) -> None:
     """(Re)compile all config-driven matchers from a pipeline-config dict."""
     global IN_SCOPE_RE, NEAR_METRO_RE, MID_METRO_RE, FAR_METRO_RE, _COMMUTE
+    global REMOTE_EXCLUDE_RE, REMOTE_REQUIRE_RE
     global ROLE_TITLE_RE, EXCLUDE_TRACK_RE, EXCLUDE_ROLE_RE
     global SENIORITY_KEEP_RE, SENIORITY_REJECT_RE, DIRECTOR_PLUS_RE
     location = cfg["location"]
-    IN_SCOPE_RE = re.compile(
-        "|".join(f"(?:{p})" for p in location["in_scope_patterns"]), re.IGNORECASE)
+    IN_SCOPE_RE = _any_of(location["in_scope_patterns"])
+    REMOTE_EXCLUDE_RE = _any_of(location.get("remote_exclude_patterns", []))
+    REMOTE_REQUIRE_RE = _any_of(location.get("remote_require_patterns", []))
     NEAR_METRO_RE = re.compile(location["tiers"]["near"], re.IGNORECASE)
     MID_METRO_RE = re.compile(location["tiers"]["mid"], re.IGNORECASE)
     FAR_METRO_RE = re.compile(location["tiers"]["far"], re.IGNORECASE)
@@ -62,14 +71,14 @@ def metro_tier(location: str | None) -> str | None:
 
 
 def commute_warning(location: str | None, onsite_days: int | None,
-                    remote_us_ok: bool = False) -> str | None:
+                    remote_ok: bool = False) -> str | None:
     """Warn when a role's onsite requirement makes its distance impractical.
 
     Deliberately a warning and not a discard: the user decides, since
     days-per-week is often negotiable and the posting is not always accurate
     about it.
     """
-    if remote_us_ok or onsite_days is None:
+    if remote_ok or onsite_days is None:
         return None
     tier = metro_tier(location)
     if tier == "far" and onsite_days >= _COMMUTE["far_min_days"]:
@@ -77,34 +86,6 @@ def commute_warning(location: str | None, onsite_days: int | None,
     if tier == "mid" and onsite_days >= _COMMUTE["mid_min_days"]:
         return f"{onsite_days} days onsite, {_COMMUTE['mid_note']}"
     return None
-
-# Country / region tokens that mark a remote role as out-of-scope. We *don't* try
-# to detect US states by name (some collide with country names, e.g. Georgia) —
-# instead we assume any remote role without an explicit non-US country tag is
-# US-eligible by default. This matches how Greenhouse / Lever publish.
-NON_US_REMOTE_RE = re.compile(
-    r"\b("
-    r"emea|apac|latam|"
-    r"uk only|europe only|eu only|india only|canada only|"
-    # "Remote - <country>" or "Remote-<country>"
-    r"remote\s*[-,]\s*("
-    r"uk|emea|eu|europe|india|canada|australia|new\s*zealand|"
-    r"japan|philippines|vietnam|singapore|hong\s*kong|israel|"
-    r"brazil|mexico|argentina|colombia|chile|costa\s*rica|"
-    r"germany|france|spain|italy|netherlands|poland|portugal|"
-    r"sweden|denmark|norway|finland|ireland|united\s*kingdom|switzerland"
-    r")|"
-    # "<country>, Remote" or "<country> Remote"
-    r"("
-    r"canada|united\s*kingdom|ireland|germany|france|spain|italy|netherlands|"
-    r"poland|portugal|sweden|denmark|norway|finland|switzerland|"
-    r"japan|philippines|vietnam|singapore|hong\s*kong|israel|india|"
-    r"brazil|mexico|argentina|colombia|chile|costa\s*rica|"
-    r"australia|new\s*zealand"
-    r")[-,\s]+remote"   # dash separator: "Canada - Remote"
-    r")\b",
-    re.IGNORECASE,
-)
 
 @dataclass
 class FilterResult:
@@ -134,7 +115,7 @@ def stage1(*, title: str, location: str | None, workplace_type: str | None) -> F
     if not ROLE_TITLE_RE.search(title):
         if EXCLUDE_ROLE_RE.search(title):
             return FilterResult(False, "discard:engineering_or_ic_role")
-        return FilterResult(False, "discard:not_pm_title")
+        return FilterResult(False, "discard:not_target_title")
 
     # Seniority floor. A title with no level word ("Product Manager, Growth")
     # is kept: many companies title every level that way, so Stage 3 decides
@@ -142,15 +123,22 @@ def stage1(*, title: str, location: str | None, workplace_type: str | None) -> F
     if SENIORITY_REJECT_RE.search(title):
         return FilterResult(False, "discard:too_junior")
 
-    # Location
+    # Location: the configured geography, plus remote roles the user can take.
+    # A remote role is out of scope when it names somewhere else
+    # (remote_exclude_patterns) or, where the config demands it, when it fails
+    # to name the user's market (remote_require_patterns).
     loc_text = location or ""
     is_remote = (workplace_type or "").lower() == "remote" or bool(
         re.search(r"\bremote\b", loc_text, re.IGNORECASE)
     )
-    if is_remote and NON_US_REMOTE_RE.search(loc_text):
-        return FilterResult(False, "discard:non_us_remote")
-    if not (IN_SCOPE_RE.search(loc_text) or is_remote):
+    if is_remote and REMOTE_EXCLUDE_RE and REMOTE_EXCLUDE_RE.search(loc_text):
+        return FilterResult(False, "discard:remote_out_of_scope")
+    if IN_SCOPE_RE.search(loc_text):
+        return FilterResult(True, "keep")
+    if not is_remote:
         return FilterResult(False, "discard:wrong_location")
+    if REMOTE_REQUIRE_RE and not REMOTE_REQUIRE_RE.search(loc_text):
+        return FilterResult(False, "discard:remote_out_of_scope")
 
     return FilterResult(True, "keep")
 
@@ -182,7 +170,7 @@ def stage3(*, yoe_required: int | None, comp_base_min: int | None,
     """
     if comp_source == "posted":
         ceiling = comp_base_max if comp_base_max is not None else comp_base_min
-        if ceiling is not None and ceiling < COMP_FLOOR_USD:
+        if ceiling is not None and ceiling < COMP_FLOOR:
             return Stage3Result(False, "discard", f"comp_ceiling_below_floor:{ceiling}")
     if yoe_required is not None and yoe_required > YOE_MAIN_QUEUE_MAX:
         return Stage3Result(True, "stretch", f"yoe_required:{yoe_required}")

@@ -1,4 +1,30 @@
+from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
+
+import pytest
+
+from job_finder import filter as filter_mod
 from job_finder.filter import stage1, stage3
+
+FIXTURE = Path(__file__).parent / "fixtures" / "pipeline_test.toml"
+
+
+@pytest.fixture
+def reconfigured():
+    """Reconfigure the filter from an edited copy of the fixture, then restore it."""
+    with FIXTURE.open("rb") as fh:
+        base = tomllib.load(fh)
+
+    def apply(**location_overrides):
+        cfg = {**base, "location": {**base["location"], **location_overrides}}
+        filter_mod.configure(cfg)
+
+    yield apply
+    filter_mod.configure(base)
 
 
 def test_stage1_keeps_senior_pm_far_metro():
@@ -83,19 +109,39 @@ def test_stage1_rejects_unscoped_location():
 def test_stage1_rejects_eu_remote():
     r = stage1(title="Senior Product Manager", location="Remote - EMEA", workplace_type="remote")
     assert not r.keep
-    assert "non_us_remote" in r.reason
+    assert "remote_out_of_scope" in r.reason
 
 
 def test_stage1_rejects_remote_japan():
     r = stage1(title="Senior Product Manager", location="Remote - Japan", workplace_type="remote")
     assert not r.keep
-    assert "non_us_remote" in r.reason
+    assert "remote_out_of_scope" in r.reason
 
 
 def test_stage1_rejects_uk_first_remote():
     r = stage1(title="Senior Product Manager", location="United Kingdom, Remote", workplace_type="remote")
     assert not r.keep
-    assert "non_us_remote" in r.reason
+    assert "remote_out_of_scope" in r.reason
+
+
+def test_remote_require_patterns_demand_the_users_market(reconfigured):
+    reconfigured(remote_exclude_patterns=[], remote_require_patterns=[r"\b(uk|united kingdom|europe|emea)\b"])
+    kept = stage1(title="Senior Product Manager", location="Remote - EMEA", workplace_type="remote")
+    assert kept.keep, kept.reason
+    bare = stage1(title="Senior Product Manager", location="Remote", workplace_type="remote")
+    assert bare.reason == "discard:remote_out_of_scope"
+
+
+def test_remote_require_patterns_never_block_the_configured_geography(reconfigured):
+    reconfigured(remote_require_patterns=[r"\b(uk|united kingdom)\b"])
+    r = stage1(title="Senior Product Manager", location="Nearville, EX (Remote)", workplace_type="remote")
+    assert r.keep, r.reason
+
+
+def test_empty_remote_exclude_patterns_keep_every_remote_role(reconfigured):
+    reconfigured(remote_exclude_patterns=[])
+    r = stage1(title="Senior Product Manager", location="Remote - Canada", workplace_type="remote")
+    assert r.keep, r.reason
 
 
 def test_stage1_keeps_remote_us_variants():
@@ -155,13 +201,12 @@ def test_stage3_null_comp_kept():
     assert r.keep and r.queue == "main"
 
 
-def test_dash_separated_non_us_remote_is_discarded():
+def test_dash_separated_out_of_scope_remote_is_discarded():
     """Regression: a live posting's "Canada - Remote" passed the location gate because
     the country-then-remote pattern only allowed comma/space separators."""
-    from job_finder.filter import stage1
     for loc in ("Canada - Remote", "Remote - Canada", "Canada, Remote"):
         r = stage1(title="Senior Product Manager", location=loc, workplace_type="remote")
-        assert r.reason == "discard:non_us_remote", loc
+        assert r.reason == "discard:remote_out_of_scope", loc
 
 
 def test_stage1_keeps_a_pm_title_with_no_level_word():

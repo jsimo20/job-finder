@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS extractions (
   domain_tags TEXT,
   company_stage TEXT,
   people_management INTEGER,
-  remote_us_ok INTEGER,
+  remote_ok INTEGER,
   onsite_days_per_week INTEGER,
   stretch_reason TEXT,
   extracted_at TEXT NOT NULL,

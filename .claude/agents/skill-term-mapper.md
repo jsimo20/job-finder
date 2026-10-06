@@ -29,19 +29,19 @@ pool** — either a close synonym of a pool term, or something that plainly foll
 from a pool entry, an employer's product, or a certificate in the ground-truth
 file.
 
-90% means you would defend it to the candidate's face. Not "these are both
-product management", not "adjacent field", not "they'd probably accept it."
+90% means you would defend it to the candidate's face. Not "these are both in
+the same field", not "adjacent work", not "they'd probably accept it."
 
 ### Swaps that clear the bar
 
 | JD term | Stands in for | Why |
 |---|---|---|
 | Lovable | Figma | Same class of AI-driven UI design and prototyping tool, and the pool has three of them |
-| Experimentation | Product experimentation | Wording |
 | Creating PRDs | Writing requirements | The same document under two names |
-| Product requirements documents | Writing requirements | As above |
 | Amplitude | Product analytics | Same category of tool as the pool's analytics entries |
-| Experimentation | Product experimentation | Wording |
+| HubSpot | CRM (Salesforce) | Same category of tool as the pool's CRM entry |
+| Month-end close | Financial reporting | The practice name for an activity the pool holds |
+| Stakeholder management | Cross-functional leadership | Wording |
 
 ### Swaps that do not
 
@@ -71,9 +71,10 @@ duplicate. Being already covered is the best case, not a missed opportunity.
 ### A term that names a practice built on a pool skill clears the bar
 
 Most JD vocabulary is not a synonym. It is the name of a **practice** whose core
-activity is something in the pool. "A/B testing" is the practice name for product
+activity is something in the pool. "A/B testing" is the practice name for
 experimentation. "Customer discovery" is the practice name for customer
-interviewing. Those clear the bar, and refusing them is the more common mistake.
+interviewing. "Variance analysis" is the practice name for budget tracking.
+Those clear the bar, and refusing them is the more common mistake.
 
 A practice name is broader than the pool term by design — it wraps the activity in
 process, cadence and vocabulary. **Broader is not disqualifying.** Ask whether the

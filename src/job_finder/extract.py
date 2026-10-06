@@ -15,11 +15,12 @@ import anthropic
 
 from . import db
 from .settings import pipeline_config
-from .taxonomy import DOMAIN_DEFINITIONS, STAGE_DEFINITIONS
+from .taxonomy import CURRENCY, DOMAIN_DEFINITIONS, STAGE_DEFINITIONS
 
 _EXTRACTION = pipeline_config().get("extraction", {})
 _ROLE_NOUN = _EXTRACTION.get("role_noun", "product manager")
 _SENIOR_SCOPE = _EXTRACTION.get("senior_scope", "a typical senior scope for this role")
+_COUNTRY = pipeline_config().get("location", {}).get("country", "United States")
 
 logger = logging.getLogger(__name__)
 
@@ -54,26 +55,26 @@ Return STRICT JSON only. No prose, no markdown fences. Schema:
 {{
   "yoe_required": <int or null>,
   "yoe_confidence": "high" | "medium" | "low",
-  "comp_base_min": <int USD or null>,
-  "comp_base_max": <int USD or null>,
+  "comp_base_min": <int, annual base in {CURRENCY}, or null>,
+  "comp_base_max": <int, annual base in {CURRENCY}, or null>,
   "comp_source": "posted" | "inferred" | null,
   "domain": [<one or more domain tags>],
   "company_stage": <one stage tag or null>,
-  "people_management": <true if JD requires directly managing PMs, else false>,
-  "remote_us_ok": <true if role permits US remote work, else false>,
+  "people_management": <true if JD requires directly managing other {_ROLE_NOUN}s or people, else false>,
+  "remote_ok": <true if the role permits fully remote work from {_COUNTRY}, else false>,
   "onsite_days_per_week": <int 0-5, or null if the JD does not say>,
   "stretch_reason": <short string explaining why this is a stretch role, or null>
 }}
 
 Rules:
-- yoe_required: minimum years of product management experience required. Null if not stated.
-- comp: only set comp_source="posted" if the JD explicitly states a salary range. Otherwise null.
+- yoe_required: minimum years of {_ROLE_NOUN} experience required. Null if not stated.
+- comp: only set comp_source="posted" if the JD explicitly states a salary range in {CURRENCY}. Otherwise null.
 - domain: choose all that clearly apply from this list:
 {_DOMAIN_LIST}
 - company_stage: choose the single best fit from:
 {_STAGE_LIST}
 - If you cannot confidently determine a stage from the JD, use null.
-- people_management: true only if the JD explicitly says the role manages other PMs/people.
+- people_management: true only if the JD explicitly says the role manages other people.
 - onsite_days_per_week: how many days per week the role requires being in an office.
   Fully remote is 0. "Hybrid, 3 days in office" is 3. "In-office" / "onsite" with no
   number stated is 5. Null ONLY when the JD says nothing about office attendance —
@@ -144,7 +145,7 @@ def run(db_path: Path = db.DEFAULT_DB_PATH, *, limit: int | None = None) -> dict
                 """
                 INSERT OR REPLACE INTO extractions
                 (posting_id, yoe_required, yoe_confidence, comp_base_min, comp_base_max,
-                 comp_source, domain_tags, company_stage, people_management, remote_us_ok,
+                 comp_source, domain_tags, company_stage, people_management, remote_ok,
                  onsite_days_per_week, stretch_reason, extracted_at, model)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
@@ -158,7 +159,7 @@ def run(db_path: Path = db.DEFAULT_DB_PATH, *, limit: int | None = None) -> dict
                     json.dumps(data.get("domain") or []),
                     data.get("company_stage"),
                     1 if data.get("people_management") else 0,
-                    1 if data.get("remote_us_ok") else 0,
+                    1 if data.get("remote_ok") else 0,
                     _clamp_days(data.get("onsite_days_per_week")),
                     data.get("stretch_reason"),
                     db.now_iso(),

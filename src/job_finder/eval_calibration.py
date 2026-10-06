@@ -44,6 +44,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from . import state
+from .taxonomy import CURRENCY_SYMBOL
 
 # Digest markdown separates fields with en/em dashes and a middle dot. Spell
 # them as escapes: a literal here has been corrupted before by a round trip
@@ -61,7 +62,7 @@ ENTRY_RE = re.compile(
     rf"^###\s+\[Score\s+(-?\d+)\]\s+(.+?)\s+{_DASH}\s+\[(.+?)\]\((\S+?)\)\s*$")
 # Stage slugs carry digits (mega_corp_10k), so the class cannot be letters only.
 STAGE_RE = re.compile(r"Stage:\s*([a-z0-9_]+)")
-COMP_LO_RE = re.compile(r"\$(\d+)")
+COMP_LO_RE = re.compile(re.escape(CURRENCY_SYMBOL) + r"(\d+)")
 # digest._fmt_comp renders a bare maximum as "Comp <=$XK", which means the
 # minimum was null. Reading that X as a floor would invent a comp score.
 COMP_MAX_ONLY = "≤"
