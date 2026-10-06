@@ -9,7 +9,7 @@ sits at the top level rather than under an extra directory.
 
     python scripts/build_cowork_plugin.py [--out DIR]
 
-Then: Cowork tab -> Customize -> Plugins -> upload the .zip. Do not add the
+Then: the + next to the message box in a new chat, or Customize -> Plugins -> upload the .zip. Do not add the
 folder as a context folder instead; a connected folder is just files on disk, so
 .mcp.json never runs and the failure looks like a broken plugin.
 """

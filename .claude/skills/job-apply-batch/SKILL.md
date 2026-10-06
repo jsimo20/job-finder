@@ -194,7 +194,7 @@ Three outcomes, and they are not two:
   configuration is visible, so it is the diagnosis rather than just the symptom.
   Say plainly: **every role in this batch will need its resume and cover letter
   attached by hand**, and the fix is to rebuild and reinstall the plugin
-  (`python scripts/build_cowork_plugin.py`, then Cowork tab -> Customize ->
+  (`python scripts/build_cowork_plugin.py`, then the + next to the message box, or Customize ->
   Plugins -> upload the zip). **Do not stop.** Prep is still worth doing: the
   tailoring, fact-checking and rendering are all still good, and the forms still
   get filled with everything that is not a file.

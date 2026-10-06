@@ -459,7 +459,7 @@ system Chrome or Safari is involved.
 
 **Install it, do not add the folder as context.** A connected folder is just
 files on disk, so `.mcp.json` never runs and the failure looks like a broken
-plugin. Cowork tab → Customize → Plugins → upload. Full reference, including
+plugin. The + next to the message box in a new chat, or Customize → Plugins → upload (the Cowork tab merged into chat in September 2026). Full reference, including
 the `mcp__remote-devices__plugin_*` tool naming:
 `~/.claude/context/cowork-plugins.md`.
 
