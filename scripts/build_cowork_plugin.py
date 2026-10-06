@@ -62,7 +62,7 @@ def main() -> int:
     print(f"built {archive}")
     for name in names:
         print(f"  {name}")
-    print("\nUpload it: Cowork tab -> Customize -> Plugins -> upload.")
+    print("\nUpload it: the + next to the message box in a new chat, or Customize -> Plugins -> upload.")
     print("Installing is not the same as adding the folder as context; only an "
           "installed plugin has its .mcp.json read.")
     return 0
