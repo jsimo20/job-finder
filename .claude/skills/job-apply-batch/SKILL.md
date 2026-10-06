@@ -198,6 +198,23 @@ Three outcomes, and they are not two:
   Plugins -> upload the zip). **Do not stop.** Prep is still worth doing: the
   tailoring, fact-checking and rendering are all still good, and the forms still
   get filled with everything that is not a file.
+
+  **On a machine that is not the developer's, the usual cause is that
+  `cowork-plugin/.mcp.json` names the developer's absolute `--output-dir`.**
+  Offer the fix once, after the report, and do it when they say yes: set
+  `--output-dir` in that file to this folder's own `.playwright-mcp` as an
+  absolute path on their computer (ask them for the folder's location if the
+  mounted path is not the host path), build with `--out` pointing into this
+  folder (the default `~/Downloads` is this environment's, not theirs):
+
+  ```sh
+  PYTHONPATH=".cowork-deps:src" python3 scripts/build_cowork_plugin.py --out .
+  ```
+
+  then tell them to add `job-finder-cowork-plugin.zip` from this folder with
+  the + next to the message box, which replaces the installed plugin. The next
+  run's probe confirms it. This edits only their local copy; nothing reaches
+  the repository.
 - **Inconclusive** — the probe itself could not run (no file chooser, the
   `data:` URL blocked, the tools absent). Report it as inconclusive. **Never
   report an inconclusive probe as a pass**, and expect the hand-attach.
