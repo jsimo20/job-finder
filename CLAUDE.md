@@ -419,6 +419,13 @@ skill; two copies of that procedure would drift.
   `.mcp.json` at all (verified 2026-08-25), so a plugin-bundled server is the only
   way it gets one. The repo copy serves Claude Code.
 - `cowork-plugin/skills/job-apply-weekly/SKILL.md` — the launcher
+- `cowork-plugin/skills/job-finder-setup/SKILL.md` — first-run setup for a
+  non-technical user: clones the public repo into the connected folder,
+  bootstraps `.cowork-deps`, interviews for `profile/` and
+  `config/pipeline.toml`, probes their company names, and proves one
+  zero-token collect. **Never names a `profile/<dir>/` layout** (the
+  fresh-clone eval greps for that). Ends by pointing at SETUP.md §2/§6 for
+  the weekly run, which still needs an API key until the in-Cowork run exists.
 
 **Install it, do not add the folder as context.** A connected folder is just
 files on disk, so `.mcp.json` never runs and the failure looks like a broken

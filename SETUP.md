@@ -9,6 +9,16 @@ places you create yourself — `config/pipeline.toml` (search preferences),
 archive). The pipeline runs locally on a weekly schedule; there is no cloud
 pipeline to configure.
 
+## No-terminal path: Cowork
+
+If you do not use a terminal, skip everything below. Download
+`job-finder-cowork-plugin.zip` from this repository's latest GitHub release,
+open the Claude desktop app, go to Cowork → Customize → Plugins and upload it,
+connect an empty folder, and say "set me up". The `job-finder-setup` skill does
+§1 to §5 by asking you questions; it needs nothing installed beyond the Claude
+desktop app (Pro plan or higher). §2's API key and §6's schedule still apply to
+the weekly run until the in-Cowork run replaces them.
+
 ## 0. Prerequisites
 
 - Python 3.10 or newer (on Debian/Ubuntu also `python3-venv`; the stock
