@@ -9,13 +9,39 @@ nobody is watching: a scheduled task, or someone who will read one report.
 `$ARGUMENTS`: `--top N` or a bare number sets how many roles the apply batch
 takes (default 3); `--apply-only` skips the pipeline; `--pipeline-only` skips
 the apply batch; `--force` runs the pipeline even when the stamp says it is not
-due. Confirm what you are about to do in your first message, in one line.
+due; `--no-update` skips the engine update in step 0. Confirm what you are
+about to do in your first message, in one line.
 
 **Every Python call below is prefixed `PYTHONPATH=".cowork-deps:src" python3`,
 run from the repo root.** On Windows in Claude Code, drop the prefix and use
 `.venv/Scripts/python.exe`. If `.cowork-deps/` is missing, build it first with
 `sh scripts/bootstrap_cowork_deps.sh`; it is gitignored and a fresh clone will
 not have it.
+
+## 0. Update the engine
+
+Skip this step when `--no-update` was given, or when `.git` exists in the repo
+root **without** `.git/shallow`: that is a developer checkout, which `git pull`
+owns and an overlay would clobber. Every other install came from the setup
+skill, as a tarball or a `git clone --depth 1` (which leaves `.git/shallow`),
+and has no way to update itself except this.
+
+```sh
+curl -fsSL --max-time 60 -o /tmp/jf-main.tar.gz https://github.com/jsimo20/job-finder/archive/refs/heads/main.tar.gz \
+  && tar tzf /tmp/jf-main.tar.gz > /dev/null \
+  && before=$(cksum < pyproject.toml) \
+  && tar xzf /tmp/jf-main.tar.gz --strip-components=1 \
+  && { [ "$before" = "$(cksum < pyproject.toml)" ] && [ -d .cowork-deps ] || sh scripts/bootstrap_cowork_deps.sh; }
+```
+
+The archive is downloaded and verified before anything is extracted, so a
+dropped connection leaves the current version intact. Extraction only writes
+tracked files; `profile/`, `data/`, `.env`, `config/pipeline.toml` and
+`.cowork-deps/` are gitignored and never in the archive.
+
+**A failed update never stops the run.** Continue on the current version and
+put one line in the report saying the update did not apply. Files deleted
+upstream are not removed by an overlay and are harmless.
 
 ## 1. Is a run due?
 

@@ -361,6 +361,13 @@ renders the digest and stamps `last_weekly_run` in `state.db`'s `meta` table.
 makes a daily trigger a no-op most days. `weekly.py` imports neither
 `anthropic` nor `python-dotenv`, so it runs under `.cowork-deps`; `extract.py`
 imports `anthropic` lazily inside `run()` for the same reason.
+**Installs from the setup skill (a tarball, or a `--depth 1` clone) update
+themselves in the weekly skill's step 0:** it downloads `main`, verifies the
+archive, and extracts over the folder (user state is gitignored, so it
+survives). It skips a full `.git` checkout, told apart by the absence of
+`.git/shallow`, so a developer's working tree is never overwritten. Tracking `main` is deliberate while the users
+are a few friends; point the URL at a moved `stable` tag to hold users on a
+tested version.
 `.claude/skills/job-finder-weekly/SKILL.md` is the procedure that drives it,
 then hands to the batch skill below. **Cowork fires no `SessionStart` or plugin
 hooks** (anthropic/claude-code#40495), so the trigger is a daily local
