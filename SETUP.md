@@ -1058,7 +1058,9 @@ and `--apply-only` run one half. The plugin is a launcher only — the procedure
 it follows is `.claude/skills/job-finder-weekly/SKILL.md` in this repo, so
 **the repo still has to be the mounted folder for that session.** It is safe
 to schedule daily: the pipeline half runs only when the last one is seven or
-more days old.
+more days old. Each run first updates the folder to the latest `main`, unless
+the folder is a full git checkout; your profile, settings and data are never
+touched. Pass `--no-update` to skip it.
 
 Three things worth knowing before you rely on it:
 
