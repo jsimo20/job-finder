@@ -37,6 +37,41 @@ git --version || true  # optional; the tarball route below works without it
 If Python is older than 3.10 or missing, stop and say the tool cannot run on
 this setup yet. Do not improvise an install.
 
+Then check that every site the engine needs is reachable from here. Any HTTP
+answer, even a 404, means reachable; only a connection that never completes
+counts as blocked:
+
+```sh
+for u in https://github.com/jsimo20/job-finder https://codeload.github.com \
+         https://pypi.org/simple/httpx/ https://files.pythonhosted.org \
+         https://api.greenhouse.io https://boards-api.greenhouse.io \
+         https://api.lever.co https://jobs.ashbyhq.com https://api.ashbyhq.com \
+         https://builtin.com; do
+  curl -sS -o /dev/null --max-time 15 "$u" 2>/dev/null && echo "ok      $u" || echo "BLOCKED $u"
+done
+```
+
+- **All ok:** say nothing about it and carry on.
+- **Any blocked:** stop before touching the folder. Nothing below works
+  without these sites, and a half-finished setup is harder to resume than one
+  that never started. Send this, one message, then wait:
+
+  > Before I can set anything up, Claude needs permission to reach the job
+  > boards. Right now this account only lets me reach a short list of
+  > websites. To change it, open **Settings** in the Claude app, go to
+  > **Capabilities**, turn on **Allow network egress**, and set the domain
+  > allowlist to **All domains**. Then start a new chat in this folder and
+  > say "set me up" again. The change only applies to new chats.
+  >
+  > If your Claude account belongs to a company or team, only its
+  > administrator can change this setting. If they'd rather allow specific
+  > sites than all of them, send them this list: <every blocked host>.
+  > Choosing **All domains** works better, because the weekly run also opens
+  > companies' own careers pages.
+
+  Name the hosts that failed, not the whole list. Never suggest a different
+  settings path, a workaround, or a retry in this chat.
+
 Then check the form-filling half. The browser that fills applications runs on
 their computer, not in your environment, and it needs Node.js there. You
 cannot see their computer, but you can see the result: **look through your
@@ -294,7 +329,8 @@ metro, or they are remote-first:
    `/jobs/product-management`, `/jobs/design-ux`, `/jobs/sales`,
    `/jobs/dev-engineering`, `/jobs/data-analytics`, `/jobs/finance`,
    `/jobs/hr`, `/jobs/operations`, `/jobs/content`, ...). Pick the one that
-   names their role.
+   names their role. If the city site does not answer, send the network
+   message from "Before anything", naming that site, and skip Built In.
 2. Set `[discovery] builtin_sites = ["<site>"]` and `builtin_category =
    "<slug>"` in `config/pipeline.toml`.
 3. Run discovery once now (about five minutes, zero tokens) and track every
