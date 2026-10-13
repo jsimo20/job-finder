@@ -223,7 +223,9 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
                         if c["ats_provider"] == "manual"]
     lines.append(f"## Manual check ({len(manual_companies)})")
     lines.append("Tracked companies with no pollable board — open each careers "
-                 "page by hand.\n")
+                 "page by hand. Nothing searches these pages, so their roles never "
+                 "appear above. To apply to one, paste its link or the job "
+                 "description into a chat and ask for help applying.\n")
     if manual_companies:
         for c in manual_companies:
             tags = ", ".join(c["sector_tags"]) if c["sector_tags"] else ""

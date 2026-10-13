@@ -34,6 +34,8 @@ def test_digest_lists_manual_companies(tmp_path):
     assert "## Manual check (1)" in body
     assert "[Handmade Widgets](https://example.com/careers)" in body
     assert "iot_edge" in body
+    # Users must learn these roles never reach the scored queues.
+    assert "paste its link or the job description" in body
 
 
 def test_collect_enriches_kept_postings_only(tmp_path, monkeypatch):
