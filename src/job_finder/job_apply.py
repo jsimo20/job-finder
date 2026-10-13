@@ -421,6 +421,15 @@ def render(
     (outdir / "cover_letter.json").write_text(
         json.dumps(cover_letter, indent=2, ensure_ascii=False), encoding="utf-8")
 
+    # Postings often close before the interview, and interview prep reads this.
+    jd_text = (posting_row.get("jd_text") or "").strip()
+    if jd_text:
+        (outdir / "jd.md").write_text(
+            f"# {posting_row['company_name']} — {posting_row['title']}\n\n"
+            f"Source: {posting_row['url']}\n\n{jd_text}\n",
+            encoding="utf-8",
+        )
+
     if config.standard_answers_md.exists():
         shutil.copy2(config.standard_answers_md, outdir / "standard_answers.md")
     else:
