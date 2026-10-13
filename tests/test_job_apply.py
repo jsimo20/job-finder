@@ -189,6 +189,28 @@ def test_render_creates_per_job_folder_with_expected_files(
     assert "Test Corp" in apply_md
     assert "Bullet one" in apply_md
     assert "job-finder mark-applied test-123" in apply_md
+    assert not (outdir / "jd.md").exists()
+
+
+def test_render_keeps_the_job_description(
+    fixture_posting_row, fixture_resume_data, fixture_cover_letter,
+    isolated_config, fixture_profile
+):
+    row = {**fixture_posting_row, "jd_text": "  Own the platform roadmap.\nShip it.  "}
+    outdir = job_apply.render(
+        posting_row=row,
+        resume_data=fixture_resume_data,
+        cover_letter=fixture_cover_letter,
+        why_this_matches=[],
+        config=isolated_config,
+        profile=fixture_profile,
+        open_browser=False,
+    )
+
+    jd = (outdir / "jd.md").read_text(encoding="utf-8")
+    assert jd.startswith("# Test Corp — Senior Product Manager, Platform")
+    assert "Source: https://example.com/jobs/test-123" in jd
+    assert jd.endswith("Own the platform roadmap.\nShip it.\n")
 
 
 def test_render_is_idempotent(

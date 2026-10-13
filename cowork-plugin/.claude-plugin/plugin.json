@@ -1,7 +1,7 @@
 {
   "name": "job-finder",
   "version": "1.0.2",
-  "description": "Set up job-finder for a new person from Cowork (job-finder-setup), then run the whole weekly cycle with no API key: poll the boards, read the new job descriptions in-session, write the digest, and tailor, fact-check, render and fill the top roles, stopping before submit (job-finder-weekly). Bump the version on every change that must reach Cowork; the version shown in Cowork's plugin list is the only way to see whether the installed snapshot matches the repo.",
+  "description": "Two launchers for the job-finder engine in a connected folder. job-finder-setup installs the engine and hands over to its setup procedure; job-finder routes everything after that (the weekly run, the company list, applying to a pasted job, interview prep) to the procedure files in the folder, which update themselves. Bump the version only when a launcher, the manifest or .mcp.json changes; the version shown in Cowork's plugin list is the only way to see whether the installed snapshot matches the repo.",
   "author": {
     "name": "job-finder"
   }

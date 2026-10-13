@@ -20,28 +20,22 @@ not have it.
 
 ## 0. Update the engine
 
-Skip this step when `--no-update` was given, or when `.git` exists in the repo
-root **without** `.git/shallow`: that is a developer checkout, which `git pull`
-owns and an overlay would clobber. Every other install came from the setup
-skill, as a tarball or a `git clone --depth 1` (which leaves `.git/shallow`),
-and has no way to update itself except this.
+Skip this step when `--no-update` was given. Otherwise:
 
 ```sh
-curl -fsSL --max-time 60 -o /tmp/jf-main.tar.gz https://github.com/jsimo20/job-finder/archive/refs/heads/main.tar.gz \
-  && tar tzf /tmp/jf-main.tar.gz > /dev/null \
-  && before=$(cksum < pyproject.toml) \
-  && tar xzf /tmp/jf-main.tar.gz --strip-components=1 \
-  && { [ "$before" = "$(cksum < pyproject.toml)" ] && [ -d .cowork-deps ] || sh scripts/bootstrap_cowork_deps.sh; }
+sh scripts/self_update.sh
 ```
 
-The archive is downloaded and verified before anything is extracted, so a
-dropped connection leaves the current version intact. Extraction only writes
-tracked files; `profile/`, `data/`, `.env`, `config/pipeline.toml` and
-`.cowork-deps/` are gitignored and never in the archive.
+It prints one line. It skips a developer checkout (a `.git` without
+`.git/shallow`, which `git pull` owns) and a folder already updated this
+hour; every other install came from the setup skill and updates only here or
+through the `job-finder` router. The archive is verified before anything is
+extracted, and extraction only writes tracked files, so `profile/`, `data/`,
+`.env`, `config/pipeline.toml` and `.cowork-deps/` are never touched.
 
 **A failed update never stops the run.** Continue on the current version and
-put one line in the report saying the update did not apply. Files deleted
-upstream are not removed by an overlay and are harmless.
+put the script's line in the report. Files deleted upstream are not removed
+by an overlay and are harmless.
 
 ## 1. Is a run due?
 

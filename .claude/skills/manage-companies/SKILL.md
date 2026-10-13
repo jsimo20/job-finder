@@ -1,104 +1,152 @@
 ---
 name: manage-companies
-description: Add, remove, swap, or validate companies in the tracked-company list (data/state.db). Use whenever the user wants to expand the universe, drop a company, fix a broken ATS slug, audit sector coverage, or probe a new careers page to figure out which ATS it uses.
+description: Add, remove, list, or find more companies in the tracked-company list (data/state.db). Use whenever the user wants to add an employer, drop one, see what is tracked, get more suggestions like the ones they have, fix a broken board, or quiet a noisy one. Works the same on Cowork and in Claude Code.
 ---
 
 # manage-companies
 
 The tracked-company list lives in `data/state.db` (gitignored, local-only)
-and drives every pipeline run. Manage it through the CLI — never edit the
-database file directly.
+and drives every weekly run. Change it only through the `state` functions
+below, never by editing the database file.
+
+**`$PY` below means `PYTHONPATH=".cowork-deps:src" python3` on Cowork and
+`.venv/Scripts/python.exe` on Windows, run from the repo root.** The
+`job-finder` console script does not exist on Cowork, so nothing here uses it.
+
+Talk to the user in plain words: "company", "job board", "careers page".
+Report results as names and counts, never as command output.
 
 ## The row shape
 
-name, ats_provider (`greenhouse` | `lever` | `ashby` | `workday` | `manual`),
-ats_slug (the company's identifier inside the ATS URL; often but not always
-the lowercase name), careers_url, sector_tags (match
-`config/pipeline.toml [domains]` keys where possible), size_band (`1-50`,
-`51-200`, `201-500`, `500+`).
+`name`, `ats_provider` (`greenhouse` | `lever` | `ashby` | `workday` |
+`manual`), `ats_slug` (the company's identifier on that board; `None` for
+`manual`), `careers_url`, `sector_tags` (keys of `config/pipeline.toml
+[domains]` where they fit, else `[]`), `size_band` (`1-50`, `51-200`,
+`201-500`, `500+`, or `None`), and optionally `max_age_days`.
 
-Workday slugs encode the board coordinates as `tenant/wdN/site` — read all
-three from the careers URL, e.g.
-`examplecorp.wd1.myworkdayjobs.com/External` → `examplecorp/wd1/External`.
-Probe with a POST to
-`https://<tenant>.<wdN>.myworkdayjobs.com/wday/cxs/<tenant>/<site>/jobs`
-(body `{"appliedFacets":{},"limit":1,"offset":0,"searchText":""}`); a 200
-with a `total` confirms the coordinates, a 422 means the tenant exists but
-the site name is wrong.
-
-ICIMS/Taleo/SuccessFactors/Phenom/Eightfold have no adapter; track those
-companies with `--provider manual --careers-url <url>` (no slug). They are
-skipped by collect and surface in the digest's **Manual check** section for
-a weekly hand check.
+A `manual` row is a careers-page link with no readable board. The weekly run
+never searches it; the digest lists it under **Manual check** for a look by
+hand. Say so whenever you add one.
 
 ## Operations
 
-### Add a company
+### List
 
-1. **Probe before adding** so a bad slug doesn't 404 the next run:
-   `python scripts/discover_companies.py --names "Company Name"` tries slug
-   variants against all three ATS endpoints and reports live posting counts.
-2. Verify the hit is really that company (slug collisions exist — check the
-   posting titles/locations, not just the 200).
-3. `job-finder companies add --name "..." --provider greenhouse --slug "..."
-   [--careers-url ...] [--tags tag1,tag2] [--size-band 201-500]`
-4. Don't auto-run the pipeline — it costs API tokens. The next scheduled run
-   picks the company up.
+```sh
+$PY -c "
+from job_finder import state
+rows = state.list_companies()
+for c in rows:
+    print(c['ats_provider'], '|', c['name'], '|', c['careers_url'] or '')
+print(len(rows), 'tracked')
+"
+```
 
-### Remove / fix a company
+Tell them how many are read automatically (any provider but `manual`) and how
+many are manual checks. List names only if they asked to see them.
 
-- `job-finder companies remove --name "..."` — closed-role inference marks
-  its postings closed on the next run.
-- Broken slug: re-probe variants (name+`inc`/`hq`, no-spaces, the other
-  ATSes), then `companies add` with the same name to upsert in place.
+### Add named companies
+
+1. Probe which job boards answer for each name:
+
+   ```sh
+   $PY scripts/discover_companies.py --names "Name One" "Name Two" --json hits.json
+   ```
+
+2. Check each hit is really that company: read the posting titles and
+   locations it printed, not just the match. Slugs collide (`relay`,
+   `general`). Drop a wrong hit from `hits.json`.
+3. Track the verified hits:
+
+   ```sh
+   $PY -c "
+   from pathlib import Path
+   from job_finder import state
+   print(state.import_companies(Path('hits.json')), 'tracked')
+   "
+   ```
+
+4. A name with no board is not dropped and the user is never asked for a
+   link. Find its careers page yourself: web search "<Name> careers" where
+   the session has search, otherwise try `https://<domain>/careers`, `/jobs`,
+   `/join-us`, `/about/careers` and take the first page that answers 200 and
+   plainly lists roles (fetch it and look; a redirect to the home page is not
+   a careers page). Track it as manual:
+
+   ```sh
+   $PY -c "
+   from job_finder import state
+   state.upsert_company({'name': '<Name>', 'ats_provider': 'manual', 'ats_slug': None,
+                         'careers_url': '<url>', 'sector_tags': [], 'size_band': None})
+   "
+   ```
+
+5. Delete `hits.json`. Report: which names are now read automatically, which
+   are manual checks, and any you could not find a jobs page for.
+
+Workday boards encode their coordinates as `tenant/wdN/site`, read from the
+careers URL (`examplecorp.wd1.myworkdayjobs.com/External` →
+`examplecorp/wd1/External`). Only add one when the user asks for it by name;
+Workday polling is unreliable and is not offered by default.
+
+### Find more like these
+
+Build 15 to 25 candidates from what they already track, the industries and
+company types in `config/pipeline.toml [domains]` and `[stages]`, and their
+region. Leave out every name already tracked. Show the list grouped by what
+the companies do, ask them to strike any they would never work for, then run
+**Add named companies** on the rest.
+
+### Remove
+
+```sh
+$PY -c "
+from job_finder import state
+print(state.remove_company('<Name>'))
+"
+```
+
+`True` means it was tracked and is gone; its postings close on the next run.
+
+### Fix a broken board
+
+A company whose board stopped answering has usually moved boards. Re-probe
+with **Add named companies** step 1, also trying the name with `inc`, `hq`,
+or no spaces. `upsert_company` with the same name replaces the row in place.
+
+### Quiet a noisy board
+
+A company with hundreds of open roles can crowd the digest. Narrow its window
+instead of dropping it: upsert the same row with `'max_age_days': 14`. The
+digest then shows only that company's postings from the last N days, and
+**hides any posting with no date**, so check the board supplies dates first.
+Upserting without the key clears it.
 
 ### Companies found by discovery
 
-`job-finder run` proposes untracked companies from Built In in the digest's
-**New companies to review** section. `job-finder discover list` shows them;
-`job-finder discover add "Name"` (or `--all` for every specific title match)
-tracks one; `job-finder discover dismiss "Name"` stops it being proposed.
-Discovered rows arrive with no sector tags and `size_band` unknown; fill them
-with `companies add` when it matters for the digest.
+The weekly run proposes untracked companies from Built In in the digest's
+**New companies to review**. To track one:
 
-### Bulk expansion (new geography or industry)
+```sh
+$PY -c "
+from job_finder import builtin_discovery
+print(builtin_discovery.promote('<Name>'))
+"
+```
 
-1. Build a candidate list of employer names from any regional source.
-2. `python scripts/discover_companies.py --file candidates.txt --json hits.json`
-3. Curate hits (verify boards, fill tags/size), then
-   `job-finder companies import hits.json`.
+To stop one being proposed again:
+`state.set_discovered_status('<Name>', 'dismissed')`.
 
-### Audit / validate
+### Never auto-apply
 
-- `job-finder companies list` for the current universe; count tags per
-  sector against the weights in `config/pipeline.toml` and suggest fills for
-  under-represented high-weight sectors.
-- Full validation: `job-finder companies export /tmp/list.json`, then probe
-  every row with discover_companies and report 200s vs 4xxs — catches
-  companies that switched ATSes.
+Companies that stay in the digest but must never get an automatic
+application (an inside contact, a pause): `state.add_no_auto('<Name>',
+reason='<why>')`, `state.remove_no_auto('<Name>')`, `state.list_no_auto()`.
+The apply procedures refuse these.
 
-### Quiet down a noisy board
+## Never
 
-A company with hundreds of open reqs can dominate the digest without ever
-producing a fresh match. Rather than dropping it, narrow its window:
-
-`job-finder companies add --name "..." --provider greenhouse --slug "..." --max-age-days 14`
-
-The digest then shows only that company's postings made within N days; every
-other company stays on the global `STALE_DAYS`. Re-running `companies add`
-without the flag clears the override. Postings with no post date are hidden
-while an override is active, so verify the ATS supplies dates before relying
-on it (Greenhouse `first_published`, Ashby `publishedDate`, Lever `createdAt`,
-Workday `startDate`).
-
-### No-auto-apply blocklist
-
-Companies that stay in the digest but must never be auto-applied to (e.g.
-where the user has an inside contact): `job-finder no-auto list|add|remove`.
-The /job-apply command hard-blocks these.
-
-## What this skill should NOT do
-
-- **Don't run `cli collect` or `cli run` automatically** — API tokens.
-- **Don't edit data/state.db or data/jobs.db directly** — CLI only.
-- **Don't commit anything under data/** — it is gitignored personal state.
+- Run a collect or a weekly run to test a change; the next scheduled run
+  picks it up.
+- Edit `data/state.db` or `data/jobs.db` directly.
+- Commit anything under `data/`.

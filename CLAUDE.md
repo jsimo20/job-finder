@@ -334,6 +334,7 @@ No GitHub Actions secrets are needed — the repo runs no workflows. Paste keys 
 - **Greenhouse forms: prefer the deterministic script** over the agent — `python -m job_finder.fill_greenhouse --url <url> --folder <per-app folder> [--city <city>]`. Fills the standard section (contact, auth, EEO, uploads) with zero LLM tokens, DOM-verifies every dropdown commit, prints a fill report, holds the browser open for review, never submits. ~2k tokens vs ~63k for the agent. One-time setup: `pip install -e .[apply]` + `playwright install chromium` (local only; CI never needs it). The agent stays as the fallback for unknown ATSes and custom questions.
 - **`<inputs_dir>/story_bank.md` is optional ground truth** (`Config.story_bank_md`): STAR stories the drafter, the fact-checker, the free-text answers and `eval_generation` all read. Untagged details are claimable; a detail tagged `[confirm]` is unverified and CRITICAL if a draft uses it. The claims-ground-truth file's framing rules win where a story overlaps them.
 - Field values come from `profile/profile.toml` (identity, EEO, work-auth stance) plus `standard_answers.md` in the configured `inputs_dir` (`profile/profile.toml [paths]`; may point at a cloud-synced folder outside the repo).
+- **`render()` writes `jd.md` when `posting_row` carries `jd_text`**, because postings close before the interview and interview prep reads it. A hand-constructed row must include the JD.
 - **`render()` writes `cover_letter.json` beside the PDFs.** The PDF is not readable input, so
   without it a revision is a rewrite rather than an edit, and `letter_linter` has nothing to read.
 - **Grade every fill batch**: `python -m job_finder.fill_grader --date <YYYY-MM-DD>` letter-grades the audit manifests (Layer 1, zero tokens). Its `no_rule` output is the backlog — turn entries into `[[custom_combos]]` answers in `profile/profile.toml`. `python -m job_finder.profile_check` is the profile doctor (placeholder/missing-doc detection); SETUP.md tells new users to run it.
@@ -362,10 +363,16 @@ makes a daily trigger a no-op most days. `weekly.py` imports neither
 `anthropic` nor `python-dotenv`, so it runs under `.cowork-deps`; `extract.py`
 imports `anthropic` lazily inside `run()` for the same reason.
 **Installs from the setup skill (a tarball, or a `--depth 1` clone) update
-themselves in the weekly skill's step 0:** it downloads `main`, verifies the
+themselves through `scripts/self_update.sh`**, which the `job-finder` router
+and the weekly skill's step 0 both run first: it downloads `main`, verifies the
 archive, and extracts over the folder (user state is gitignored, so it
 survives). It skips a full `.git` checkout, told apart by the absence of
-`.git/shallow`, so a developer's working tree is never overwritten. Tracking `main` is deliberate while the users
+`.git/shallow`, so a developer's working tree is never overwritten, and a
+folder already updated this hour (`data/.engine_updated`). **Extraction uses
+`tar --overwrite`**: tar's default deletes and recreates each file, and a
+Cowork folder mount blocks deletes (the same cause as the journal-mode gotcha).
+The script's body is one function so the shell has parsed it before tar
+rewrites the file. Tracking `main` is deliberate while the users
 are a few friends; point the URL at a moved `stable` tag to hold users on a
 tested version.
 `.claude/skills/job-finder-weekly/SKILL.md` is the procedure that drives it,
@@ -434,11 +441,13 @@ not have it and the batch preflight rebuilds it rather than failing.
 
 ## Cowork plugin (`cowork-plugin/`)
 
-Cowork does not index project-level `.claude/skills/`, so the weekly batch is
-also packaged as a plugin. It is a **thin launcher, not a copy**: the skill reads
-`.claude/skills/job-apply-batch/SKILL.md` from the mounted repo and decides only
-the role count. Everything else, the archive step included, lives in the batch
-skill; two copies of that procedure would drift.
+Cowork does not index project-level `.claude/skills/`, so the plugin exists to
+give Cowork something to trigger. **It holds launchers, never procedure**: every
+procedure lives in the repo and reaches users through `scripts/self_update.sh`,
+so changing one needs no rebuild or re-upload. Only three things stay in the
+plugin, because the repo cannot carry them: the manifest, `.mcp.json`, and the
+setup bootstrap (the repo does not exist yet when setup starts). A new procedure
+is a new row in the router's table, not a new plugin skill.
 
 - `cowork-plugin/.claude-plugin/plugin.json` — manifest
 - `cowork-plugin/.mcp.json` — Playwright, **version-pinned** (`@latest`
@@ -446,13 +455,14 @@ skill; two copies of that procedure would drift.
   duplicate of the repo-root `.mcp.json`:** Cowork does not read a project's
   `.mcp.json` at all (verified 2026-08-25), so a plugin-bundled server is the only
   way it gets one. The repo copy serves Claude Code.
-- `cowork-plugin/skills/job-finder-weekly/SKILL.md` — the launcher for
-  `.claude/skills/job-finder-weekly/SKILL.md`
-- `cowork-plugin/skills/job-finder-setup/SKILL.md` — first-run setup for a
-  non-technical user: clones the public repo into the connected folder,
-  bootstraps `.cowork-deps`, interviews for `profile/` and
-  `config/pipeline.toml`, probes their company names, proves one zero-token
-  collect, and schedules the weekly skill as a daily local task. **Never
+- `cowork-plugin/skills/job-finder/SKILL.md` — the router launcher: reads
+  `.claude/skills/job-finder/SKILL.md`, which updates the engine and routes to
+  the weekly run, `manage-companies`, `/job-apply` for one pasted role, or
+  `interview-prep`. Updates an install that predates the router once, inline.
+- `cowork-plugin/skills/job-finder-setup/SKILL.md` — the setup bootstrap:
+  confirms the folder, checks network access, installs or updates the engine,
+  then hands over to `.claude/skills/job-finder-setup/SKILL.md`, which runs the
+  interview, the company list, the first collect and the schedule. **Neither
   names a `profile/<dir>/` layout** (the fresh-clone eval greps for that).
 
 **The Playwright server runs on the user's machine via `npx`, so Node.js has
@@ -470,7 +480,8 @@ plugin. The + next to the message box in a new chat, or Customize → Plugins �
 the `mcp__remote-devices__plugin_*` tool naming:
 `~/.claude/context/cowork-plugins.md`.
 
-**Bump `plugin.json`'s `version` on every change that has to reach Cowork.**
+**Bump `plugin.json`'s `version` on every change to a launcher, the manifest
+or `.mcp.json`**; procedure changes need no bump.
 The repo cannot see what is installed, but Cowork's plugin list shows the
 installed version, so the two versions side by side are the one drift check a
 human can run in five seconds. A version left alone across a rebuild throws that
@@ -494,7 +505,10 @@ can carry. In Claude Code on Windows the script runs and costs ~2k.
 ## Project-level skills
 
 - `.claude/skills/job-apply-batch/SKILL.md` — the unattended apply loop. **Lives in `skills/`, not `commands/`, on purpose:** Cowork rejected it as an unknown skill while it sat in `.claude/commands/`, and its frontmatter only parsed once it carried a `name:` field. Skills register on both surfaces; commands appear not to. Prefer `skills/` for anything an unattended session must invoke.
-- `.claude/skills/manage-companies/SKILL.md` — add/remove/probe tracked companies in `data/state.db` from plain-English instructions, via the `job-finder companies` CLI.
+- `.claude/skills/job-finder/SKILL.md` — the router every Cowork request after setup goes through. Runs `scripts/self_update.sh`, then picks the procedure, and maps the `job-finder` console commands (absent on Cowork) to module calls.
+- `.claude/skills/job-finder-setup/SKILL.md` — the setup procedure from the profile interview on; the plugin launcher hands over to it, and the router sends settings changes to the step that covers them.
+- `.claude/skills/manage-companies/SKILL.md` — add/remove/list/find-more tracked companies in `data/state.db` through `state` module calls, so it runs on Cowork and Windows alike.
+- `.claude/skills/interview-prep/SKILL.md` — reads an application folder (`jd.md`, `cover_letter.json`, the resume generator, `apply.md`, `skill_substitutions.json`) plus the ground truth, writes `interview_prep_<round>.md`, and runs a mock interview with feedback after each answer. **Its examples are fictional and must stay that way**: it ships in a public repo.
 
 ## Subagents
 

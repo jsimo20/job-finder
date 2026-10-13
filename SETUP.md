@@ -1043,7 +1043,8 @@ resume or cover letter attached.
 Two checks exist, and you need both:
 
 - **Bump `version` in `cowork-plugin/.claude-plugin/plugin.json` on every change
-  that has to reach Cowork.** Cowork's plugin list shows the installed version, so
+  to a launcher, the manifest or `.mcp.json`.** Procedure changes reach users
+  through the self-update and need no rebuild. Cowork's plugin list shows the installed version, so
   the two side by side are a five-second drift check. `job-finder status` prints
   the repo's version for comparison. A version left alone across a rebuild throws
   this away.
@@ -1051,16 +1052,17 @@ Two checks exist, and you need both:
   drafting anything. It asks the running server rather than reading a file, so it
   is the only check that catches a stale install on its own.
 
-Once installed, `/job-finder-weekly` runs the whole weekly cycle with no API
-key: collect, in-session extraction, digest, then the apply batch. It takes a
-count: `/job-finder-weekly 3`, or `all`, defaulting to 3; `--pipeline-only`
-and `--apply-only` run one half. The plugin is a launcher only — the procedure
-it follows is `.claude/skills/job-finder-weekly/SKILL.md` in this repo, so
-**the repo still has to be the mounted folder for that session.** It is safe
-to schedule daily: the pipeline half runs only when the last one is seven or
-more days old. Each run first updates the folder to the latest `main`, unless
-the folder is a full git checkout; your profile, settings and data are never
-touched. Pass `--no-update` to skip it.
+The plugin holds two launchers and no procedure. `job-finder-setup` installs
+the engine and hands over to `.claude/skills/job-finder-setup/SKILL.md`.
+`/job-finder` routes everything after that through
+`.claude/skills/job-finder/SKILL.md`: the weekly run ("run my weekly job
+search", or `/job-finder run my weekly job search --top 3`), the company list,
+applying to one pasted job, and interview prep. **The repo has to be the
+mounted folder for that session.** Every route first runs
+`scripts/self_update.sh`, which overlays the latest `main` unless the folder
+is a full git checkout; your profile, settings and data are never touched.
+The weekly run takes `--no-update` to skip it, and is safe to schedule daily:
+the pipeline half runs only when the last one is seven or more days old.
 
 Three things worth knowing before you rely on it:
 
