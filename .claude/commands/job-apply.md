@@ -31,7 +31,7 @@ a. **Load context** (read these files once and keep in memory for the whole sess
    - the writing-style file at `[paths].writing_style_path` — the voice rules for anything written as the user. Read it before drafting the cover letter, not after. Its Voice-mode section and its §8 (show the work, don't claim the match) are what keep a letter from reading AI-written.
    - the resume generator at `[paths].resume_skill_path` (default `profile/generate_resume.py`); read any SKILL.md or design notes sitting next to it, if present
    - The full row for this posting from `data/jobs.db` — including `jd_text`. If the DB is stale (it's rebuilt by each pipeline run) or `jd_text` is null, fetch the JD via WebFetch on the posting URL.
-   - **Roles with no DB row at all** (a pasted URL, or a company from the digest's Manual check section) are first-class inputs, not errors. Fetch the JD from the live posting page — WebFetch first, the browser if the page is JS-walled — and hand-construct `posting_row` for step g. The ATS behind the URL never gates prep: any posting whose JD you can read gets the full loop below.
+   - **Roles with no DB row at all** (a pasted URL, or a company from the digest's Manual check section) are first-class inputs, not errors. Fetch the JD from the live posting page — WebFetch first, the browser if the page is JS-walled — and hand-construct `posting_row` for step g. The ATS behind the URL never gates prep: any posting whose JD you can read gets the full loop below. **A pasted JD** (the text, not a link) is the JD: use it as given, and ask once for the posting link so `apply.md` and autofill have a URL; without one, use the company's careers page and skip autofill.
 
 b. **Show the user a one-paragraph read of the JD** — what they're hiring for, the 3–5 keywords/frames that genuinely map to the user's resume, anything that risks overstatement. Ask the user for any orientation before you draft (sometimes they'll have a specific angle).
 
@@ -110,7 +110,7 @@ g. **On final approval, call render()** by running this in the repo's venv. **Pa
    missing. `render()` needs `reportlab`, which an import-only check will not
    catch.
 
-   `posting_row` must contain at minimum: `external_id`, `title`, `url`, `company_name`. Optional but used in `apply.md`: `total_score`, `queue`, `location`. If you're hand-constructing because the DB is empty (CI doesn't preserve `data/jobs.db` across runs), include all of these so the rendered `apply.md` is complete.
+   `posting_row` must contain at minimum: `external_id`, `title`, `url`, `company_name`. Optional but used in `apply.md`: `total_score`, `queue`, `location`. Always include `jd_text` (the DB row carries it; for a hand-constructed row, the JD you fetched or the user pasted): `render()` saves it as `jd.md`, which interview prep reads after the posting has closed. If you're hand-constructing because the DB is empty (CI doesn't preserve `data/jobs.db` across runs), include all of these so the rendered `apply.md` is complete.
 
    Use the `Bash` tool. For large JSON payloads, write them to the scratchpad directory and load via `json.load(open(path))` to avoid awkward command-line escaping.
 

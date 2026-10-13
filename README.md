@@ -61,12 +61,16 @@ English.
   a real `profile/` exists.
 - `job-finder applied add` / `outreach add` record what you submitted and who
   you contacted, so nothing resurfaces and nothing is forgotten.
+- "Prep me for my interview with <company>" runs the `interview-prep` skill:
+  it re-reads the job description, resume and cover letter you sent, writes a
+  prep sheet into the application folder, and runs a mock interview with
+  feedback after every answer, graded against your ground truth.
 
 ### Unattended batches
 
 From Cowork, build and install the plugin in `cowork-plugin/` (SETUP.md §8) and
-run `/job-finder-weekly 3`, which also does the pipeline half in-session with
-no API key. From Claude Code,
+say "run my weekly job search", which also does the pipeline half in-session
+with no API key. From Claude Code,
 `/job-apply-batch --top 5` runs the whole loop over several roles without
 stopping between them and reports once at the end, for a session you are not
 watching. It is the same per-role loop as `/job-apply` with the approval gates
