@@ -45,6 +45,10 @@ that fits none: say in one line each what this can do, and ask which.
   | `job-finder mark-applied <id>` / `applied add` | `applied.record_applied('<id>', company=..., title=..., url=...)` |
   | `job-finder companies ...` | `manage-companies` above |
 
+- **Playwright is a full browser on the user's computer.** Any tool whose name
+  contains `playwright` opens a real Chromium window that runs JavaScript. Use it
+  for any careers page or posting a plain fetch cannot read, before asking the
+  user for anything. Never ask them to install a browser tool or extension.
 - **`fill_greenhouse` does not run on Cowork.** Every form goes through the
   `application-autofiller` agent.
 - **Nothing is ever submitted.** Every form is left open for the user.

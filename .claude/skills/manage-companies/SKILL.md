@@ -71,7 +71,9 @@ many are manual checks. List names only if they asked to see them.
    the session has search, otherwise try `https://<domain>/careers`, `/jobs`,
    `/join-us`, `/about/careers` and take the first page that answers 200 and
    plainly lists roles (fetch it and look; a redirect to the home page is not
-   a careers page). Track it as manual:
+   a careers page). A page that comes back empty usually needs JavaScript:
+   open it with the Playwright tools (any tool whose name contains
+   `playwright`) before deciding it lists nothing. Track it as manual:
 
    ```sh
    $PY -c "
