@@ -18,7 +18,7 @@ def test_setup_md_defines_the_whole_starting_profile():
     assert set(BLOCKS) == {
         "profile.toml", "resume_master.md", "personal_statement.md", "writing-style.md",
         "standard_answers.md", "fit_profile.md", "generate_resume.py", "qa_checklist.md",
-        "claims_ground_truth.md",
+        "claims_ground_truth.md", "CLAUDE.md", "corrections.md",
     }
 
 

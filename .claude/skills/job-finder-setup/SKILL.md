@@ -256,16 +256,18 @@ nothing, and that each run also updates the tool.
 Tell them, in this order and nothing more:
 
 1. What is in the folder now, and that none of it is shared anywhere.
-2. To run the search by hand: open this folder in a chat and say "run my
+2. That when they ask for the same change twice, or tell you a rule directly,
+   Claude writes it to their own rules file and follows it from then on.
+3. To run the search by hand: open this folder in a chat and say "run my
    weekly job search". The first run is the longest.
-3. To come back: "change my settings", "add companies: Acme, Globex", "find me
+4. To come back: "change my settings", "add companies: Acme, Globex", "find me
    more companies".
-4. Large employers usually post on their own careers sites, which the search
+5. Large employers usually post on their own careers sites, which the search
    cannot read. For one they care about, "add companies: <name>" lists its
    careers page in the digest under **Manual check**; when a role there
    interests them, they paste the link or description into a chat and ask for
    help applying.
-5. When an application becomes an interview: "prep me for my interview with
+6. When an application becomes an interview: "prep me for my interview with
    <company>" builds a prep sheet and runs a mock interview.
 
 ## Hard rules

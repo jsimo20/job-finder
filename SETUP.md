@@ -55,6 +55,8 @@ Everything personal is gitignored and never committed: `profile/`,
 | `claims_ground_truth.md` | tailoring, fact-checker | Exact metrics, framing rules, skill source pool |
 | `story_bank.md` (optional) | drafting, fact-checker | STAR stories; a detail tagged `[confirm]` is never used |
 | `generate_resume.py` | `job_apply.render()` | Resume PDF generator; edit only `RESUME_DATA` |
+| `CLAUDE.md` | every procedure | The user's own rules, learned from their corrections |
+| `corrections.md` | every procedure | Change requests seen once, waiting for a repeat |
 
 With no `[paths]` table every file sits directly in `profile/`. Name a path in
 `[paths]` to keep a file elsewhere; relative paths resolve against the repo
@@ -790,6 +792,21 @@ if __name__ == "__main__":
 - [ ] PDF metadata set (title, author, subject, creator)?
 - [ ] (add your own fact-specific checks: metric baselines, framings to avoid,
       claims that must stay qualified)
+```
+
+```markdown profile/CLAUDE.md
+# My rules
+
+How I want the agent to work and write. The agent adds a line when I ask for
+the same change twice, or when I tell it a rule directly, and prunes this file
+each time. Edit it freely.
+```
+
+```markdown profile/corrections.md
+# Corrections seen once
+
+Change requests made one time. A second request of the same kind becomes a rule
+in CLAUDE.md and its line here is deleted.
 ```
 
 ```markdown profile/claims_ground_truth.md
