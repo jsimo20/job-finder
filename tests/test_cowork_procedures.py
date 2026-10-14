@@ -26,3 +26,14 @@ def test_every_entry_point_exists():
     paths = {p for p in re.findall(r"`(\.claude/[^`]+\.md)`", section) if "<" not in p}
     assert paths, "the entry-point table names no procedures"
     assert sorted(p for p in paths if not (REPO_ROOT / p).exists()) == []
+
+
+def test_no_procedure_names_a_profile_layout():
+    # Profile paths resolve through profile.toml [paths]; a prompt that names
+    # `profile/<dir>/` hard-codes one user's folders into everyone's run.
+    offenders = [f"{p.relative_to(REPO_ROOT)}:{n}"
+                 for p in PROCEDURES + sorted(REPO_ROOT.glob(".claude/agents/*.md"))
+                 for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
+                 for m in re.finditer(r"profile/([A-Za-z_-]+)/", line)
+                 if m.group(1) != "applications"]
+    assert offenders == []

@@ -1,183 +1,72 @@
-# Setup — new user
+# Setup
 
-Step-by-step setup for a fresh clone. Written so you can paste it into a
-Claude Code session ("follow SETUP.md") and have it drive; every step also
-works by hand. Nothing here requires the original owner's files, and the repo
-carries no personal data at all: everything personal lives in three gitignored
-places you create yourself — `config/pipeline.toml` (search preferences),
-`profile/` (identity), and `data/state.db` (companies, ledgers, digest
-archive). The pipeline runs locally on a weekly schedule; there is no cloud
-pipeline to configure.
+**Cowork users never need this file.** Install the plugin (README) and say
+"set me up" in a chat with an empty folder connected; the setup skill does the
+rest.
 
-## No-terminal path: Cowork
+This file holds two things:
 
-If you do not use a terminal, skip everything below. Download
-`job-finder-cowork-plugin.zip` from this repository's latest GitHub release,
-open the Claude desktop app, start a new chat, click the + next to the message box and add it as a plugin,
-connect an empty folder, and say "set me up". The `job-finder-setup` skill does
-§1 to §5 by asking you questions and schedules the weekly run inside Cowork;
-it needs nothing installed beyond the Claude desktop app (Pro plan or higher),
-and no API key.
+- the developer setup for Claude Code, below;
+- the profile starting files that `profile_init` writes. The setup skill runs
+  it on every install, so they are the defaults every user starts from.
 
-## 0. Prerequisites
+## Developer setup (Claude Code)
 
-- Python 3.10 or newer (on Debian/Ubuntu also `python3-venv`; the stock
-  interpreter there cannot create a virtualenv)
-- `git`, and the `gh` CLI logged into your GitHub account
-- `uv` (`pip install uv`) — or plain pip, adjusting the commands below
-- An Anthropic API key with credit (console.anthropic.com) — the pipeline's
-  extraction stage bills against it
-- A Gmail account with 2FA, for the digest email
-- A Windows machine that's usually on (the weekly run is a Scheduled Task;
-  on macOS/Linux use cron/launchd with the same command)
-
-If a Claude Code session is driving this setup, four things still need a
-human first — everything else it can do from this document:
-
-1. Installing Claude Code itself (plus Python/git/gh above)
-2. Access to this repo (a collaborator invite, or a copy from whoever
-   handed it to you)
-3. Creating the Anthropic API key and adding billing
-4. Generating the Gmail app password (§2) — never paste it into chat;
-   put it straight into `.env` yourself
-
-## 1. Get a copy
+Python 3.10 or newer, `git`, and Claude Code.
 
 ```sh
-git clone <repo-url> my-job-finder && cd my-job-finder
-git remote rename origin upstream
-gh repo create <your-user>/my-job-finder --private --source=. --remote=origin --push
-```
-
-`upstream` keeps the repo you cloned from, so later fixes arrive with
-`git pull upstream main`. Nothing to reset: the repo contains no one's search
-state. Everything personal is created locally in the steps below and never
-committed.
-
-## 2. Install
-
-```sh
+git clone https://github.com/jsimo20/job-finder.git && cd job-finder
 python -m venv .venv
-.venv/Scripts/activate        # Windows; use .venv/bin/activate elsewhere
-pip install uv
-uv pip install -e ".[dev]"
+.venv/Scripts/activate              # .venv/bin/activate outside Windows
+pip install uv && uv pip install -e ".[dev]"
+python -m pytest -q                 # passes with no profile, config or keys
 ```
 
-The browser-autofill workflow (optional, local-only):
+To fill Greenhouse forms with the deterministic script:
 
 ```sh
-uv pip install -e ".[apply]"
-playwright install chromium
+uv pip install -e ".[apply]" && playwright install chromium
 ```
 
-The Playwright MCP server accepts file uploads only from its `--output-dir` and
-its cwd, so that argument has to be **this clone's** `.playwright-mcp` folder as
-an absolute path; a wrong one rejects every resume as "outside allowed roots".
-Set it in `.mcp.json` (Claude Code) and, if you will use Cowork, in
-`cowork-plugin/.mcp.json` as well before building the plugin (§8).
+Set `--output-dir` in `.mcp.json` to this checkout's absolute
+`.playwright-mcp` path; the Playwright server rejects uploads from anywhere
+else.
 
-Sanity check — the suite must pass on a fresh clone with no profile:
+Then build the profile, search settings and company list by following
+`.claude/skills/job-finder-setup/SKILL.md` from step 2, the same interview
+Cowork runs. Run the weekly cycle by saying "run my weekly job search"; it
+needs no API key. Changing code, prompts, tests or the plugin: read
+`DEVELOPMENT.md`.
 
-```sh
-python -m pytest -q
-```
+## What lives where
 
-Create a `.env` at the repo root — the pipeline and the digest email read
-it (plain key=value, three lines):
+Everything personal is gitignored and never committed: `profile/`,
+`config/pipeline.toml`, `.env`, `data/` and `digests/`.
 
-```
-ANTHROPIC_API_KEY=sk-ant-...
-GMAIL_USER=you@gmail.com
-GMAIL_APP_PASSWORD=xxxxxxxxxxxxxxxx
-```
-
-`GMAIL_APP_PASSWORD` is a 16-char app password from
-myaccount.google.com/apppasswords (requires 2FA). `GMAIL_USER` is both the
-sender and the recipient of the digest.
-
-User environment variables work too (`setx GMAIL_USER ...` on Windows), and the
-scheduled task inherits them. Keep each key in one place only: the CLI loads
-`.env` with override on, so a stale copy there silently wins over a working
-environment variable.
-
-## 3. Create your profile
-
-`profile/` is gitignored and holds everything personal: identity, EEO answers,
-your master resume, your writing voice. Its starting files are the blocks at the
-end of this section. Write them all at once:
-
-```sh
-python -m job_finder.profile_init
-```
-
-That creates `profile/` with every file below and never overwrites one that
-already exists. Copying each block by hand works too. Every file starts with
-example values, so edit them in this order:
-
-1. **`profile/profile.toml`** — your name, email, phone, links, city;
-   work-authorization stance; EEO defaults (leave `""` for any question you
-   want to answer by hand on every form). Optionally point `[paths]` at
-   folders outside the repo.
-2. **`profile/resume_master.md`** — your real history. This is ground truth:
-   the fact-checker flags anything in a draft that doesn't trace to it, so
-   write only what you can defend in an interview.
-3. **`profile/personal_statement.md`** — a page in your own voice.
-4. **`profile/writing-style.md`** — the voice rules for anything written as
-   you. The fact-checker reads all of it and runs its self-check list against
-   every letter; `letter_linter` enforces a fixed subset in code (no em-dashes,
-   the trope list, no volunteered gaps, the closing "Thanks," and the fixed
-   final sentence), so keep those or change the linter with them. The default is
-   usable as-is; make it yours over time.
-5. **`profile/standard_answers.md`** — contact block + stock screening answers.
-6. **`profile/fit_profile.md`** — what a great role looks like for you.
-7. **`profile/generate_resume.py`** — edit only the RESUME_DATA block.
-8. **`profile/qa_checklist.md`** and **`profile/claims_ground_truth.md`** — grow
-   these over time; the defaults work on day one.
-
-| File | Used by | What it drives |
+| File in `profile/` | Used by | What it drives |
 |---|---|---|
-| `profile.toml` | everything apply-side | Identity on PDFs, autofill contact values, EEO defaults, paths |
-| `resume_master.md` | tailoring, fact-checker | Ground truth: every resume bullet must trace to it |
-| `personal_statement.md` | tailoring, fact-checker | Your narrative voice; cover letters are checked against its tone |
-| `writing-style.md` | cover-letter drafting, fact-checker, `letter_linter` | The voice rules for anything written as you |
-| `standard_answers.md` | form autofill, autofill agent | Contact block plus stock answers to common screening questions |
-| `fit_profile.md` | digest-triager agent | What a great role is for you, so triage can rank the digest |
-| `qa_checklist.md` | `job_apply.render()` | Per-application checklist written into every apply.md |
-| `claims_ground_truth.md` | tailoring | Per-claim framing rules and metrics the drafter must not inflate |
-| `story_bank.md` (optional, no starting block) | drafting, fact-checker, free-text answers | STAR stories from past interviews; untagged details count as ground truth, and a detail tagged `[confirm]` is never used until you confirm it |
-| `generate_resume.py` | `job_apply.render()` | Resume PDF generator |
+| `profile.toml` | everything apply-side | Identity on PDFs, autofill values, EEO defaults, `[paths]` |
+| `resume_master.md` | tailoring, fact-checker | Ground truth: every resume claim traces to it |
+| `personal_statement.md` | tailoring, fact-checker | The user's voice; letters are checked against its tone |
+| `writing-style.md` | drafting, fact-checker, `letter_linter` | Voice rules for anything written as the user |
+| `standard_answers.md` | autofill | Contact block and stock screening answers |
+| `fit_profile.md` | `digest-triager` | What a great role is, for ranking the digest |
+| `qa_checklist.md` | `job_apply.render()` | Checklist written into every `apply.md` |
+| `claims_ground_truth.md` | tailoring, fact-checker | Exact metrics, framing rules, skill source pool |
+| `story_bank.md` (optional) | drafting, fact-checker | STAR stories; a detail tagged `[confirm]` is never used |
+| `generate_resume.py` | `job_apply.render()` | Resume PDF generator; edit only `RESUME_DATA` |
 
-EEO values are voluntary; an empty value is always left for you to answer.
+With no `[paths]` table every file sits directly in `profile/`. Name a path in
+`[paths]` to keep a file elsewhere; relative paths resolve against the repo
+root. Nothing outside `profile.toml` may assume a layout: prompts and scripts
+resolve paths through `job_apply.load_config()`. `python -m
+job_finder.profile_check` exits 0 only when no placeholder remains.
 
-Every path above is where the tooling looks when `profile.toml` has no
-`[paths]` table. Keep any of them elsewhere by naming it there
-(`inputs_dir`, `writing_style_path`, `claims_ground_truth_path`,
-`resume_skill_path`); relative paths resolve against the repo root. Nothing
-outside `profile.toml` may assume a layout, so the Claude-side prompts resolve
-these paths through `job_apply.load_config()` rather than naming them.
+## Profile starting files
 
-**Do not skip 2–5.** The tailoring, fact-checking, and autofill workflows all
-read those files; with placeholders still in them you'd be submitting
-applications carrying example data. When you think you're done, prove it:
-
-```sh
-python -m job_finder.profile_check
-```
-
-It flags every placeholder value and missing driving doc, and exits non-zero
-until your profile is real. Run it again any time; the apply workflow assumes
-it passes.
-
-`profile/` is gitignored. Verify before your first push:
-
-```sh
-git check-ignore profile/ && git status --short
-```
-
-### The starting files
-
-`profile_init` reads the blocks below, so each block's first line names the
-file it becomes. Keep that line intact if you edit them.
+`python -m job_finder.profile_init` writes each block below to the file its
+first line names, and never overwrites a file that exists. Keep those first
+lines intact.
 
 ```toml profile/profile.toml
 # Edit every value. profile/ is gitignored and holds all of your context: the
@@ -189,13 +78,13 @@ file it becomes. Keep that line intact if you edit them.
 [identity]
 name = "Alex Sample"
 # One-line positioning shown under your name on the cover letter header.
-title_subtitle = "Senior Product Manager | Your Positioning Line"
+title_subtitle = "Your Title | Your Positioning Line"
 email = "alex.sample@example.com"
 phone = "555-555-0100"
 linkedin = "https://www.linkedin.com/in/your-handle/"
 github = "https://github.com/your-handle"
 # What autofill types into "which cities are you available to work in" fields.
-city = "Boston"
+city = "Your City"
 # Street address for forms that demand a full mailing address. Leave "" to
 # fill those by hand.
 address = ""
@@ -280,11 +169,11 @@ this file or to personal_statement.md, so write only what you can defend.
 
 ## Experience
 
-### Current Company — Senior Product Manager (Jan 2023 – present)
+### Current Company — Your Title (Jan 2023 – present)
 - Bullet with the real metric and the real scope.
 - Another bullet.
 
-### Previous Company — Product Manager (Jun 2020 – Jan 2023)
+### Previous Company — Your Previous Title (Jun 2020 – Jan 2023)
 - ...
 
 ## Skills source pool
@@ -657,8 +546,8 @@ exact shape (any value here overrides `profile.toml [identity]`).
 - **Phone:** 555-555-0100
 - **LinkedIn:** https://www.linkedin.com/in/your-handle/
 - **GitHub:** https://github.com/your-handle
-- **Location:** Boston, MA
-- **Address:** 123 Example St, Boston MA 02101
+- **Location:** Your City, ST
+- **Address:** 123 Example St, Your City ST 00000
 
 ## Work authorization
 
@@ -736,13 +625,13 @@ LIGHT = HexColor("#A3BAC3")
 # ---------- RESUME DATA (EDIT ONLY THIS BLOCK) ----------
 RESUME_DATA = {
     "name": "Alex Sample",
-    "title": "Senior Product Manager  |  Your Positioning Line",
+    "title": "Your Title  |  Your Positioning Line",
     "contact": '<font color="#2C5F8A">555-555-0100</font>  |  <a href="mailto:alex.sample@example.com" color="#2C5F8A">alex.sample@example.com</a>  |  <a href="https://www.linkedin.com/in/your-handle/" color="#2C5F8A">LinkedIn</a>',
 
     "experience": [
         {
             "company": "Current Company",
-            "role": "Senior Product Manager",
+            "role": "Your Title",
             "dates": "JAN 2023 – PRESENT",
             "bullets": [
                 "One outcome-focused bullet with a concrete metric you can defend in an interview.",
@@ -751,7 +640,7 @@ RESUME_DATA = {
         },
         {
             "company": "Previous Company",
-            "role": "Product Manager",
+            "role": "Your Previous Title",
             "dates": "JUN 2020 – JAN 2023",
             "bullets": [
                 "Keep bullets outcome-first and traceable to your resume_master.md.",
@@ -912,202 +801,3 @@ Examples of the kind of rule that belongs here:
 - Metric Y is modeled, not measured — say so.
 - Never claim credit for Z; it belongs to another team.
 ```
-
-## 4. Configure the pipeline
-
-Your search parameters are personal, so the real config is gitignored:
-
-```sh
-cp config/pipeline.example.toml config/pipeline.toml
-```
-
-Edit **`config/pipeline.toml`**. What to edit:
-
-- `[location]` — the scope is always your geography plus remote roles you can
-  take. Set `country`, replace the metro regexes with your own target
-  geography, and the commute tiers/notes with drive times from where you
-  live. `remote_exclude_patterns` names the markets a remote role must not be
-  tagged with; outside the US also set `remote_require_patterns`, because a
-  bare "Remote" on a US-based board usually means US-only.
-- `[domains.*]` / `[stages.*]` — reweight to your background; definitions
-  feed the extraction prompt, so keep them concrete.
-- `[filters]` — your comp floor and its currency, comp score thresholds, and
-  years-of-experience cap.
-
-- `[titles]` — which job titles count as target roles, adjacent tracks to
-  exclude, and the seniority band. This is the industry knob: replace the
-  product-management defaults with your own market's title patterns.
-- `[extraction]` — the role noun the extraction prompt speaks about.
-
-## 5. Build your company list
-
-The tracked-company list lives in `data/state.db` (gitignored). Start from
-the tiny neutral example, then build your own market's list:
-
-```sh
-job-finder companies import config/companies.example.json
-job-finder companies list
-```
-
-To expand: put candidate employer names in a text file, probe them
-(`python scripts/discover_companies.py --file candidates.txt --json hits.json`),
-verify the hits, and `job-finder companies import hits.json`. The
-`manage-companies` skill drives all of this from plain English in a Claude
-Code session.
-
-`job-finder companies add` takes a `--provider` of `greenhouse`, `lever`,
-`ashby`, `workday` (slug format `tenant/wdN/site`) or `manual`. A `manual`
-company has no pollable board, so it carries only `--careers-url` and appears in
-the digest's **Manual check** section for a weekly look by hand. Add
-`--max-age-days 14` to a high-volume board to show only its recent postings.
-
-To find companies you are missing, list Built In regional sites under
-`[discovery] builtin_sites` in `config/pipeline.toml` (for example
-`"https://www.builtinboston.com"`). Each run then proposes untracked companies
-posting your target role in the digest's **New companies to review** section.
-It never adds them: `job-finder discover add "Name"` tracks one, `--all` tracks
-every specific match, and `job-finder discover dismiss` records a no.
-
-## 6. Schedule the weekly run
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\install_schedule.ps1
-```
-
-Registers a Windows Scheduled Task: `job-finder run --email` every Monday at
-09:00 local. Test it once by hand first (`job-finder run --email` — this spends
-real API tokens).
-
-The task is registered with **`WakeToRun`**: a machine asleep at 09:00 gets no
-catch-up run, so the task wakes it. `StartWhenAvailable` covers a machine that
-was powered off.
-
-Confirm afterwards with `job-finder status`, which prints the task's next run
-and whether it will wake the machine. To pause the weekly run and the digest
-email without losing the schedule:
-
-```powershell
-Disable-ScheduledTask -TaskName "job-finder weekly"   # Enable-ScheduledTask to resume
-```
-
-No GitHub Actions secrets are required: the repo runs no CI workflows. Code
-review is on demand: dispatch the `python-code-reviewer` agent, or use the
-built-in `/code-review`. Either runs locally against your own key.
-
-## 7. Personalize the Claude-side workflows
-
-The `.claude/` prompts are generic: every user-specific rule (metric
-baselines, banned framings, voice) is read at run time from your profile
-docs, mainly `profile/claims_ground_truth.md` and the files in `[paths]`. So
-personalization happens in §3, not by editing prompts. Two things worth a
-skim anyway:
-
-- `profile/claims_ground_truth.md` — the per-claim framing rules the
-  fact-checker enforces come from here; the richer you make it, the more it
-  catches
-- `CLAUDE.md` — project instructions; adjust anything that doesn't match how
-  you work
-
-## 8. Optional — run it from Cowork
-
-Skip this if you only use Claude Code; everything works there already.
-
-Cowork does not index a project's `.claude/skills/`, so the weekly batch is also
-packaged as a plugin in `cowork-plugin/`. Set `--output-dir` in
-`cowork-plugin/.mcp.json` to this clone's absolute `.playwright-mcp` path (§2),
-then build the archive:
-
-```sh
-python scripts/build_cowork_plugin.py
-```
-
-That writes `job-finder-cowork-plugin.zip` to your Downloads folder (`--out` to
-put it elsewhere). Then, in the Claude app: **the + next to the message box, or Customize -> Plugins -> upload** it.
-Uploading a plugin with the same `name` replaces the installed one.
-
-**Install it; do not add `cowork-plugin/` as a context folder.** A connected
-folder is just files on disk, so its `.mcp.json` never runs, Playwright never
-starts, and the failure looks exactly like a broken plugin.
-
-### Editing the plugin later: rebuild and re-upload, every time
-
-**A correct file in `cowork-plugin/` does nothing until you rebuild the zip and
-upload it again.** Cowork runs the snapshot it was given and keeps it
-service-side, so nothing on your machine can compare the repo against what is
-installed — `~/.claude/plugins/data/job-finder-inline/` is empty and
-`.claude.json` holds only a usage counter.
-
-A stale install rejects every file upload, so applications go out with no
-resume or cover letter attached.
-
-Two checks exist, and you need both:
-
-- **Bump `version` in `cowork-plugin/.claude-plugin/plugin.json` on every change
-  to a launcher, the manifest or `.mcp.json`.** Procedure changes reach users
-  through the self-update and need no rebuild. Cowork's plugin list shows the installed version, so
-  the two side by side are a five-second drift check. `job-finder status` prints
-  the repo's version for comparison. A version left alone across a rebuild throws
-  this away.
-- **The batch's preflight upload probe**, which uploads one throwaway file before
-  drafting anything. It asks the running server rather than reading a file, so it
-  is the only check that catches a stale install on its own.
-
-The plugin holds one launcher, `job-finder-setup`, which installs the engine
-and hands over to `.claude/skills/job-finder-setup/SKILL.md`. Everything after
-that is a skill in the folder, which Cowork lists to the model, so you ask in
-plain words: "run my weekly job search", "add companies: Acme", "help me apply
-to this job" with a link, "prep me for my interview with Acme". **The repo has
-to be the connected folder for that chat.** The weekly run updates the folder
-to the latest `main` first (`scripts/self_update.sh`) unless it is a full git
-checkout; your profile, settings and data are never touched. It takes
-`--no-update` to skip that, and is safe to schedule daily: the pipeline half
-runs only when the last one is seven or more days old.
-
-Three things worth knowing before you rely on it:
-
-- The plugin's `.mcp.json` is **required, not a duplicate of the repo-root one**.
-  Cowork does not read a project's `.mcp.json`, so a plugin-bundled server is the
-  only way it gets Playwright; the repo copy serves Claude Code. Keep the
-  **Playwright version pin** identical in both (separate from the plugin's own
-  `version` above).
-- **`fill_greenhouse` does not run on Cowork.** The device VM has no `playwright`
-  Python module, and a browser launched inside it is not one you can see or click,
-  which defeats leaving tabs open for review. On Cowork every form goes through the
-  autofill agent at roughly 63k tokens each, so that is a ceiling on how many roles
-  one batch can carry. In Claude Code on Windows the script runs at about 2k.
-- Playwright starts from a fresh browser profile with no cookies or logins, so
-  any form behind an account wall gets an `APPLY_NOTES.md` handoff for manual
-  submission rather than a fill attempt.
-
-## 9. What never goes in git
-
-Everything personal, already handled by `.gitignore`: `profile/`, `.env`,
-`config/pipeline.toml`, and ALL of `data/` and `digests/` — the state
-database (companies, applied/seen ledgers, digest archive), the ephemeral
-jobs.db, fill audits, and the outreach log. The repo is pure engine; if a
-commit ever contains personal data, that's a bug.
-
-## Day-to-day commands
-
-```sh
-python -m pytest -q                              # tests
-job-finder status                          # did the last run work? both halves
-python -m job_finder.profile_check         # is my profile complete?
-job-finder review                          # interactive digest review
-job-finder discover list                   # companies proposed by discovery
-job-finder applied add --external-id ...   # record an application
-python -m job_finder.fill_greenhouse \
-    --url <apply url> --folder <per-app folder>   # deterministic fill (not on Cowork)
-python -m job_finder.letter_linter --date <YYYY-MM-DD>  # grade the drafted letters
-python -m job_finder.fill_grader --date <YYYY-MM-DD>   # grade a fill batch
-```
-
-After every fill batch, run the grader on that date's audit manifests. It
-letter-grades each form (missed fields, environment failures, critical
-violations like a wrong sponsorship answer) and its `no_rule` list is your
-backlog: each entry becomes a new `[[custom_combos]]` answer in
-`profile/profile.toml`, so coverage compounds batch over batch.
-
-The pipeline itself (`job-finder run`) is what the scheduled task runs
-weekly — it spends real Anthropic tokens, so avoid extra casual runs.
-`job-finder digest-archive list|show` reads the archive in state.db.

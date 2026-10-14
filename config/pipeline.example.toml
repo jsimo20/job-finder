@@ -1,51 +1,51 @@
-# EXAMPLE pipeline configuration — a working demonstration, not anyone's
-# real search. Copy it and replace every value with your own:
+# Starting point for config/pipeline.toml, the user's search settings.
 #
 #     cp config/pipeline.example.toml config/pipeline.toml
 #
-# config/pipeline.toml is gitignored (search preferences are personal); the
-# pipeline falls back to this example when no real config exists, so a fresh
-# clone runs out of the box. Contact details and EEO answers never belong in
-# either file — those live in profile/.
+# Every value marked REPLACE is a placeholder that matches nothing, so a search
+# never runs on someone else's preferences. Write each from the user's own
+# answers; `python -m job_finder.profile_check` refuses a config that still
+# contains REPLACE. Contact details and EEO answers never go here; they live in
+# profile/.
 
 [filters]
-# Annual base pay. Every pay number here is in `currency`; `currency_symbol`
-# is how the digest prints them.
-comp_floor = 140000
+# Lowest annual base pay the user accepts, in `currency`; 0 means no floor.
+# `currency_symbol` is how the digest prints pay.
+comp_floor = 0
 currency = "USD"
 currency_symbol = "$"
 # Roles asking for more years than this route to the stretch queue.
-yoe_main_queue_max = 7
-# A title with no level word ("Product Manager, Growth") reaches the main queue
-# only when the JD asks for at least this many years; otherwise it goes to stretch.
-untitled_min_yoe = 5
+yoe_main_queue_max = 10
+# A title with no level word reaches the main queue only when the JD asks for
+# at least this many years; otherwise it goes to stretch.
+untitled_min_yoe = 0
 # Postings open longer than this are dropped as likely evergreen reqs.
 stale_days = 30
-# Posted base-salary minimums at or above each threshold add one point to the
-# comp score. Order low to high; use [] to ignore comp in scoring.
-comp_score_thresholds = [170000, 200000]
+# Posted base-pay minimums at or above each threshold add one point to the
+# comp score. Order low to high; [] ignores pay in scoring.
+comp_score_thresholds = []
 
 # ── Role targeting ───────────────────────────────────────────────────────────
-# Which job titles the pipeline is hunting. Edit every pattern for your own
-# market; the defaults target senior product management roles.
+# Written from the user's own words: the titles they would apply to, the
+# adjacent titles that share words but are a different job, and their level.
 
 [titles]
 # A title must match one of these to count as a target role at all.
-role_patterns = ['\b(product manager|product management|head of product|product lead)\b']
+role_patterns = ['\b(REPLACE target titles)\b']
 # Adjacent tracks that share vocabulary but are out of scope.
-exclude_track = '\b(product marketing|PMM|project manager|program manager|TPM|technical program|product owner|scrum master|product designer|UX designer|UI designer)\b'
+exclude_track = '\b(REPLACE adjacent tracks)\b'
 # Titles containing target words that are really a different job.
-exclude_role = '\b(engineer|engineering|developer|scientist|analyst|architect|researcher|data engineer|software engineer|security engineer|full[- ]?stack)\b'
-# Seniority band: must match keep, must not match reject; above-band titles
-# are discarded separately.
-seniority_keep = '\b(senior|sr\.?|staff|principal|lead|group|head of product)\b'
-seniority_reject = '\b(associate product manager|associate pm|APM|junior|jr\.?|intern|product manager (i|ii)\b|PM I+\b)\b'
-above_band = '\b(director|VP|vice president|chief|SVP|EVP|head of (?!product\b))'
+exclude_role = '\b(REPLACE different jobs)\b'
+# Seniority band: a title with a level word must match keep and must not match
+# reject; above-band titles are discarded separately.
+seniority_keep = '\b(REPLACE level words to keep)\b'
+seniority_reject = '\b(REPLACE level words to drop)\b'
+above_band = '\b(REPLACE levels above the band)\b'
 
 [extraction]
-# How the extraction prompt describes the roles it reads. Keep short.
-role_noun = "product manager"
-senior_scope = "a typical Senior/Staff PM scope"
+# How the extraction prompt describes the roles it reads. One plain phrase each.
+role_noun = "REPLACE role noun"
+senior_scope = "REPLACE the scope of the user's level"
 
 # ── Location scope ───────────────────────────────────────────────────────────
 # The scope is always your geography plus remote roles you can take:
@@ -96,67 +96,20 @@ far_note = "~2h each way from home"
 mid_note = "~1h each way from home"
 
 # ── Domain taxonomy ──────────────────────────────────────────────────────────
-# The extraction model tags each role with these domains; the scorer sums the
-# weights. Add, remove, or reweight to match your own background. Definitions
-# feed the extraction prompt, so keep them one line and concrete.
+# The industries the user wants, weighted. The extraction model tags each role
+# with these keys and the scorer sums the weights. One table per industry; the
+# definition feeds the extraction prompt, so keep it one concrete line.
 
-[domains.ai_agentic]
-weight = 5
-definition = "AI/agentic/LLM platforms, foundation models, agent infra"
-
-[domains.developer_platform]
-weight = 4
-definition = "Developer platforms, partner ecosystems, public APIs, SDKs"
-
-[domains.consumer_at_scale]
-weight = 4
-definition = "Consumer products with 1M+ active users"
-
-[domains.iot_edge]
-weight = 3
-definition = "IoT, edge computing, smart home, embedded systems"
-
-[domains.connectivity_telecom]
-weight = 3
-definition = "Telecom, networking, 5G, ISPs, connectivity infra, CDN/edge networks"
-
-[domains.silicon]
-weight = 3
-definition = "Chips, semiconductors, photonics, hardware acceleration"
-
-[domains.space]
-weight = 3
-definition = "Space tech, satellites, launch, earth observation, in-orbit services"
-
-[domains.quantum]
-weight = 3
-definition = "Quantum computing hardware, software, cloud services"
-
-[domains.health_bio]
-weight = 2
-definition = "Clinical AI, diagnostics, life-sciences tooling, bio platforms"
+[domains.replace_me]
+weight = 1
+definition = "REPLACE an industry the user wants"
 
 # ── Company-stage taxonomy ───────────────────────────────────────────────────
+# The kinds of company the user wants, weighted the same way.
 
-[stages.series_b_d_ai_native]
-weight = 4
-definition = "Series B-D, AI-native or platform-native company"
-
-[stages.public_new_ai_line]
-weight = 3
-definition = "Public company launching a new AI/platform product line"
-
-[stages.late_stage_pre_ipo]
-weight = 3
-definition = "Late-stage private with strong product culture, pre-IPO"
-
-[stages.mega_corp_10k]
-weight = 2
-definition = "Public/private mega-corp with 10K+ employees, slower but stable"
-
-[stages.seed_series_a]
+[stages.replace_me]
 weight = 1
-definition = "Seed or Series A, usually founder-led PM"
+definition = "REPLACE a company stage or size the user wants"
 
 # ── Company discovery ────────────────────────────────────────────────────────
 # Each weekly run scans these Built In regional sites for companies posting the
@@ -165,7 +118,7 @@ definition = "Seed or Series A, usually founder-led PM"
 
 [discovery]
 builtin_sites = []
-builtin_category = "product-management"
+builtin_category = ""
 # Only listings posted within this many days are considered.
 max_age_days = 7
 max_pages = 60

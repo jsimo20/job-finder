@@ -1,7 +1,8 @@
-"""CLI entrypoint. `run` drives the whole pipeline; the stage subcommands
-(collect, extract, score, digest) run pieces of it, and the rest manage
-durable state in data/state.db (companies, no-auto, applied, digest-archive,
-outreach) or the working DB (review, mark-applied, dismiss, unmark)."""
+"""CLI entrypoint for Claude Code on Windows. The stage subcommands (collect,
+score, digest) run pieces of the pipeline; the rest manage durable state in
+data/state.db (companies, no-auto, applied, digest-archive, outreach) or the
+working DB (review, mark-applied, dismiss, unmark). The weekly cycle itself is
+`python -m job_finder.weekly`."""
 from __future__ import annotations
 
 import argparse
@@ -10,12 +11,9 @@ import logging
 import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
+from . import (applied, builtin_discovery, collect, db, digest, job_apply, outreach, review,
+               score, state)
 
-from . import (applied, builtin_discovery, collect, db, digest, emailer, extract, job_apply,
-               outreach, review, score, state)
-
-load_dotenv(override=True)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
@@ -27,15 +25,6 @@ def _cmd_init_db(args: argparse.Namespace) -> int:
 
 def _cmd_collect(args: argparse.Namespace) -> int:
     stats = collect.run(db_path=Path(args.db) if args.db else db.DEFAULT_DB_PATH)
-    print(json.dumps(stats, indent=2))
-    return 0
-
-
-def _cmd_extract(args: argparse.Namespace) -> int:
-    stats = extract.run(
-        db_path=Path(args.db) if args.db else db.DEFAULT_DB_PATH,
-        limit=args.limit,
-    )
     print(json.dumps(stats, indent=2))
     return 0
 
@@ -52,12 +41,6 @@ def _cmd_digest(args: argparse.Namespace) -> int:
         db_path=Path(args.db) if args.db else db.DEFAULT_DB_PATH,
     )
     print(f"wrote {out}")
-    return 0
-
-
-def _cmd_status(args: argparse.Namespace) -> int:
-    from . import status
-    print(status.format_status(status.collect_status()))
     return 0
 
 
@@ -171,40 +154,6 @@ def _cmd_outreach_remove(args: argparse.Namespace) -> int:
     if not removed:
         print(f"no match for {args.name!r} @ {args.company!r}")
     return 0 if removed else 1
-
-
-def _cmd_run(args: argparse.Namespace) -> int:
-    db_path = Path(args.db) if args.db else db.DEFAULT_DB_PATH
-    db.init_db(db_path)
-    print("== collect ==")
-    print(json.dumps(collect.run(db_path=db_path), indent=2))
-    print("== extract ==")
-    print(json.dumps(extract.run(db_path=db_path), indent=2))
-    print("== score ==")
-    print(json.dumps(score.run(db_path=db_path), indent=2))
-    print("== discover ==")
-    # Discovery only proposes companies for the digest; a failure here must not
-    # cost the week's digest, so it is reported and the run continues.
-    try:
-        print(json.dumps(builtin_discovery.run(), indent=2))
-    except Exception as exc:
-        print(f"DISCOVERY FAILED: {exc}", file=sys.stderr)
-    for name in builtin_discovery.track_specific():
-        print(f"tracked: {name}")
-    print("== digest ==")
-    out = digest.render(db_path=db_path)
-    print(f"wrote {out}")
-    if args.email:
-        # The digest is already written and archived; a failed send loses
-        # nothing but the notification.
-        record = state.get_digest()
-        try:
-            emailer.send_digest(record["body"], record["date"])
-            print(f"emailed digest {record['date']}")
-        except Exception as exc:
-            print(f"EMAIL FAILED: {exc}", file=sys.stderr)
-            return 1
-    return 0
 
 
 def _cmd_discover(args: argparse.Namespace) -> int:
@@ -348,25 +297,15 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("init-db").set_defaults(func=_cmd_init_db)
-    sub.add_parser("status", help="did the last run work? both halves, one place").set_defaults(func=_cmd_status)
 
     p = sub.add_parser("collect")
     p.set_defaults(func=_cmd_collect)
-
-    p = sub.add_parser("extract")
-    p.add_argument("--limit", type=int, default=None)
-    p.set_defaults(func=_cmd_extract)
 
     sub.add_parser("score").set_defaults(func=_cmd_score)
 
     p = sub.add_parser("digest")
     p.add_argument("--date", default=None, help="ISO date (default: today)")
     p.set_defaults(func=_cmd_digest)
-
-    p = sub.add_parser("run")
-    p.add_argument("--email", action="store_true",
-                   help="email the digest after the run (the scheduled task passes this)")
-    p.set_defaults(func=_cmd_run)
 
     p = sub.add_parser("companies", help="the tracked-company list (data/state.db)")
     csub = p.add_subparsers(dest="companies_cmd", required=True)

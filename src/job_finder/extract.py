@@ -1,18 +1,12 @@
 """Stage 2: extraction of structured signals from each surviving JD.
 
-Two ways to run it against the same prompt and the same table:
-
-- `run()`: one Claude Haiku API call per posting, system prompt cached.
-- `export_pending()` / `import_results()`: the session that drives the weekly
-  skill does the reading itself (or hands batches to subagents) and writes the
-  answers back as JSON lines. No API key, no SDK; `anthropic` is imported only
-  inside `run()` so this module loads on a device VM without it.
+`export_pending()` writes the JDs that need reading; the session that drives
+the weekly skill reads them against SYSTEM_PROMPT (or hands batches to
+subagents) and `import_results()` stores the answers. No API key, no SDK.
 """
 from __future__ import annotations
 
 import json
-import logging
-import os
 from pathlib import Path
 from typing import Any
 
@@ -21,13 +15,10 @@ from .settings import pipeline_config
 from .taxonomy import CURRENCY, DOMAIN_DEFINITIONS, STAGE_DEFINITIONS
 
 _EXTRACTION = pipeline_config().get("extraction", {})
-_ROLE_NOUN = _EXTRACTION.get("role_noun", "product manager")
+_ROLE_NOUN = _EXTRACTION.get("role_noun", "job")
 _SENIOR_SCOPE = _EXTRACTION.get("senior_scope", "a typical senior scope for this role")
 _COUNTRY = pipeline_config().get("location", {}).get("country", "United States")
 
-logger = logging.getLogger(__name__)
-
-MODEL = "claude-haiku-4-5-20251001"
 JD_CHARS = 12000
 
 _DOMAIN_LIST = "\n".join(f"- {k}: {v}" for k, v in DOMAIN_DEFINITIONS.items())
@@ -88,26 +79,6 @@ Rules:
 Output ONLY the JSON object."""
 
 
-def _call_claude(client, jd_text: str, title: str, company_name: str) -> dict[str, Any]:
-    jd_text = jd_text.replace(_BOM, "")
-    title = title.replace(_BOM, "")
-    user_msg = (
-        f"Company: {company_name}\nTitle: {title}\n\nJob description:\n{jd_text[:JD_CHARS]}"
-    )
-    resp = client.messages.create(
-        model=MODEL,
-        max_tokens=1024,
-        system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
-        messages=[{"role": "user", "content": user_msg}],
-    )
-    text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text").strip()
-    if text.startswith("```"):
-        text = text.strip("`")
-        if text.lower().startswith("json"):
-            text = text[4:].strip()
-    return json.loads(text)
-
-
 _PENDING_SQL = """
     SELECT p.id, p.title, p.jd_text, c.name AS company_name
     FROM postings p
@@ -152,33 +123,6 @@ def store(conn, posting_id: int, data: dict[str, Any], model: str) -> None:
             model,
         ),
     )
-
-
-def run(db_path: Path = db.DEFAULT_DB_PATH, *, limit: int | None = None) -> dict:
-    import anthropic
-
-    api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip().replace(_BOM, "")
-    if not api_key:
-        raise RuntimeError("ANTHROPIC_API_KEY not set")
-    client = anthropic.Anthropic(api_key=api_key)
-    stats = {"considered": 0, "extracted": 0, "skipped": 0, "errors": 0, "errors_detail": []}
-
-    with db.connect(db_path) as conn:
-        for row in _pending(conn, limit):
-            stats["considered"] += 1
-            if not row["jd_text"]:
-                stats["skipped"] += 1
-                continue
-            try:
-                data = _call_claude(client, row["jd_text"], row["title"], row["company_name"])
-            except Exception as e:
-                logger.error("extract failed posting_id=%s err=%s", row["id"], e)
-                stats["errors"] += 1
-                stats["errors_detail"].append(f"posting_id={row['id']}: {e}")
-                continue
-            store(conn, row["id"], data, MODEL)
-            stats["extracted"] += 1
-    return stats
 
 
 def export_pending(path: Path, db_path: Path = db.DEFAULT_DB_PATH, *,

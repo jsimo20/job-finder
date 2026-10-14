@@ -31,7 +31,7 @@ def load_companies(state_db: Path = state.DEFAULT_STATE_DB) -> list[dict]:
     companies = state.list_companies(state_db)
     if not companies:
         logger.warning("no tracked companies in %s — run "
-                       "`job-finder companies import <file.json>` (SETUP.md §5)",
+                       "`job-finder companies import <file.json>` (the manage-companies skill)",
                        state_db)
     return companies
 

@@ -1,11 +1,11 @@
-"""Tests for the local-first state store (state.py, emailer)."""
+"""Tests for the local-first state store (state.py)."""
 from __future__ import annotations
 
 import json
 
 import pytest
 
-from job_finder import emailer, state
+from job_finder import state
 
 
 def test_company_crud_roundtrip(tmp_path):
@@ -80,34 +80,3 @@ def test_digest_archive_latest_and_by_date(tmp_path):
     state.save_digest("2026-08-10", "revised body", db)   # re-render same date
     assert state.get_digest("2026-08-10", db)["body"] == "revised body"
     assert state.list_digests(db) == ["2026-08-03", "2026-08-10"]
-
-
-def test_emailer_refuses_without_credentials(monkeypatch):
-    monkeypatch.delenv("GMAIL_USER", raising=False)
-    monkeypatch.delenv("GMAIL_APP_PASSWORD", raising=False)
-    with pytest.raises(RuntimeError, match="GMAIL_USER"):
-        emailer.send_digest("body", "2026-08-03")
-
-
-def test_emailer_sends_when_configured(monkeypatch):
-    sent = {}
-
-    class FakeSMTP:
-        def __init__(self, host, port, timeout=None):
-            sent["host"] = host
-        def __enter__(self):
-            return self
-        def __exit__(self, *a):
-            return False
-        def login(self, user, password):
-            sent["login"] = user
-        def send_message(self, msg):
-            sent["subject"] = msg["Subject"]
-            sent["to"] = msg["To"]
-
-    monkeypatch.setenv("GMAIL_USER", "u@example.com")
-    monkeypatch.setenv("GMAIL_APP_PASSWORD", "x" * 16)
-    monkeypatch.setattr(emailer.smtplib, "SMTP_SSL", FakeSMTP)
-    emailer.send_digest("body", "2026-08-03")
-    assert sent == {"host": "smtp.gmail.com", "login": "u@example.com",
-                    "subject": "Job Digest — 2026-08-03", "to": "u@example.com"}
