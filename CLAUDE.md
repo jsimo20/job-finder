@@ -3,9 +3,7 @@
 **Scope:** the rules and tools for any agent working in this folder, whether a
 user's Cowork chat or a developer's Claude Code session. Both load this file
 into every chat here, so it holds only what an agent must follow or needs to
-operate the tools. What the project is, for people: `README.md`. Changing code,
-prompts, tests or the plugin: read `DEVELOPMENT.md` first (developer checkouts
-only).
+operate the tools. What the project is, for people: `README.md`.
 
 job-finder finds roles worth applying to from the user's company list,
 prepares tailored applications, and fills forms up to Submit. Everything runs

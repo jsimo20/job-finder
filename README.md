@@ -8,8 +8,26 @@ Everything it knows about you stays in one folder on your computer.
 
 ## Get started
 
-Follow [SETUP.md](SETUP.md): install the Claude desktop app and the plugin,
-connect an empty folder, and say "set me up".
+1. **Claude Pro or higher.** job-finder runs in Cowork, which is not on the
+   free plan: https://claude.com/pricing
+2. **The Claude desktop app**, signed in with the same account:
+   https://claude.com/download
+3. **Download the plugin:**
+   https://github.com/jsimo20/job-finder/releases/latest/download/job-finder-cowork-plugin.zip
+4. **Install it.** In the Claude app, start a new chat, click the **+** next to
+   the message box and add the plugin from the zip.
+5. **Make an empty folder** (for example `Documents/job-finder`), click **+**
+   again and connect it.
+6. **Say "set me up".** It's a conversation of about 20 to 30 minutes: where
+   you live, the jobs you want, your pay floor, your resume and a few
+   paragraphs about yourself in your own words. It may stop once to have you
+   change a Claude setting or install Node.js so it can fill forms, and it
+   tells you exactly what to click.
+
+At the end it schedules a weekly run on a morning you usually have the app
+open. Then let that run use your folder without asking: click **Scheduled** in
+the left sidebar, open **Job finder weekly run**, and click the warning sign
+next to the folder.
 
 ## What you can ask for
 
@@ -55,7 +73,5 @@ plugin again when a release note says to.
 
 ## For developers
 
-- [DEVELOPMENT.md](DEVELOPMENT.md): architecture, tests,
-  evals and releasing.
-- [CLAUDE.md](CLAUDE.md): the rules and tools every agent working in the
-  folder follows.
+[CLAUDE.md](CLAUDE.md) holds the rules and tools every agent working in the
+folder follows.

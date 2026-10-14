@@ -1,35 +1,9 @@
-# Setup
+# Profile starting files
 
-## Set up in the Claude app
-
-1. **Claude Pro or higher.** The job finder runs in Cowork, which is not on the
-   free plan: https://claude.com/pricing
-2. **The Claude desktop app**, signed in with the same account:
-   https://claude.com/download
-3. **Download the plugin:**
-   https://github.com/jsimo20/job-finder/releases/latest/download/job-finder-cowork-plugin.zip
-4. **Install it.** In the Claude app, start a new chat, click the **+** next to
-   the message box and add the plugin from the zip.
-5. **Make an empty folder** (for example `Documents/job-finder`), click **+**
-   again and connect it.
-6. **Say "set me up".** It's a conversation of about 20 to 30 minutes: where
-   you live, the jobs you want, your pay floor, your resume and a few
-   paragraphs about yourself in your own words. It may stop once to have you
-   change a Claude setting or install Node.js so it can fill forms, and it
-   tells you exactly what to click.
-
-At the end it schedules a weekly run on a morning you usually have the app
-open. Then let that run use your folder without asking: click **Scheduled** in
-the left sidebar, open **Job finder weekly run**, and click the warning sign
-next to the folder.
-
-## Profile starting files and where things live
-
-The setup skill runs `profile_init`, which writes the blocks at the end of this
-file into `profile/`. They are the defaults every user starts from.
-
-Everything personal is gitignored and never committed: `profile/`,
-`config/pipeline.toml`, `.env`, `data/` and `digests/`.
+`python -m job_finder.profile_init` writes each block below to the `profile/`
+path its first line names, and never overwrites a file that exists. Keep those
+first lines intact. Setup then replaces every example value with the user's
+own answers. `profile/` is gitignored and never committed.
 
 | File in `profile/` | Used by | What it drives |
 |---|---|---|
@@ -52,11 +26,7 @@ root. Nothing outside `profile.toml` may assume a layout: prompts and scripts
 resolve paths through `job_apply.load_config()`. `python -m
 job_finder.profile_check` exits 0 only when no placeholder remains.
 
-### The blocks
-
-`python -m job_finder.profile_init` writes each block below to the file its
-first line names, and never overwrites a file that exists. Keep those first
-lines intact.
+## The blocks
 
 ```toml profile/profile.toml
 # Edit every value. profile/ is gitignored and holds all of your context: the

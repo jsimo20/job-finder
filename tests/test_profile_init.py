@@ -1,4 +1,4 @@
-"""SETUP.md is the only definition of a new user's profile/, so it is tested here."""
+"""profile-files.md is the only definition of a new user's profile/, so it is tested here."""
 from __future__ import annotations
 
 try:
@@ -11,10 +11,10 @@ import pytest
 from job_finder import job_apply, profile_init, settings
 from job_finder.fill_greenhouse import build_combo_fields
 
-BLOCKS = profile_init.profile_blocks(profile_init.SETUP_MD.read_text(encoding="utf-8"))
+BLOCKS = profile_init.profile_blocks(profile_init.PROFILE_FILES.read_text(encoding="utf-8"))
 
 
-def test_setup_md_defines_the_whole_starting_profile():
+def test_profile_files_define_the_whole_starting_profile():
     assert set(BLOCKS) == {
         "profile.toml", "resume_master.md", "personal_statement.md", "writing-style.md",
         "standard_answers.md", "fit_profile.md", "generate_resume.py", "qa_checklist.md",
@@ -22,8 +22,8 @@ def test_setup_md_defines_the_whole_starting_profile():
     }
 
 
-def test_setup_md_defines_every_file_the_default_paths_resolve():
-    """A profile built from SETUP.md with no [paths] table must give the apply loop
+def test_profile_files_define_every_file_the_default_paths_resolve():
+    """A profile built from profile-files.md with no [paths] table must give the apply loop
     every ground-truth file it reads, at the path load_config resolves."""
     cfg = job_apply.load_config(profile={})
     base = settings.profile_dir()

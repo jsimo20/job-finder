@@ -93,10 +93,10 @@ def isolated_config(tmp_path: Path) -> job_apply.Config:
     session_ctx = tmp_path / "session_ctx.md"
     session_ctx.write_text("# anti-overstatement rules\n", encoding="utf-8")
 
-    # The generator SETUP.md gives every new user, so render tests never skip.
+    # The generator profile_init gives every new user, so render tests never skip.
     generator = tmp_path / "generate_resume.py"
     generator.write_text(profile_init.profile_blocks(
-        profile_init.SETUP_MD.read_text(encoding="utf-8"))["generate_resume.py"],
+        profile_init.PROFILE_FILES.read_text(encoding="utf-8"))["generate_resume.py"],
         encoding="utf-8")
     return job_apply.Config(
         inputs_dir=inputs,
