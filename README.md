@@ -4,7 +4,9 @@ job-finder runs inside the Claude desktop app. It watches the job boards of
 companies you choose, ranks new postings against what you're looking for, and
 writes a tailored resume and cover letter for each role you pick. Then it fills
 in the application and leaves it open for you to check and submit yourself.
-Everything it knows about you stays in one folder on your computer.
+When an application turns into an interview, it writes a prep sheet and runs a
+mock interview with you. Everything it knows about you stays in one folder on
+your computer.
 
 ## Get started
 
