@@ -23,36 +23,6 @@ open. Then let that run use your folder without asking: click **Scheduled** in
 the left sidebar, open **Job finder weekly run**, and click the warning sign
 next to the folder.
 
-## Developer setup (Claude Code)
-
-For changing the engine itself.
-
-Python 3.10 or newer, `git`, and Claude Code.
-
-```sh
-git clone https://github.com/jsimo20/job-finder.git && cd job-finder
-python -m venv .venv
-.venv/Scripts/activate              # .venv/bin/activate outside Windows
-pip install uv && uv pip install -e ".[dev]"
-python -m pytest -q                 # passes with no profile, config or keys
-```
-
-To fill Greenhouse forms with the deterministic script:
-
-```sh
-uv pip install -e ".[apply]" && playwright install chromium
-```
-
-Set `--output-dir` in `.mcp.json` to this checkout's absolute
-`.playwright-mcp` path; the Playwright server rejects uploads from anywhere
-else.
-
-Then build the profile, search settings and company list by following
-`.claude/skills/job-finder-setup/SKILL.md` from step 2, the same interview
-Cowork runs. Run the weekly cycle by saying "run my weekly job search"; it
-needs no API key. Changing code, prompts, tests or the plugin: read
-`DEVELOPMENT.md`.
-
 ## Profile starting files and where things live
 
 The setup skill runs `profile_init`, which writes the blocks at the end of this

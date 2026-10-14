@@ -4,6 +4,33 @@ For changing code, prompts, tests or the plugin. Left out of user installs
 (`.gitattributes` export-ignore), so nothing here may be needed at run time.
 Rules every agent follows, users' included, live in `CLAUDE.md`.
 
+## Setup
+
+Python 3.10 or newer, `git`, and Claude Code.
+
+```sh
+git clone https://github.com/jsimo20/job-finder.git && cd job-finder
+python -m venv .venv
+.venv/Scripts/activate              # .venv/bin/activate outside Windows
+pip install uv && uv pip install -e ".[dev]"
+python -m pytest -q                 # passes with no profile, config or keys
+```
+
+To fill Greenhouse forms with the deterministic script:
+
+```sh
+uv pip install -e ".[apply]" && playwright install chromium
+```
+
+Set `--output-dir` in `.mcp.json` to this checkout's absolute
+`.playwright-mcp` path; the Playwright server rejects uploads from anywhere
+else.
+
+Then build the profile, search settings and company list by following
+`.claude/skills/job-finder-setup/SKILL.md` from step 2, the same interview
+Cowork runs. Run the weekly cycle by saying "run my weekly job search"; it
+needs no API key.
+
 ## Architecture
 
 ```
