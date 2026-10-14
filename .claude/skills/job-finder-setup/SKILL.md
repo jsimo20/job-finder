@@ -239,15 +239,25 @@ Either way, go back to step 3. `profile_check` must exit 0 before you go on.
 
 ## 6. Schedule the weekly run
 
-Ask which weekday morning they usually have the Claude app open. If a
-scheduled-task tool is available, create a task attached to this folder,
-weekly on that day at that hour, with the prompt:
+Ask which weekday morning they usually have the Claude app open. Then create
+the scheduled task with:
 
-> Read `.claude/skills/job-finder-weekly/SKILL.md` in this folder and follow it.
+| Field | Value |
+|---|---|
+| Name | Job finder weekly run |
+| Prompt | `Read .claude/skills/job-finder-weekly/SKILL.md in this folder and follow it.` |
+| Schedule | Weekly on their day and hour, in their time zone |
+| Folders | This folder's path on their computer, as Cowork shows the connected folder |
+| Requires local device | On |
 
-Otherwise tell them to say, in this folder: "every Monday at 9am, read
-`.claude/skills/job-finder-weekly/SKILL.md` in this folder and follow it",
-with their day and hour.
+**The folder is required.** A task without it runs in the cloud and cannot see
+the engine, so nothing runs. A folder can only be set when a task is created:
+to fix a task without one, delete it and create it again. After creating it,
+list the scheduled tasks and confirm the folder shows on this one.
+
+With no scheduled-task tool, tell them to say, in this folder: "every Monday
+at 9am, read `.claude/skills/job-finder-weekly/SKILL.md` in this folder and
+follow it, with this folder attached", with their day and hour.
 
 Tell them it only runs while the Claude app is open, that they can say "run my
 weekly job search" any time instead, and that each run updates the tool first.
