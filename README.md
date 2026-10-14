@@ -72,8 +72,3 @@ files and never touch yours.
 
 Each scheduled run updates the engine automatically. You only download the
 plugin again when a release note says to.
-
-## For developers
-
-[CLAUDE.md](CLAUDE.md) holds the rules and tools every agent working in the
-folder follows.
