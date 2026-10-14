@@ -35,6 +35,28 @@ REQUIRED = [
 MAX_PLUGIN_DESCRIPTION = 500
 _TAG = re.compile(r"<[^>]*>")
 _DESCRIPTION = re.compile(r"^description:\s*(.*)$", re.MULTILINE)
+_NAME = re.compile(r"^name:\s*(\S+)\s*$", re.MULTILINE)
+
+
+def skill_errors(skills_dir: Path) -> list[str]:
+    """Frontmatter checks for every <skills_dir>/<name>/SKILL.md.
+
+    Applied to the repo's .claude/skills too: Cowork lists a connected folder's
+    skills to the model, so a malformed one there fails for every user.
+    """
+    errors = []
+    for skill in sorted(skills_dir.glob("*/SKILL.md")):
+        text = skill.read_text(encoding="utf-8")
+        name = skill.parent.name
+        declared = _NAME.search(text)
+        if not declared or declared.group(1) != name:
+            errors.append(f"skill {name!r}: SKILL.md name must match its folder")
+        match = _DESCRIPTION.search(text)
+        if not match:
+            errors.append(f"skill {name!r}: SKILL.md has no description")
+        elif _TAG.search(match.group(1)):
+            errors.append(f"skill {name!r}: SKILL.md description cannot contain XML tags")
+    return errors
 
 
 def validation_errors(plugin_dir: Path = PLUGIN_DIR) -> list[str]:
@@ -47,14 +69,7 @@ def validation_errors(plugin_dir: Path = PLUGIN_DIR) -> list[str]:
     manifest = json.loads((plugin_dir / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
     if len(manifest.get("description", "")) > MAX_PLUGIN_DESCRIPTION:
         errors.append(f"plugin description must be at most {MAX_PLUGIN_DESCRIPTION} characters")
-    for skill in sorted(plugin_dir.glob("skills/*/SKILL.md")):
-        match = _DESCRIPTION.search(skill.read_text(encoding="utf-8"))
-        name = skill.parent.name
-        if not match:
-            errors.append(f"skill {name!r}: SKILL.md has no description")
-        elif _TAG.search(match.group(1)):
-            errors.append(f"skill {name!r}: SKILL.md description cannot contain XML tags")
-    return errors
+    return errors + skill_errors(plugin_dir / "skills")
 
 
 def build(out_dir: Path) -> Path:
@@ -64,7 +79,7 @@ def build(out_dir: Path) -> Path:
             f"cowork-plugin/ is incomplete, missing: {', '.join(map(str, missing))}")
     if not list(PLUGIN_DIR.glob("skills/*/SKILL.md")):
         raise SystemExit("cowork-plugin/skills/<name>/SKILL.md not found")
-    errors = validation_errors()
+    errors = validation_errors() + skill_errors(REPO_ROOT / ".claude/skills")
     if errors:
         raise SystemExit("Cowork would reject this plugin:\n  " + "\n  ".join(errors))
 

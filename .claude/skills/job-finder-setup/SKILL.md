@@ -1,6 +1,6 @@
 ---
 name: job-finder-setup
-description: The setup procedure for job-finder, from the profile interview onward. Read by the plugin's setup launcher once the engine is in the folder, and by the job-finder router when a user wants to change their profile, resume, voice, titles, places, pay or schedule. Builds the profile, the search settings and the company list through a plain-language interview, proves the first collect, and schedules the weekly run.
+description: The setup procedure for job-finder, from the profile interview onward. Read by the plugin's setup launcher once the engine is in the folder, and directly when a user wants to change their profile, resume, voice, titles, places, pay or schedule. Builds the profile, the search settings and the company list through a plain-language interview, proves the first collect, and schedules the weekly run.
 ---
 
 # job-finder-setup
@@ -344,7 +344,7 @@ Tell them, in this order and nothing more:
 
 1. What is in the folder now and that none of it is shared anywhere.
 2. How to run the weekly cycle by hand: open this folder in Cowork and say
-   "run my weekly job search" (or `/job-finder`). The first run reads
+   "run my weekly job search". The first run reads
    every job description the collect found, so it is the longest; later runs
    read only what is new.
 3. How to come back: "change my settings" to change anything above; "add

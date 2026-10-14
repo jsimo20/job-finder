@@ -24,7 +24,6 @@ Check the tools you need exist in your own environment, silently:
 
 ```sh
 python3 --version      # needs 3.10 or newer
-git --version || true  # optional; the tarball route below works without it
 ```
 
 If Python is older than 3.10 or missing, stop and say the tool cannot run on
@@ -73,20 +72,18 @@ bring it up to date, then go to step 2. A failure here never stops setup.
 
 ```sh
 cd "$ROOT" && if [ -f scripts/self_update.sh ]; then sh scripts/self_update.sh; else
-  curl -fsSL --max-time 60 https://github.com/jsimo20/job-finder/archive/refs/heads/main.tar.gz     | tar xz --strip-components=1 --overwrite; fi
+  curl -fsSL --max-time 60 https://github.com/jsimo20/job-finder/archive/refs/heads/main.tar.gz \
+    | tar xz --strip-components=1 --overwrite; fi
 ```
 
 **Not installed:**
 
 ```sh
-cd "$ROOT" && git clone --depth 1 https://github.com/jsimo20/job-finder.git .
+cd "$ROOT" && curl -fsSL --max-time 120 https://github.com/jsimo20/job-finder/archive/refs/heads/main.tar.gz | tar xz --strip-components=1
 ```
 
-If git is unavailable or the clone fails, take the tarball route:
-
-```sh
-cd "$ROOT" && curl -fsSL https://github.com/jsimo20/job-finder/archive/refs/heads/main.tar.gz | tar xz --strip-components=1
-```
+Never `git clone` here: on a Cowork folder mount the clone breaks partway and
+leaves an unfinished `.git` behind.
 
 Then install the Python packages the engine needs, into the folder:
 

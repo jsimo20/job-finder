@@ -326,7 +326,7 @@ No GitHub Actions secrets are needed — the repo runs no workflows. Paste keys 
 
 ## Apply workflow (slash commands)
 
-- `/job-apply [external_id | --top N]` — tailors resume + cover letter for pending roles, runs the materials fact-checker, renders the per-job folder via `job_apply.render()`, then dispatches autofill. Logic in `.claude/commands/job-apply.md`; deterministic render in `src/job_finder/job_apply.py`.
+- `/job-apply [external_id | --top N]` — tailors resume + cover letter for pending roles, runs the materials fact-checker, renders the per-job folder via `job_apply.render()`, then dispatches autofill. Logic in `.claude/skills/job-apply/SKILL.md`; deterministic render in `src/job_finder/job_apply.py`.
 - **The ATS never gates prep — only who pushes Submit.** Any posting with a readable JD gets the full tailor→fact-check→render loop, including pasted URLs and manual-tier companies. Autofill runs when the form is reachable; account-walled portals (SuccessFactors, Workday, iCIMS, Phenom) get a complete package plus an `APPLY_NOTES.md` manual-submit handoff instead. A role is never skipped because of its ATS.
 - `job-finder applications archive [--dry-run]` — **unused by default.** `[paths].applications_archive_dir` is unset, so this raises rather than moving anything. It stays for anyone who wants a second location; set the key and it moves finished folders there, skipping any name that already exists.
 - `/job-apply-batch [--top N] [--include-stretch]` — the same loop over N roles with no per-role gates and one report at the end, for unattended sessions. Defers to `job-apply.md` for the per-role work rather than restating it. Adds a ground-truth preflight, a park-don't-guess rule, and a batch gate. Main queue only by default: the calibration eval puts stretch roles at 0.52x the baseline apply rate against main's 1.23x, and in a batch nobody skips them.
@@ -363,8 +363,9 @@ makes a daily trigger a no-op most days. `weekly.py` imports neither
 `anthropic` nor `python-dotenv`, so it runs under `.cowork-deps`; `extract.py`
 imports `anthropic` lazily inside `run()` for the same reason.
 **Installs from the setup skill (a tarball, or a `--depth 1` clone) update
-themselves through `scripts/self_update.sh`**, which the `job-finder` router
-and the weekly skill's step 0 both run first: it downloads `main`, verifies the
+themselves through `scripts/self_update.sh`**, which the weekly skill's step 0
+runs on every scheduled fire (daily) and the setup launcher runs on an existing
+install: it downloads `main`, verifies the
 archive, and extracts over the folder (user state is gitignored, so it
 survives). It skips a full `.git` checkout, told apart by the absence of
 `.git/shallow`, so a developer's working tree is never overwritten, and a
@@ -386,11 +387,17 @@ scheduled task, which only fires while the app is open.
 
 > Read `.claude/skills/job-apply-batch/SKILL.md` and follow it for the top 1 role.
 
-A file read works on every surface. **Cowork does not index project-level
-`.claude/skills/` or `.claude/commands/` at all** — confirmed by typing `/mana`
-there and getting only plugin skills, with `manage-companies` absent despite
-being correctly formed and weeks old. It loads plugin skills and this
-`CLAUDE.md`, nothing else from the repo.
+A file read works on every surface. **Cowork lists a connected folder's
+`.claude/skills/*` to the model at chat start**, but its `/` menu does not show
+them. Verified 2026-10-13 with a canary skill named nowhere else: it was in the
+model's skill list, staged as a stub under
+`/mnt/user-data/uploads/cowork-folders/<folder>-<hash>/.claude/skills/`; loading
+it returns a redirect, and the model then reads the real file on the device. So
+the `/` menu is not a test of what the model can load. Whether
+`.claude/commands/` is staged is untested. **Every procedure must run correctly
+both when loaded directly and when read by path** (its own Python prefix,
+nothing assumed from the router), because the model may pick the folder's skill
+over the plugin's.
 
 So do not move a file between `commands/` and `skills/` hoping that surface will
 notice, and do not copy a procedure into this file: point at its path, so there
@@ -439,15 +446,83 @@ not have it and the batch preflight rebuilds it rather than failing.
   playwright import is guarded for that reason. Keep it guarded: the fill gate
   runs where no browser client is installed.
 
+## Working in Cowork
+
+Cowork lists the folder's `.claude/skills/*` to the model and loads this file
+into every chat in the folder; the plugin holds only the setup launcher. **This
+section is where every Cowork-wide rule lives**, because a skill can be loaded
+directly and nothing else is guaranteed to be read first.
+
+**Entry points.** Each request maps to one procedure:
+
+| The user wants | Procedure |
+|---|---|
+| First-time setup | the plugin's `job-finder-setup`, which installs and hands over to `.claude/skills/job-finder-setup/SKILL.md` |
+| The weekly run, "work through the top roles" | `.claude/skills/job-finder-weekly/SKILL.md` |
+| Help applying to one role: a pasted link or job description, a Manual check company | `.claude/skills/job-apply/SKILL.md`, for that one role |
+| Add, remove, list or find more companies; stop one being auto-applied | `.claude/skills/manage-companies/SKILL.md` |
+| Interview prep or a mock interview | `.claude/skills/interview-prep/SKILL.md` |
+| Change profile, resume, voice, titles, places, pay or schedule | `.claude/skills/job-finder-setup/SKILL.md`, from the step that covers it |
+| Update the engine now | `sh scripts/self_update.sh` |
+
+**The `job-finder` console script does not exist on Cowork.** Where a procedure
+names one, call the module instead:
+
+| Console command | Cowork equivalent |
+|---|---|
+| `job-finder no-auto list` | `state.is_no_auto('<company>')` |
+| `job-finder digest-archive show` | `state.get_digest()['body']` |
+| `job-finder mark-applied <id>` / `applied add` | `applied.record_applied('<id>', company=..., title=..., url=...)` |
+| `job-finder companies ...` | `.claude/skills/manage-companies/SKILL.md` |
+
+**Subagents: dispatch every repo agent as a general-purpose agent, on every
+surface.** Cowork does not load `.claude/agents/`: on 2026-10-13 the named types
+were absent there. Start a general-purpose agent whose prompt opens "Read
+`.claude/agents/<name>.md` and follow it as your instructions", then the inputs.
+Set its model to the file's `model:` where the surface allows. Verified on
+Cowork 2026-10-13: both apply-loop agents ran this way as Sonnet and read their
+files on the device themselves. Never skip a dispatch because a named type is
+missing; with no agent tool at all, do the
+work in the main session from the same file. The frontmatter `tools:` list is
+not enforced this way, so each agent's own rules carry its limits.
+
+**Playwright is a full browser on the user's computer.** Any tool whose name
+contains `playwright` opens a real Chromium window that runs JavaScript. Use it
+for any careers page or posting a plain fetch cannot read, before asking the
+user for anything, and never ask them to install a browser tool or extension.
+
+**Nothing is ever submitted.** Every form is left open for the user.
+
+## Releasing
+
+**Merging to `main` deploys every procedure, code and doc change**: installs
+update from `main` on each daily scheduled run. So staging happens before the
+merge.
+
+- **Stage in the developer checkout.** Connect this repo in Cowork with the
+  branch checked out; a full checkout never self-updates, so Cowork reads the
+  branch as it stands. Run the requests the change touches and read the trace.
+- **A plugin change** (setup launcher, `.mcp.json`, manifest) also needs:
+  bump `plugin.json`'s version, `python scripts/build_cowork_plugin.py` (it
+  refuses what Cowork's uploader rejects), install that zip on this machine and
+  smoke-test, then publish a GitHub release with the zip. Users re-upload; the
+  setup email's `releases/latest` link always serves the newest.
+- **Setup downloads `main`, not the branch**, so a fresh-folder setup test
+  checks only the launcher's own steps.
+- **Before outsiders depend on it**, point the tarball URL in
+  `scripts/self_update.sh` and the setup launcher at a `stable` tag. Merging
+  then stops deploying; moving the tag deploys.
+
 ## Cowork plugin (`cowork-plugin/`)
 
-Cowork does not index project-level `.claude/skills/`, so the plugin exists to
-give Cowork something to trigger. **It holds launchers, never procedure**: every
-procedure lives in the repo and reaches users through `scripts/self_update.sh`,
-so changing one needs no rebuild or re-upload. Only three things stay in the
-plugin, because the repo cannot carry them: the manifest, `.mcp.json`, and the
-setup bootstrap (the repo does not exist yet when setup starts). A new procedure
-is a new row in the router's table, not a new plugin skill.
+The plugin exists so Cowork has something to trigger before the engine is in
+the folder. **It holds the setup launcher and nothing else that could live in
+the repo**: every procedure is a folder skill, reaches users through
+`scripts/self_update.sh`, and changes with no rebuild or re-upload. Three things
+stay in the plugin because the repo cannot carry them: the manifest,
+`.mcp.json`, and the setup bootstrap. A new procedure is a new skill under
+`.claude/skills/` plus a row in the entry-point table above, never a plugin
+skill.
 
 - `cowork-plugin/.claude-plugin/plugin.json` — manifest
 - `cowork-plugin/.mcp.json` — Playwright, **version-pinned** (`@latest`
@@ -455,15 +530,12 @@ is a new row in the router's table, not a new plugin skill.
   duplicate of the repo-root `.mcp.json`:** Cowork does not read a project's
   `.mcp.json` at all (verified 2026-08-25), so a plugin-bundled server is the only
   way it gets one. The repo copy serves Claude Code.
-- `cowork-plugin/skills/job-finder/SKILL.md` — the router launcher: reads
-  `.claude/skills/job-finder/SKILL.md`, which updates the engine and routes to
-  the weekly run, `manage-companies`, `/job-apply` for one pasted role, or
-  `interview-prep`. Updates an install that predates the router once, inline.
 - `cowork-plugin/skills/job-finder-setup/SKILL.md` — the setup bootstrap:
-  confirms the folder, checks network access, installs or updates the engine,
-  then hands over to `.claude/skills/job-finder-setup/SKILL.md`, which runs the
-  interview, the company list, the first collect and the schedule. **Neither
-  names a `profile/<dir>/` layout** (the fresh-clone eval greps for that).
+  confirms the folder, checks network access, installs the engine from the
+  tarball (never `git clone`, which breaks on a Cowork folder mount) or updates
+  it, then hands over to `.claude/skills/job-finder-setup/SKILL.md`, which runs
+  the interview, the company list, the first collect and the schedule. **It
+  never names a `profile/<dir>/` layout** (the fresh-clone eval greps for that).
 
 **The Playwright server runs on the user's machine via `npx`, so Node.js has
 to exist there**; without it the session simply has no `playwright` tools.
@@ -505,14 +577,14 @@ can carry. In Claude Code on Windows the script runs and costs ~2k.
 ## Project-level skills
 
 - `.claude/skills/job-apply-batch/SKILL.md` — the unattended apply loop. **Lives in `skills/`, not `commands/`, on purpose:** Cowork rejected it as an unknown skill while it sat in `.claude/commands/`, and its frontmatter only parsed once it carried a `name:` field. Skills register on both surfaces; commands appear not to. Prefer `skills/` for anything an unattended session must invoke.
-- `.claude/skills/job-finder/SKILL.md` — the router every Cowork request after setup goes through. Runs `scripts/self_update.sh`, then picks the procedure, and maps the `job-finder` console commands (absent on Cowork) to module calls.
-- `.claude/skills/job-finder-setup/SKILL.md` — the setup procedure from the profile interview on; the plugin launcher hands over to it, and the router sends settings changes to the step that covers them.
+- `.claude/skills/job-apply/SKILL.md` — the per-role apply loop (`/job-apply` in Claude Code). A skill rather than a command so Cowork lists it.
+- `.claude/skills/job-finder-setup/SKILL.md` — the setup procedure from the profile interview on; the plugin launcher hands over to it, and a settings change starts at the step that covers it.
 - `.claude/skills/manage-companies/SKILL.md` — add/remove/list/find-more tracked companies in `data/state.db` through `state` module calls, so it runs on Cowork and Windows alike.
 - `.claude/skills/interview-prep/SKILL.md` — reads an application folder (`jd.md`, `cover_letter.json`, the resume generator, `apply.md`, `skill_substitutions.json`) plus the ground truth, writes `interview_prep_<round>.md`, and runs a mock interview with feedback after each answer. **Its examples are fictional and must stay that way**: it ships in a public repo.
 
 ## Subagents
 
-`.claude/agents/` — dispatched from slash commands or directly via the `Agent` tool. Each pins its own model and tool list. The Sonnet subagents below handle mechanical work so the main Opus-tier conversation keeps focus on voice and judgment.
+`.claude/agents/` — each file is the instructions for a general-purpose agent (see Working in Cowork, Subagents); its frontmatter `model:` is applied where the surface allows. The Sonnet subagents below handle mechanical work so the main Opus-tier conversation keeps focus on voice and judgment.
 
 | Subagent | Purpose | Model |
 |---|---|---|

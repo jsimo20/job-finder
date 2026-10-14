@@ -25,7 +25,7 @@ roles one batch can carry, not a preference to weigh. In Claude Code on Windows
 `fill_greenhouse` does run, costs about 2k per form, and is the better path
 wherever the ATS is Greenhouse.
 
-**The per-role loop is `.claude/commands/job-apply.md` and is not restated
+**The per-role loop is `.claude/skills/job-apply/SKILL.md` and is not restated
 here.** Read it and follow it for each role. This file specifies only what
 changes when nobody is watching. Two copies of that loop would drift.
 

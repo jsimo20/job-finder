@@ -1,13 +1,18 @@
 ---
-description: Tailor resume + cover letter for pending roles and prep apply package
-argument-hint: [external_id or --top N]
+name: job-apply
+description: Tailor the resume and cover letter for one or more roles, fact-check them, render the application folder, and fill the form without submitting. Use for "help me apply to this job" with a pasted link or job description, a company from the digest's Manual check, a pending role's id, or "what should I apply to".
+argument-hint: [external_id, a posting link, or --top N]
 ---
+
+**On Cowork, read the "Working in Cowork" section of `CLAUDE.md` first**: it maps
+every `job-finder` console command below to its module call and says how to
+dispatch the agents this procedure names.
 
 You are driving the apply-prep loop for the user. The pipeline that picks the roles is `job-finder`; the tailoring ground truth lives in the profile driving docs (`resume_master.md`, `personal_statement.md`, and the claims-ground-truth file named by `profile/profile.toml` `[paths]`). The deterministic render lives in `src/job_finder/job_apply.py`.
 
 ## What to do
 
-Three subagents (all Sonnet) handle the mechanical phases of this command so the main Opus-tier conversation can focus on drafting work that benefits from Opus voice and judgment. Dispatch them via the `Agent` tool with the indicated `subagent_type`. Each starts with cold context — pass the inputs it needs inline in the prompt.
+Three subagents (all Sonnet) handle the mechanical phases of this command so the main Opus-tier conversation can focus on drafting work that benefits from Opus voice and judgment. Dispatch each as a general-purpose agent that reads its own definition file (`CLAUDE.md`, Working in Cowork, Subagents); never by a named `subagent_type`, which Cowork does not have. Each starts with cold context — pass the inputs it needs inline in the prompt.
 
 ### 1. Pick role(s)
 

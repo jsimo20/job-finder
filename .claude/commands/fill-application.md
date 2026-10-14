@@ -20,7 +20,7 @@ If no folder is given, the autofiller will fall back to the global `standard_ans
 
 ### 2. Dispatch the `application-autofiller` subagent
 
-Use the `Agent` tool with `subagent_type: application-autofiller`. Pass these inputs inline in the prompt:
+Dispatch a general-purpose agent whose prompt opens "Read `.claude/agents/application-autofiller.md` and follow it as your instructions" (`CLAUDE.md`, Working in Cowork, Subagents). Pass these inputs inline in the prompt:
 
 - `application_url`: the URL from $ARGUMENTS
 - `folder_path`: the folder path from $ARGUMENTS (or the literal string "GLOBAL_DEFAULTS_ONLY" if none given)
