@@ -37,6 +37,9 @@ to one procedure:
 | Change profile, resume, voice, titles, places, pay or schedule | `.claude/skills/job-finder-setup/SKILL.md`, from the step that covers it |
 | "Update me" | `sh scripts/self_update.sh`, then "Updating an existing folder" in `.claude/skills/job-finder-setup/SKILL.md` |
 
+- **A set-up folder never reruns setup.** When `profile/profile.toml` exists,
+  "set me up" or "get started" means "Updating an existing folder" in
+  `.claude/skills/job-finder-setup/SKILL.md`, never a plugin's own setup steps.
 - **Python:** `PYTHONPATH=".cowork-deps:src" python3` from the folder root on
   Cowork (build a missing `.cowork-deps/` with
   `sh scripts/bootstrap_cowork_deps.sh`); `.venv/Scripts/python.exe` with no
