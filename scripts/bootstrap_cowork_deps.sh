@@ -3,45 +3,36 @@
 #
 #     sh scripts/bootstrap_cowork_deps.sh
 #
-# Why this exists. `job_finder` lives under `src/`, and the only editable install
-# is a .pth file inside the Windows `.venv`, which the Linux VM Cowork mounts
-# cannot see. The first Python call of the batch therefore dies on
-# `ModuleNotFoundError: No module named 'job_finder'` before any dependency
-# question arises. `PYTHONPATH=src` fixes that import; this directory fixes the
-# third-party imports behind it, because the VM ships bare Python with no
-# site-packages.
-#
-# After running this, every Python call on that VM is:
+# The VM ships bare Python with no site-packages and cannot see the Windows
+# `.venv`, so this installs pyproject.toml's runtime dependencies into
+# `.cowork-deps/`. After it, every Python call on the VM is:
 #
 #     PYTHONPATH=".cowork-deps:src" python3 -m job_finder.<module>
 #
-# `python3`, not `python`. Both exist on the VM; be explicit.
-#
-# The default set is pure Python with zero compiled extensions, so it survives a
-# Python minor-version bump:
-#
-#   httpx          liveness, and every ATS adapter
-#   tomli          settings, on 3.10 where tomllib does not exist
-#   reportlab      job_apply.render(). Not needed to import job_apply, only to
-#                  call it, which is why an import-only check passes without it
-#                  and the batch then fails at the render step.
-#   beautifulsoup4 builtin_discovery, which weekly.finish runs
-#
-#
-# The same set covers `python3 -m job_finder.cli`, the stand-in for the
-# `job-finder` console script.
+# Keep runtime dependencies pure Python, so the folder survives a Python
+# minor-version bump.
 set -eu
 
 cd "$(dirname "$0")/.."
-
-PACKAGES="httpx tomli reportlab beautifulsoup4"
 
 # python3 on the Cowork VM; Windows has only `python` (its python3 is a Store stub).
 PY=python3
 "$PY" -c "" 2>/dev/null || PY=python
 
-# shellcheck disable=SC2086
-"$PY" -m pip install --quiet --disable-pip-version-check --target .cowork-deps $PACKAGES
+# Parsed by hand: tomllib is 3.11+, and the VM runs 3.10 with nothing installed.
+"$PY" - <<'PYEOF'
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+text = Path("pyproject.toml").read_text(encoding="utf-8")
+block = re.search(r"^dependencies = \[(.*?)^\]", text, re.M | re.S).group(1)
+deps = re.findall(r'"([^"]+)"', block)
+subprocess.run([sys.executable, "-m", "pip", "install", "--quiet",
+                "--disable-pip-version-check", "--target", ".cowork-deps", *deps],
+               check=True)
+PYEOF
 
 # The path is set inside Python because PYTHONPATH's separator differs by OS.
 "$PY" -c "
