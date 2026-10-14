@@ -1,4 +1,4 @@
-"""Write the starting profile/ files that SETUP.md §3 defines.
+"""Write the starting profile/ files that SETUP.md defines.
 
 SETUP.md is the only place those files exist in the repo. Each one is a fenced
 block whose info string names its destination, for example a block opened with
@@ -70,7 +70,7 @@ def main() -> int:
     for p in kept:
         print(f"kept    {p.relative_to(settings.REPO_ROOT).as_posix()} (already exists)")
     print("\nEvery written file still holds example values. Edit them in the order "
-          "SETUP.md §3 lists, then run `python -m job_finder.profile_check`.")
+          "SETUP.md lists, then run `python -m job_finder.profile_check`.")
     return 0
 
 

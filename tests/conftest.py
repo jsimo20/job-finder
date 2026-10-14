@@ -1,18 +1,21 @@
-"""Every test runs against the fictional fixture geography, so results are
-identical whether or not a personal config/pipeline.toml exists locally."""
+"""Every test runs against the fixture config, so results are identical
+whether or not a personal config/pipeline.toml exists locally."""
 from __future__ import annotations
+
+import os
+from pathlib import Path
+
+FIXTURE = Path(__file__).parent / "fixtures" / "pipeline_test.toml"
+# Set before any job_finder import: taxonomy reads the config at import time.
+os.environ["JOB_FINDER_PIPELINE_CONFIG"] = str(FIXTURE)
 
 try:
     import tomllib
 except ModuleNotFoundError:  # Python 3.10
     import tomli as tomllib
-from pathlib import Path
+import pytest  # noqa: E402  (after the env var above)
 
-import pytest
-
-from job_finder import filter as filter_mod
-
-FIXTURE = Path(__file__).parent / "fixtures" / "pipeline_test.toml"
+from job_finder import filter as filter_mod  # noqa: E402
 
 
 @pytest.fixture(autouse=True, scope="session")

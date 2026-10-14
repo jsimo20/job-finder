@@ -50,11 +50,12 @@ class Listing:
 
 
 def settings() -> dict:
-    """[discovery] from the pipeline config; an absent table disables discovery."""
+    """[discovery] from the pipeline config; no sites or no category disables it."""
     cfg = pipeline_config().get("discovery", {})
+    category = cfg.get("builtin_category", "")
     return {
-        "sites": list(cfg.get("builtin_sites", [])),
-        "category": cfg.get("builtin_category", "product-management"),
+        "sites": list(cfg.get("builtin_sites", [])) if category else [],
+        "category": category,
         "max_age_days": int(cfg.get("max_age_days", 7)),
         "max_pages": int(cfg.get("max_pages", 60)),
     }
@@ -148,7 +149,7 @@ def is_generic_title(title: str) -> bool:
     """True for a title that is only a level and the role noun ("Senior Product
     Manager"): many unrelated boards list it, so matching it proves little."""
     core = filters.SENIORITY_KEEP_RE.sub(" ", title)
-    role_noun = pipeline_config().get("extraction", {}).get("role_noun", "product manager")
+    role_noun = pipeline_config().get("extraction", {}).get("role_noun", "")
     return _normalize_title(core) == _normalize_title(role_noun)
 
 

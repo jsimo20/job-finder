@@ -154,3 +154,27 @@ def test_custom_text_rules_parse_and_filter():
         {"label": "no-value"},
     ]}
     assert build_custom_text(profile) == [(r"zip.{0,10}code", "99999")]
+
+
+def test_example_config_carries_no_ones_search():
+    # A fresh install falls back to this file; any real title or industry in it
+    # would quietly become the new user's search.
+    import re
+    cfg = settings.pipeline_config(settings.PIPELINE_EXAMPLE_PATH)
+    for key, value in cfg["titles"].items():
+        for pattern in value if isinstance(value, list) else [value]:
+            assert "REPLACE" in pattern, key
+            assert not re.search(pattern, "Senior Product Manager", re.I), key
+    assert "REPLACE" in cfg["extraction"]["role_noun"]
+    assert set(cfg["domains"]) == {"replace_me"}
+    assert set(cfg["stages"]) == {"replace_me"}
+    assert cfg["filters"]["comp_floor"] == 0
+
+
+def test_profile_check_refuses_placeholders(tmp_path, monkeypatch):
+    from job_finder import profile_check
+    config = tmp_path / "pipeline.toml"
+    config.write_text(settings.PIPELINE_EXAMPLE_PATH.read_text(encoding="utf-8"),
+                      encoding="utf-8")
+    monkeypatch.setattr(settings, "PIPELINE_CONFIG_PATH", config)
+    assert any("REPLACE" in issue for issue in profile_check.check())

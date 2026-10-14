@@ -1,5 +1,5 @@
 """Profile doctor: verify the gitignored profile/ is filled in, not still the
-starting values from SETUP.md §3. Run it after setup and before the first real application:
+starting values from SETUP.md. Run it after setup and before the first real application:
 
     python -m job_finder.profile_check
 
@@ -13,7 +13,7 @@ import sys
 from . import settings
 from .job_apply import load_config
 
-# Values that mean "still the starting values from SETUP.md §3".
+# Values that mean "still the starting values from SETUP.md".
 PLACEHOLDERS = {
     "name": {"alex sample", ""},
     "email_domains": {"example.com"},
@@ -26,20 +26,22 @@ def check() -> list[str]:
     issues: list[str] = []
 
     if not settings.PIPELINE_CONFIG_PATH.exists():
-        issues.append("config/pipeline.toml not found — running on the example "
-                      "defaults. Copy config/pipeline.example.toml and edit it "
-                      "for your own search (SETUP.md §4)")
+        issues.append("config/pipeline.toml not found — copy "
+                      "config/pipeline.example.toml and write every value from "
+                      "the user's own search")
+    elif "REPLACE" in settings.PIPELINE_CONFIG_PATH.read_text(encoding="utf-8"):
+        issues.append("config/pipeline.toml still holds REPLACE placeholders — "
+                      "write each one from the user's own search")
 
     from . import state
     if not state.list_companies():
-        issues.append("no tracked companies in data/state.db — import a starter list: "
-                      "`job-finder companies import config/companies.example.json` "
-                      "then build your own (SETUP.md §5)")
+        issues.append("no tracked companies in data/state.db — build the list with "
+                      "the manage-companies skill")
 
     real = settings.PROFILE_DIR / "profile.toml"
     if not real.exists():
         return ["profile/profile.toml does not exist — run `python -m job_finder.profile_init` "
-                "and fill it in (SETUP.md §3)"]
+                "and fill it in (SETUP.md)"]
 
     profile = settings.load_profile(real)
     ident = profile.get("identity", {})
@@ -64,7 +66,7 @@ def check() -> list[str]:
                       ("standard_answers.md", config.standard_answers_md)):
         if not path.exists():
             issues.append(f"{doc} not found at {path} — the tailoring and autofill "
-                          "workflows read it (SETUP.md §3)")
+                          "workflows read it (SETUP.md)")
         else:
             # ": <FILL IN" = a field whose VALUE is still the placeholder;
             # prose that merely mentions <FILL IN> (the file's own
@@ -74,14 +76,14 @@ def check() -> list[str]:
     if not config.writing_style.exists():
         issues.append(f"writing-style.md not found at {config.writing_style} — the "
                       "fact-checker reads it as the voice authority and the letter "
-                      "linter enforces a subset of it (SETUP.md §3)")
+                      "linter enforces a subset of it (SETUP.md)")
     if not config.claims_ground_truth.exists():
         issues.append(f"claims_ground_truth.md not found at {config.claims_ground_truth} — "
-                      "the tailoring and fact-checking workflows read it (SETUP.md §3)")
+                      "the tailoring and fact-checking workflows read it (SETUP.md)")
     if not config.resume_skill.exists():
         issues.append(f"resume generator not found at {config.resume_skill} — "
                       "`python -m job_finder.profile_init` writes it; then edit its "
-                      "RESUME_DATA block (SETUP.md §3)")
+                      "RESUME_DATA block (SETUP.md)")
     if not (settings.PROFILE_DIR / "fit_profile.md").exists():
         issues.append("profile/fit_profile.md missing — the digest triager ranks roles with it")
 
@@ -94,12 +96,12 @@ def main() -> int:
         print("profile check: PASS — pipeline config, identity, driving docs, "
               "and generator all present.")
         print("Reminder: the tracked-company list lives in data/state.db — "
-              "`job-finder companies list` to inspect it (SETUP.md §5).")
+              "`job-finder companies list` to inspect it (the manage-companies skill).")
         return 0
     print(f"profile check: {len(issues)} issue(s)\n")
     for issue in issues:
         print(f"  - {issue}")
-    print("\nFix these before running the apply workflow. See SETUP.md §3.")
+    print("\nFix these before running the apply workflow. See SETUP.md.")
     return 1
 
 
