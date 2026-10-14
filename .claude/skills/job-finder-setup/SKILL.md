@@ -27,10 +27,12 @@ their files.
    starting files newer versions need and touches nothing that exists.
 2. `PYTHONPATH=".cowork-deps:src" python3 -m job_finder.profile_check`. For
    each issue, do only the step below that covers it.
-3. List the scheduled tasks. Keep a **Job finder weekly run** that has this
-   folder. Otherwise create it as step 6 says, on the old task's day and time
-   if there was one, deleting any copy without a folder; then have them allow
-   the folder as step 6 says.
+3. List the scheduled tasks. Any task whose prompt names `job-finder-weekly`
+   is a job-finder run, whatever its name; older versions made them daily,
+   under other names, sometimes without a folder. Leave exactly one: weekly,
+   named **Job finder weekly run**, with this folder. If none qualifies,
+   create it as step 6 says, at the old task's hour and weekday, then delete
+   every other job-finder run and have them allow the folder as step 6 says.
 4. Tell them in one line that they are up to date.
 
 ## How to talk
