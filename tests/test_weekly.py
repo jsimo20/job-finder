@@ -91,20 +91,20 @@ def test_status_is_due_with_no_stamp_and_after_the_interval(tmp_path):
     fresh = datetime.now(timezone.utc).isoformat(timespec="seconds")
     state.set_meta(weekly.LAST_RUN_KEY, fresh, sdb)
     assert weekly.status(sdb)["due"] is False
-    old = (datetime.now(timezone.utc) - timedelta(days=weekly.INTERVAL_DAYS)).isoformat(
+    old = (datetime.now(timezone.utc) - timedelta(days=weekly.MIN_DAYS)).isoformat(
         timespec="seconds")
     state.set_meta(weekly.LAST_RUN_KEY, old, sdb)
     assert weekly.status(sdb)["due"] is True
 
 
-def test_a_weekly_trigger_is_due_although_the_last_run_finished_after_it_fired(tmp_path):
+def test_a_late_catch_up_does_not_skip_the_next_weekly_trigger(tmp_path):
     sdb = tmp_path / "state.db"
-    # Fired at 09:00, finished at 09:40; next week's trigger fires at 09:00.
-    finished = datetime.now(timezone.utc) - timedelta(days=7) + timedelta(minutes=40)
-    state.set_meta(weekly.LAST_RUN_KEY, finished.isoformat(timespec="seconds"), sdb)
+    # Monday 09:00 missed, caught up Tuesday 15:00; next Monday 09:00 is 5.75 days on.
+    caught_up = datetime.now(timezone.utc) - timedelta(days=5, hours=18)
+    state.set_meta(weekly.LAST_RUN_KEY, caught_up.isoformat(timespec="seconds"), sdb)
     assert weekly.status(sdb)["due"] is True
-    six_days = datetime.now(timezone.utc) - timedelta(days=6)
-    state.set_meta(weekly.LAST_RUN_KEY, six_days.isoformat(timespec="seconds"), sdb)
+    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+    state.set_meta(weekly.LAST_RUN_KEY, yesterday.isoformat(timespec="seconds"), sdb)
     assert weekly.status(sdb)["due"] is False
 
 
