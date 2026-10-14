@@ -257,14 +257,10 @@ must say to request access first. A folder can only be set when a task is create
 to fix a task without one, delete it and create it again. After creating it,
 list the scheduled tasks and confirm the folder shows on this one.
 
-**Then start its first run now, while they are here.** A task asks for
-permission to use the folder when a run starts, not when it is created; if
-nobody answers, an unattended run stalls. Start the run (a run-now tool if you
-have one, otherwise ask them to open **Scheduled**, pick the task and click
-**Run now**) and tell them: "A box will ask to let this task use your folder on
-every run. Click Allow." This run is their first weekly search, so it takes a
-while and they can leave it. Before you finish, ask them to check that the
-task's page lists the folder as allowed.
+**Then have them allow the folder once.** Tell them: "Click **Scheduled** in
+the left sidebar, open **Job finder weekly run**, click the warning sign next
+to the folder, and allow it." Until they do, a run requests access itself,
+which usually succeeds.
 
 With no scheduled-task tool, tell them to say, in this folder: "every Monday
 at 9am, read `.claude/skills/job-finder-weekly/SKILL.md` in this folder and
