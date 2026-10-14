@@ -245,13 +245,15 @@ the scheduled task with:
 | Field | Value |
 |---|---|
 | Name | Job finder weekly run |
-| Prompt | `Read .claude/skills/job-finder-weekly/SKILL.md in this folder and follow it.` |
+| Prompt | `If <folder path> is not connected, request access to it first. Then read .claude/skills/job-finder-weekly/SKILL.md in it and follow it.` with `<folder path>` replaced by the Folders value |
 | Schedule | Weekly on their day and hour, in their time zone |
 | Folders | This folder's path on their computer, as Cowork shows the connected folder |
 | Requires local device | On |
 
 **The folder is required.** A task without it runs in the cloud and cannot see
-the engine, so nothing runs. A folder can only be set when a task is created:
+the engine, so nothing runs. A run can still start before the folder is
+connected, and the procedure lives inside the folder, so the prompt itself
+must say to request access first. A folder can only be set when a task is created:
 to fix a task without one, delete it and create it again. After creating it,
 list the scheduled tasks and confirm the folder shows on this one.
 
