@@ -55,8 +55,7 @@ plugin again when a release note says to.
 
 ## For developers
 
-- [SETUP.md](SETUP.md): developer setup in Claude Code, and the profile
-  starting files every user begins from.
-- [DEVELOPMENT.md](DEVELOPMENT.md): architecture, tests, evals and releasing.
+- [DEVELOPMENT.md](DEVELOPMENT.md): setup in Claude Code, architecture, tests,
+  evals and releasing.
 - [CLAUDE.md](CLAUDE.md): the rules and tools every agent working in the
   folder follows.
