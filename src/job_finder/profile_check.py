@@ -40,8 +40,9 @@ def check() -> list[str]:
 
     real = settings.PROFILE_DIR / "profile.toml"
     if not real.exists():
-        return ["profile/profile.toml does not exist — run `python -m job_finder.profile_init` "
-                "and fill it in"]
+        issues.append("profile/profile.toml does not exist — run "
+                      "`python -m job_finder.profile_init` and fill it in")
+        return issues
 
     profile = settings.load_profile(real)
     ident = profile.get("identity", {})

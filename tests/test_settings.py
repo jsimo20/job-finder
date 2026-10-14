@@ -177,4 +177,7 @@ def test_profile_check_refuses_placeholders(tmp_path, monkeypatch):
     config.write_text(settings.PIPELINE_EXAMPLE_PATH.read_text(encoding="utf-8"),
                       encoding="utf-8")
     monkeypatch.setattr(settings, "PIPELINE_CONFIG_PATH", config)
-    assert any("REPLACE" in issue for issue in profile_check.check())
+    monkeypatch.setattr(settings, "PROFILE_DIR", tmp_path / "profile")
+    issues = profile_check.check()
+    assert any("REPLACE" in issue for issue in issues)
+    assert any("profile.toml does not exist" in issue for issue in issues)
