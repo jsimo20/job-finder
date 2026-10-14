@@ -69,7 +69,7 @@ d. **Draft the cover letter** as a dict matching `job_apply._render_cover_letter
      "recipient": "<Company> Hiring Team\n<Company>\n<City, State>",
      "salutation": "To the <Company> Hiring Team,",
      "paragraphs": ["...", "...", "...", "..."],  # 3–5 paragraphs
-     "closing": "Thanks,",
+     "closing": "<profile.toml [letters] closing, else the writing-style file's sign-off>",
      "title_subtitle": "<must match the title subtitle in resume_data>",
    }
    ```

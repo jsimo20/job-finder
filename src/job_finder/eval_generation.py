@@ -259,7 +259,7 @@ Produce your fact-check report in the documented output format."""
 
 
 def grade_one(letter: dict[str, Any], report: str) -> dict[str, Any]:
-    findings = letter_linter.lint(letter)
+    findings = letter_linter.lint(letter, letter_linter.letter_rules(settings.load_profile()))
     lint_critical = [f for f in findings if f.severity == letter_linter.CRITICAL]
     check_critical = eval_factcheck.severity_at_least(report, "CRITICAL")
     return {

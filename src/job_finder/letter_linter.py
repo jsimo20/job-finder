@@ -15,16 +15,16 @@ Two severities:
 - **CRITICAL** blocks. A flat ban with no legitimate exception: em-dashes, an
   opening that announces a reaction, a feeling verb,
   a trope from the guide's §2, a banned hedge word, a sentence whose content is
-  the absence of experience (§15), a closing that is not "Thanks,", a final
-  sentence that is not the fixed one.
+  the absence of experience (§15), and, when the user's profile sets them in
+  `[letters]`, a sign-off or final sentence other than theirs.
 - **ADVISORY** never blocks. Patterns with real exceptions, where the value is a
   human glance rather than a verdict. Trailing-gloss candidates live here because
   "which is what started my search" is correct and matches the same shape.
 
 Paragraph chaining is ADVISORY on purpose. It encodes a procedure written on
 2026-08-25 and validated against one letter; it collects signal until there is
-enough of it to justify blocking on. The closing is not in that category: the
-final sentence is fixed text, so there is nothing to weigh.
+enough of it to justify blocking on. A configured sign-off and final sentence
+are not in that category: they are fixed text, so there is nothing to weigh.
 """
 from __future__ import annotations
 
@@ -186,11 +186,12 @@ def check_banned_words(letter: dict[str, Any]) -> list[Finding]:
     return out
 
 
-def check_closing(letter: dict[str, Any]) -> list[Finding]:
+def check_closing(letter: dict[str, Any], required: str | None) -> list[Finding]:
+    """The sign-off is the user's own when profile.toml [letters] sets one."""
     closing = str(letter.get("closing", "")).strip()
-    if closing and closing.rstrip(",") != "Thanks":
+    if required and closing and closing.rstrip(",") != required.strip().rstrip(","):
         return [Finding("wrong_closing", CRITICAL,
-                        f'"{closing}": the closing is always "Thanks,"', "closing")]
+                        f'"{closing}": the closing is always "{required}"', "closing")]
     return []
 
 
@@ -243,8 +244,6 @@ def check_paragraph_chain(letter: dict[str, Any]) -> list[Finding]:
     return out
 
 
-FINAL_LINE = "I look forward to discussing this opportunity in greater detail with you."
-
 # The close this replaced: one line naming the hook and asking a real question.
 # Across a stack of letters it was the tell, so it is now a violation rather than
 # the target.
@@ -256,8 +255,8 @@ CURIOSITY_CLOSE = re.compile(
 )
 
 
-def check_final_line(letter: dict[str, Any]) -> list[Finding]:
-    """The letter ends on one fixed sentence, verbatim, and nothing follows it."""
+def check_final_line(letter: dict[str, Any], required: str | None) -> list[Finding]:
+    """With profile.toml [letters] final_line set, the letter ends on it verbatim."""
     paras = paragraphs(letter)
     if not paras:
         return []
@@ -265,9 +264,9 @@ def check_final_line(letter: dict[str, Any]) -> list[Finding]:
     said = sentences(last_para)
     last = said[-1] if said else last_para
     out: list[Finding] = []
-    if last.strip().rstrip(".") != FINAL_LINE.rstrip("."):
+    if required and last.strip().rstrip(".") != required.strip().rstrip("."):
         out.append(Finding("wrong_final_line", CRITICAL,
-                           f'the last sentence must be "{FINAL_LINE}", not "{last[:60]}"',
+                           f'the last sentence must be "{required}", not "{last[:60]}"',
                            f"para {len(paras)}"))
     if match := CURIOSITY_CLOSE.search(last_para):
         out.append(Finding("curiosity_close", CRITICAL,
@@ -526,15 +525,23 @@ def check_sentence_variety(letter: dict[str, Any]) -> list[Finding]:
 
 CHECKS = (
     check_em_dash, check_opening, check_feeling_verbs,
-    check_tropes, check_banned_words, check_gap_disclaimer, check_closing,
+    check_tropes, check_banned_words, check_gap_disclaimer,
     check_gloss, check_paragraph_chain, check_known_new,
     check_dramatic_pivot, check_first_person_reach, check_sentence_variety,
-    check_final_line,
 )
 
 
-def lint(letter: dict[str, Any]) -> list[Finding]:
-    return [f for check in CHECKS for f in check(letter)]
+def letter_rules(profile: dict[str, Any]) -> dict[str, str]:
+    """The user's own sign-off and final sentence, from profile.toml [letters]."""
+    letters = profile.get("letters", {})
+    return {k: letters[k] for k in ("closing", "final_line") if letters.get(k)}
+
+
+def lint(letter: dict[str, Any], rules: dict[str, str] | None = None) -> list[Finding]:
+    rules = rules or {}
+    return ([f for check in CHECKS for f in check(letter)]
+            + check_closing(letter, rules.get("closing"))
+            + check_final_line(letter, rules.get("final_line")))
 
 
 def load_letter(folder: Path) -> dict[str, Any] | None:
@@ -581,12 +588,14 @@ def main(argv: Iterable[str] | None = None) -> int:
                     help="print only the letters that block")
     args = ap.parse_args(list(argv) if argv is not None else None)
 
+    from . import settings
+    rules = letter_rules(settings.load_profile())
     if args.folder:
         folders = [args.folder]
     else:
         root = args.applications_dir
         if root is None:
-            from . import job_apply, settings
+            from . import job_apply
             root = job_apply.load_config(settings.require_profile()).applications_dir
         folders = find_folders(root, args.date)
 
@@ -595,7 +604,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         letter = load_letter(folder)
         if letter is None:
             continue
-        results.append((folder.name, lint(letter)))
+        results.append((folder.name, lint(letter, rules)))
     return report(results, quiet=args.quiet)
 
 
