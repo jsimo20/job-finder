@@ -1,6 +1,6 @@
 ---
 name: job-finder-weekly
-description: The whole weekly cycle in one unattended run, with no API key. Polls every tracked board, reads the surviving job descriptions in-session, scores them, writes the digest, then runs the apply batch over the top N roles and reports once. Idempotent on a seven-day stamp, so a daily trigger is a no-op until a run is due. Accepts --top N (default 3), --apply-only, --pipeline-only, --force.
+description: The whole weekly cycle in one unattended run, with no API key. Polls every tracked board, reads the surviving job descriptions in-session, scores them, writes the digest, then runs the apply batch over the top N roles and reports once. Idempotent on a seven-day stamp, so an early or repeated trigger spends nothing until a run is due. Accepts --top N (default 3), --apply-only, --pipeline-only, --force.
 ---
 
 Run the weekly cycle end to end without stopping to ask. Built for a session
@@ -47,7 +47,7 @@ PYTHONPATH=".cowork-deps:src" python3 -m job_finder.weekly status
 days old. **If it is false and `--force` was not given, stop here**: report in
 one line that the run was not due, and spend nothing else. The apply batch runs
 only after a fresh digest, or when the user asks with `--apply-only`. This is
-what makes a daily trigger safe: six days out of seven the run costs nothing.
+what makes an early or repeated trigger safe: it costs nothing until a run is due.
 
 ## 2. Collect
 

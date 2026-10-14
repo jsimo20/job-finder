@@ -241,15 +241,16 @@ Either way, go back to step 3. `profile_check` must exit 0 before you go on.
 
 Ask which weekday morning they usually have the Claude app open. If a
 scheduled-task tool is available, create a task attached to this folder,
-daily at that hour, with the prompt:
+weekly on that day at that hour, with the prompt:
 
 > Read `.claude/skills/job-finder-weekly/SKILL.md` in this folder and follow it.
 
-Otherwise tell them to say, in this folder: "every weekday at 9am, read
-`.claude/skills/job-finder-weekly/SKILL.md` in this folder and follow it".
+Otherwise tell them to say, in this folder: "every Monday at 9am, read
+`.claude/skills/job-finder-weekly/SKILL.md` in this folder and follow it",
+with their day and hour.
 
-Tell them it only runs while the Claude app is open, that a missed day costs
-nothing, and that each run also updates the tool.
+Tell them it only runs while the Claude app is open, that they can say "run my
+weekly job search" any time instead, and that each run updates the tool first.
 
 ## 7. Hand off
 

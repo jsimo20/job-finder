@@ -81,7 +81,7 @@ Users run it in Cowork from a folder that `scripts/self_update.sh` keeps on
 ## Releasing
 
 **Merging to `main` deploys every procedure, code and doc change**: installs
-update from `main` on each daily scheduled run. Stage before merging.
+update from `main` at the start of each scheduled weekly run. Stage before merging.
 
 - **Stage in this checkout.** Connect it in Cowork with the branch checked out;
   a full checkout never self-updates, so Cowork reads the branch. Run the

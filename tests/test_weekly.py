@@ -97,6 +97,17 @@ def test_status_is_due_with_no_stamp_and_after_the_interval(tmp_path):
     assert weekly.status(sdb)["due"] is True
 
 
+def test_a_weekly_trigger_is_due_although_the_last_run_finished_after_it_fired(tmp_path):
+    sdb = tmp_path / "state.db"
+    # Fired at 09:00, finished at 09:40; next week's trigger fires at 09:00.
+    finished = datetime.now(timezone.utc) - timedelta(days=7) + timedelta(minutes=40)
+    state.set_meta(weekly.LAST_RUN_KEY, finished.isoformat(timespec="seconds"), sdb)
+    assert weekly.status(sdb)["due"] is True
+    six_days = datetime.now(timezone.utc) - timedelta(days=6)
+    state.set_meta(weekly.LAST_RUN_KEY, six_days.isoformat(timespec="seconds"), sdb)
+    assert weekly.status(sdb)["due"] is False
+
+
 def test_finish_renders_a_digest_and_stamps_the_run(jobs_db, tmp_path):
     sdb = tmp_path / "state.db"
     # discover=False: the default scans the configured Built In sites over the network.
