@@ -1,6 +1,6 @@
 ---
 name: job-finder
-description: Everything job-finder does after setup. Use for "run my weekly job search", a scheduled weekly run, "work through the top roles", "add companies: <names>", "remove <company>", "find me more companies", "help me apply to this job" with a link or a pasted job description, "prep me for my interview", "mock interview", or "change my settings". Takes the user's request as its argument.
+description: Everything job-finder does after setup. Use for "run my weekly job search", a scheduled weekly run, "work through the top roles", "add companies: Acme, Globex", "remove a company", "find me more companies", "help me apply to this job" with a link or a pasted job description, "prep me for my interview", "mock interview", or "change my settings". Takes the user's request as its argument.
 ---
 
 # job-finder

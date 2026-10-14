@@ -1,6 +1,6 @@
 ---
 name: interview-prep
-description: Prepare the user for an interview on a role they applied to, then run a mock interview with feedback after every answer. Re-reads the job description, the resume and cover letter they sent, and their ground truth, so nothing they rehearse goes beyond what they can defend. Use when the user says "prep me for my interview", "I have an interview with <company>", "mock interview", "practice the panel", or "help me get ready for the call".
+description: Prepare the user for an interview on a role they applied to, then run a mock interview with feedback after every answer. Re-reads the job description, the resume and cover letter they sent, and their ground truth, so nothing they rehearse goes beyond what they can defend. Use when the user says "prep me for my interview", "I have an interview with Acme", "mock interview", "practice the panel", or "help me get ready for the call".
 ---
 
 # interview-prep

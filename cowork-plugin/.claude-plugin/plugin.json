@@ -1,7 +1,7 @@
 {
   "name": "job-finder",
-  "version": "1.0.2",
-  "description": "Two launchers for the job-finder engine in a connected folder. job-finder-setup installs the engine and hands over to its setup procedure; job-finder routes everything after that (the weekly run, the company list, applying to a pasted job, interview prep) to the procedure files in the folder, which update themselves. Bump the version only when a launcher, the manifest or .mcp.json changes; the version shown in Cowork's plugin list is the only way to see whether the installed snapshot matches the repo.",
+  "version": "1.0.3",
+  "description": "Two launchers for the job-finder engine in a connected folder. job-finder-setup installs the engine and hands over to its setup procedure. job-finder routes everything after that (the weekly run, the company list, applying to a pasted job, interview prep) to procedure files in the folder, which update themselves.",
   "author": {
     "name": "job-finder"
   }
