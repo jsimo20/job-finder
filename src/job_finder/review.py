@@ -61,7 +61,7 @@ def run(db_path: Path = db.DEFAULT_DB_PATH) -> dict:
     with db.connect(db_path) as conn:
         rows = applied.drop_applied(conn.execute(PENDING_SQL).fetchall())
     if not rows:
-        print("No pending roles. Run `job-finder run` first or wait for the next digest.")
+        print("No pending roles. Run the weekly cycle first or wait for the next digest.")
         return stats
 
     print(f"\n{len(rows)} pending role(s). {HELP}\n")

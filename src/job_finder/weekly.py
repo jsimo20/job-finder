@@ -1,12 +1,9 @@
-"""The weekly pipeline, split so a Cowork session can do the extraction itself.
+"""The weekly pipeline, split so the driving session does the extraction itself.
 
-`job-finder run` does collect, extract, score and digest in one process with an
-API key. This module exposes the same stages as subcommands with a gap in the
-middle: `collect` writes the surviving job descriptions out as JSON lines, the
-driving session (or its subagents) reads them against `prompt` and writes the
-answers back, `import-extractions` stores them, and `finish` scores, renders
-the digest and stamps the run. No API key, and nothing here imports `anthropic`
-or `python-dotenv`, so it runs under `PYTHONPATH=".cowork-deps:src" python3`.
+`collect` writes the surviving job descriptions out as JSON lines, the session
+(or its subagents) reads them against `prompt` and writes the answers back,
+`import-extractions` stores them, and `finish` scores, renders the digest and
+stamps the run. No API key; it runs under `PYTHONPATH=".cowork-deps:src" python3`.
 
     python -m job_finder.weekly status
     python -m job_finder.weekly collect

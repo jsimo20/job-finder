@@ -1,8 +1,7 @@
 #!/usr/bin/env sh
 # Make job_finder runnable on a Cowork device VM. Idempotent; run from anywhere.
 #
-#     sh scripts/bootstrap_cowork_deps.sh          # what the batch needs
-#     sh scripts/bootstrap_cowork_deps.sh --cli    # also the job-finder console script
+#     sh scripts/bootstrap_cowork_deps.sh
 #
 # Why this exists. `job_finder` lives under `src/`, and the only editable install
 # is a .pth file inside the Windows `.venv`, which the Linux VM Cowork mounts
@@ -28,24 +27,14 @@
 #                  and the batch then fails at the render step.
 #   beautifulsoup4 builtin_discovery, which weekly.finish runs
 #
-# --cli adds anthropic and python-dotenv, which `job_finder.cli` imports at module
-# level. That is the only way to reach `job-finder digest-archive list` and
-# `job-finder applications archive` on a machine with no console script:
 #
-#     PYTHONPATH=".cowork-deps:src" python3 -m job_finder.cli applications archive
-#
-# It is not the default because anthropic pulls
-# `jiter.cpython-310-x86_64-linux-gnu.so`, which locks this directory to CPython
-# 3.10 on linux/x86_64 and makes it a rebuild rather than a copy after an upgrade.
-# Prefer running the CLI on Windows, where the editable install already works.
+# The same set covers `python3 -m job_finder.cli`, the stand-in for the
+# `job-finder` console script.
 set -eu
 
 cd "$(dirname "$0")/.."
 
 PACKAGES="httpx tomli reportlab beautifulsoup4"
-if [ "${1:-}" = "--cli" ]; then
-    PACKAGES="$PACKAGES anthropic python-dotenv"
-fi
 
 # shellcheck disable=SC2086
 python3 -m pip install --quiet --disable-pip-version-check --target .cowork-deps $PACKAGES
