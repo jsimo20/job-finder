@@ -1052,17 +1052,16 @@ Two checks exist, and you need both:
   drafting anything. It asks the running server rather than reading a file, so it
   is the only check that catches a stale install on its own.
 
-The plugin holds two launchers and no procedure. `job-finder-setup` installs
-the engine and hands over to `.claude/skills/job-finder-setup/SKILL.md`.
-`/job-finder` routes everything after that through
-`.claude/skills/job-finder/SKILL.md`: the weekly run ("run my weekly job
-search", or `/job-finder run my weekly job search --top 3`), the company list,
-applying to one pasted job, and interview prep. **The repo has to be the
-mounted folder for that session.** Every route first runs
-`scripts/self_update.sh`, which overlays the latest `main` unless the folder
-is a full git checkout; your profile, settings and data are never touched.
-The weekly run takes `--no-update` to skip it, and is safe to schedule daily:
-the pipeline half runs only when the last one is seven or more days old.
+The plugin holds one launcher, `job-finder-setup`, which installs the engine
+and hands over to `.claude/skills/job-finder-setup/SKILL.md`. Everything after
+that is a skill in the folder, which Cowork lists to the model, so you ask in
+plain words: "run my weekly job search", "add companies: Acme", "help me apply
+to this job" with a link, "prep me for my interview with Acme". **The repo has
+to be the connected folder for that chat.** The weekly run updates the folder
+to the latest `main` first (`scripts/self_update.sh`) unless it is a full git
+checkout; your profile, settings and data are never touched. It takes
+`--no-update` to skip that, and is safe to schedule daily: the pipeline half
+runs only when the last one is seven or more days old.
 
 Three things worth knowing before you rely on it:
 

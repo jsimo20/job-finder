@@ -29,7 +29,7 @@ sh scripts/self_update.sh
 It prints one line. It skips a developer checkout (a `.git` without
 `.git/shallow`, which `git pull` owns) and a folder already updated this
 hour; every other install came from the setup skill and updates only here or
-through the `job-finder` router. The archive is verified before anything is
+through the setup launcher. The archive is verified before anything is
 extracted, and extraction only writes tracked files, so `profile/`, `data/`,
 `.env`, `config/pipeline.toml` and `.cowork-deps/` are never touched.
 
