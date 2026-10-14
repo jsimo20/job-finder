@@ -36,10 +36,16 @@ cd "$(dirname "$0")/.."
 
 PACKAGES="httpx tomli reportlab beautifulsoup4"
 
-# shellcheck disable=SC2086
-python3 -m pip install --quiet --disable-pip-version-check --target .cowork-deps $PACKAGES
+# python3 on the Cowork VM; Windows has only `python` (its python3 is a Store stub).
+PY=python3
+"$PY" -c "" 2>/dev/null || PY=python
 
-PYTHONPATH=".cowork-deps:src" python3 -c "
+# shellcheck disable=SC2086
+"$PY" -m pip install --quiet --disable-pip-version-check --target .cowork-deps $PACKAGES
+
+# The path is set inside Python because PYTHONPATH's separator differs by OS.
+"$PY" -c "
+import sys; sys.path[:0] = ['.cowork-deps', 'src']
 import job_finder.liveness, job_finder.letter_linter, job_finder.form_inventory
 import job_finder.job_apply, job_finder.fill_grader, job_finder.weekly
 import job_finder.builtin_discovery  # weekly.finish imports it lazily
