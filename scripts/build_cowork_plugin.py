@@ -16,6 +16,8 @@ folder as a context folder instead; a connected folder is just files on disk, so
 from __future__ import annotations
 
 import argparse
+import json
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -30,6 +32,31 @@ REQUIRED = [
 ]
 
 
+MAX_PLUGIN_DESCRIPTION = 500
+_TAG = re.compile(r"<[^>]*>")
+_DESCRIPTION = re.compile(r"^description:\s*(.*)$", re.MULTILINE)
+
+
+def validation_errors(plugin_dir: Path = PLUGIN_DIR) -> list[str]:
+    """The checks Cowork's uploader rejects a plugin for, run before zipping.
+
+    The uploader only reports them after the user has downloaded the zip, so a
+    failure here is a release nobody can install.
+    """
+    errors = []
+    manifest = json.loads((plugin_dir / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+    if len(manifest.get("description", "")) > MAX_PLUGIN_DESCRIPTION:
+        errors.append(f"plugin description must be at most {MAX_PLUGIN_DESCRIPTION} characters")
+    for skill in sorted(plugin_dir.glob("skills/*/SKILL.md")):
+        match = _DESCRIPTION.search(skill.read_text(encoding="utf-8"))
+        name = skill.parent.name
+        if not match:
+            errors.append(f"skill {name!r}: SKILL.md has no description")
+        elif _TAG.search(match.group(1)):
+            errors.append(f"skill {name!r}: SKILL.md description cannot contain XML tags")
+    return errors
+
+
 def build(out_dir: Path) -> Path:
     missing = [p for p in REQUIRED if not (PLUGIN_DIR / p).exists()]
     if missing:
@@ -37,6 +64,9 @@ def build(out_dir: Path) -> Path:
             f"cowork-plugin/ is incomplete, missing: {', '.join(map(str, missing))}")
     if not list(PLUGIN_DIR.glob("skills/*/SKILL.md")):
         raise SystemExit("cowork-plugin/skills/<name>/SKILL.md not found")
+    errors = validation_errors()
+    if errors:
+        raise SystemExit("Cowork would reject this plugin:\n  " + "\n  ".join(errors))
 
     out_dir.mkdir(parents=True, exist_ok=True)
     archive = out_dir / ARCHIVE_NAME
