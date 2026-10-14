@@ -1,9 +1,4 @@
-"""Tests for job_apply.render() and helpers.
-
-tailor() is intentionally not unit-tested — it makes a real LLM call and
-the deterministic /job-apply flow runs the tailoring conversationally
-instead. We test the pure deterministic surface.
-"""
+"""Tests for job_apply.render() and helpers."""
 from __future__ import annotations
 
 import json

@@ -21,7 +21,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Iterable
 
 MIN_CONFIDENCE = 0.9
 
