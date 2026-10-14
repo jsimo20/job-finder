@@ -149,6 +149,12 @@ veteran = ""
 disability = ""
 pronouns = ""
 
+[letters]
+# Optional. When set, every cover letter uses exactly these and letter_linter
+# blocks one that does not.
+# closing = "Thanks,"
+# final_line = "I look forward to talking with you."
+
 [paths]
 # All optional. Without overrides, every driving doc is expected inside
 # profile/ itself and rendered applications land in profile/applications/.
@@ -219,8 +225,8 @@ Two things to know before you do:
   rule here does not lift it there: no em-dashes, no opening that announces a
   reaction, no feeling verbs, the trope ban list, no sentence that volunteers a
   gap, no paragraph that disowns the text before it ("None of that is why I am
-  writing"), the closing "Thanks," and the fixed final sentence in the Voice
-  mode section.
+  writing"), and the sign-off and final sentence when `profile.toml`
+  `[letters]` sets them.
   Change those in `src/job_finder/letter_linter.py` alongside this file.
 
 The style sample is `personal_statement.md`: when a draft does not sound like
@@ -463,13 +469,10 @@ yes, it is not about this role's subject yet.**
 
 ### Closing
 
-- The last sentence of the final paragraph is exactly:
-
-  > I look forward to discussing this opportunity in greater detail with you.
-
-  Verbatim, every time, nothing after it. It closes the final paragraph rather
-  than standing as its own. Do not end on a curiosity question; across a stack of letters the
-  constructed question is the tell.
+- End the final paragraph on a plain, forward-looking sentence, not a curiosity
+  question; across a stack of letters the constructed question is the tell. To
+  use the same final sentence every time, set `[letters] final_line` in
+  `profile.toml` and the linter enforces it verbatim.
 - Never name a gap. No sentence whose content is the absence of experience:
   not a domain that is not your background, not a requirement you miss, not a
   part of the role you would be learning. The reader has the resume and the
@@ -487,7 +490,8 @@ yes, it is not about this role's subject yet.**
 - Logistics as a human line, never a selling point.
 - First person singular. Work you directed is "I", even when the source says
   "we" about the team.
-- Sign off "Thanks,". No "Sincerely," or "Best regards,".
+- One sign-off for every letter. Set `[letters] closing` in `profile.toml` to
+  have the linter enforce it.
 
 ---
 

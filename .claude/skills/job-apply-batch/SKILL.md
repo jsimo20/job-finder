@@ -294,7 +294,8 @@ PYTHONPATH=".cowork-deps:src" python3 -m job_finder.letter_linter --date <today>
 - **0** — no critical violation.
 - **4** — a letter breaks a flat ban (em-dash, a paragraph opening on "I", an
   opening that announces a reaction rather than stating a fact about the company,
-  a feeling verb, a trope, a closing that is not "Thanks,"). **Re-draft that letter and re-render
+  a feeling verb, a trope, a sign-off or final line other than the profile's
+  `[letters]` ones). **Re-draft that letter and re-render
   before filling it.** These are zero-judgment rules, so there is nothing to
   weigh and nothing to ask about: fix it and carry on. Never fill a form with a
   letter that failed, and never skip the role instead of fixing it.
@@ -334,7 +335,7 @@ PYTHONPATH=".cowork-deps:src" python3 scripts/lint_form_answers.py --date <today
     [{"question": "Why Anthropic?", "paragraphs": ["...", "..."]}]
 
 Same exit codes, same checks, minus the two that are letter-specific (a form
-answer has no "Thanks," closing and no fixed final line). **4 means a voice rule
+answer has no sign-off and no final line). **4 means a voice rule
 broke: fix the text and re-paste it into the form before moving on.**
 
 Then, after the last fill:

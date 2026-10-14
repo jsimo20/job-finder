@@ -7,6 +7,9 @@ import pytest
 
 from job_finder import letter_linter as L
 
+# A user's own sign-off and final sentence, as profile.toml [letters] sets them.
+RULES = {"closing": "Thanks,",
+         "final_line": "I look forward to discussing this opportunity in greater detail with you."}
 
 CLEAN = {
     "closing": "Thanks,",
@@ -26,11 +29,11 @@ CLEAN = {
 
 
 def severities(letter, check_name):
-    return [f.severity for f in L.lint(letter) if f.check == check_name]
+    return [f.severity for f in L.lint(letter, RULES) if f.check == check_name]
 
 
 def test_the_reference_letter_has_no_critical_findings():
-    assert [f for f in L.lint(CLEAN) if f.severity == L.CRITICAL] == []
+    assert [f for f in L.lint(CLEAN, RULES) if f.severity == L.CRITICAL] == []
 
 
 def test_em_dash_is_critical():
@@ -53,8 +56,8 @@ def test_opening_a_paragraph_on_i_is_allowed():
         "Following that, I took on the router firmware backlog.",
         "I look forward to discussing this opportunity in greater detail with you.",
     ]}
-    assert [f for f in L.lint(letter) if f.severity == L.CRITICAL] == []
-    assert not any(f.check == "paragraph_starts_with_i" for f in L.lint(letter))
+    assert [f for f in L.lint(letter, RULES) if f.severity == L.CRITICAL] == []
+    assert not any(f.check == "paragraph_starts_with_i" for f in L.lint(letter, RULES))
     assert not hasattr(L, "check_paragraph_opening_i")
 
 
@@ -135,7 +138,7 @@ def test_a_legitimate_which_clause_still_reports_as_a_candidate():
     letter = {**CLEAN, "paragraphs": [
         "The Directory is public. Sample Co does not support remote work, which is "
         "what started my search."]}
-    findings = [f for f in L.lint(letter) if f.check == "gloss_candidate"]
+    findings = [f for f in L.lint(letter, RULES) if f.check == "gloss_candidate"]
     assert findings and all(f.severity == L.ADVISORY for f in findings)
 
 
@@ -215,7 +218,7 @@ def test_paragraph_chaining_never_blocks():
         "Golf remains stubbornly difficult for me. I look forward to discussing "
         "this opportunity in greater detail with you.",
     ]}
-    assert [f.code for f in L.lint(letter) if f.severity == L.CRITICAL] == []
+    assert [f.code for f in L.lint(letter, RULES) if f.severity == L.CRITICAL] == []
 
 
 def test_exit_codes(tmp_path, capsys):
@@ -318,7 +321,7 @@ def test_gap_disclaimer_reports_the_paragraph_it_found():
         "The Directory makes the trust case in public.",
         "Trust and safety is not my background, though.",
     ]}
-    found = [f for f in L.lint(letter) if f.check == "gap_disclaimer"]
+    found = [f for f in L.lint(letter, RULES) if f.check == "gap_disclaimer"]
     assert len(found) == 1
     assert found[0].where == "para 2"
 
@@ -573,3 +576,16 @@ def test_the_short_sentence_test_is_not_machine_checkable():
         "front of the queue. That is the work."]}
     for letter in (adds_logic, adds_feeling):
         assert severities(letter, "no_short_sentence") == []
+
+
+def test_sign_off_and_final_line_are_enforced_only_when_the_profile_sets_them():
+    letter = {**CLEAN, "closing": "Best regards,",
+              "paragraphs": CLEAN["paragraphs"][:-1] + ["Getting to work on that means leaving Sample Co."]}
+    assert not any(f.check in {"wrong_closing", "wrong_final_line"} for f in L.lint(letter))
+    found = {f.check for f in L.lint(letter, RULES) if f.severity == L.CRITICAL}
+    assert {"wrong_closing", "wrong_final_line"} <= found
+
+
+def test_letter_rules_read_profile_letters_table():
+    assert L.letter_rules({}) == {}
+    assert L.letter_rules({"letters": {"closing": "Cheers,"}}) == {"closing": "Cheers,"}
