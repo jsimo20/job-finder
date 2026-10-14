@@ -52,7 +52,7 @@ PYTHONPATH=".cowork-deps:src" python3 -m job_finder.profile_init
 ```
 
 It writes the starting files into `profile/` and never overwrites one that
-exists. Replace every example value with their real answers, in the order
+exists; `profile-files.md` beside this file says what each one drives. Replace every example value with their real answers, in the order
 below. **Read back every file you write.**
 
 ### 2a. Resume, the ground truth

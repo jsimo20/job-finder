@@ -1,5 +1,5 @@
 """Profile doctor: verify the gitignored profile/ is filled in, not still the
-starting values from SETUP.md. Run it after setup and before the first real application:
+starting values profile_init wrote. Run it after setup and before the first real application:
 
     python -m job_finder.profile_check
 
@@ -13,7 +13,7 @@ import sys
 from . import settings
 from .job_apply import load_config
 
-# Values that mean "still the starting values from SETUP.md".
+# Values that mean "still the starting values profile_init wrote".
 PLACEHOLDERS = {
     "name": {"alex sample", ""},
     "email_domains": {"example.com"},
@@ -41,7 +41,7 @@ def check() -> list[str]:
     real = settings.PROFILE_DIR / "profile.toml"
     if not real.exists():
         return ["profile/profile.toml does not exist — run `python -m job_finder.profile_init` "
-                "and fill it in (SETUP.md)"]
+                "and fill it in"]
 
     profile = settings.load_profile(real)
     ident = profile.get("identity", {})
@@ -66,7 +66,7 @@ def check() -> list[str]:
                       ("standard_answers.md", config.standard_answers_md)):
         if not path.exists():
             issues.append(f"{doc} not found at {path} — the tailoring and autofill "
-                          "workflows read it (SETUP.md)")
+                          "workflows read it")
         else:
             # ": <FILL IN" = a field whose VALUE is still the placeholder;
             # prose that merely mentions <FILL IN> (the file's own
@@ -76,14 +76,14 @@ def check() -> list[str]:
     if not config.writing_style.exists():
         issues.append(f"writing-style.md not found at {config.writing_style} — the "
                       "fact-checker reads it as the voice authority and the letter "
-                      "linter enforces a subset of it (SETUP.md)")
+                      "linter enforces a subset of it")
     if not config.claims_ground_truth.exists():
         issues.append(f"claims_ground_truth.md not found at {config.claims_ground_truth} — "
-                      "the tailoring and fact-checking workflows read it (SETUP.md)")
+                      "the tailoring and fact-checking workflows read it")
     if not config.resume_skill.exists():
         issues.append(f"resume generator not found at {config.resume_skill} — "
                       "`python -m job_finder.profile_init` writes it; then edit its "
-                      "RESUME_DATA block (SETUP.md)")
+                      "RESUME_DATA block")
     if not (settings.PROFILE_DIR / "fit_profile.md").exists():
         issues.append("profile/fit_profile.md missing — the digest triager ranks roles with it")
 
@@ -101,7 +101,7 @@ def main() -> int:
     print(f"profile check: {len(issues)} issue(s)\n")
     for issue in issues:
         print(f"  - {issue}")
-    print("\nFix these before running the apply workflow. See SETUP.md.")
+    print("\nFix these before running the apply workflow.")
     return 1
 
 

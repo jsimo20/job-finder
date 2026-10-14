@@ -6,7 +6,6 @@
 # Developer-only files: kept in the repo, left out of the archive every user
 # installs and updates from (setup and scripts/self_update.sh download it).
 # Evals stay out so a user's agent never reads a grader's expected answers.
-DEVELOPMENT.md                          export-ignore
 tests/                                  export-ignore
 cowork-plugin/                          export-ignore
 src/job_finder/eval_*.py                export-ignore
