@@ -11,8 +11,9 @@ stamps the run. No API key; it runs under `PYTHONPATH=".cowork-deps:src" python3
     python -m job_finder.weekly import-extractions data/weekly/extractions.jsonl
     python -m job_finder.weekly finish
 
-A run is due when the last stamped run is `INTERVAL_DAYS` or more days old, so a
-daily trigger that calls `status` first is a no-op six days out of seven.
+A run is due when the last stamped run is at least `INTERVAL_DAYS` minus
+`SLACK_DAYS` old. The stamp is written when a run finishes, so a weekly trigger
+fires slightly less than seven days after it; the slack keeps that run due.
 """
 from __future__ import annotations
 
@@ -25,6 +26,7 @@ from pathlib import Path
 from . import collect, db, digest, extract, score, state
 
 INTERVAL_DAYS = 7
+SLACK_DAYS = 0.5
 LAST_RUN_KEY = "last_weekly_run"
 WEEKLY_DIR = Path(__file__).resolve().parents[2] / "data" / "weekly"
 PENDING_PATH = WEEKLY_DIR / "pending_extractions.jsonl"
@@ -39,7 +41,7 @@ def status(state_db: Path = state.DEFAULT_STATE_DB) -> dict:
     if last is None:
         return {"last_run": None, "days_since": None, "due": True}
     days = (_now() - datetime.fromisoformat(last)).total_seconds() / 86400
-    return {"last_run": last, "days_since": round(days, 1), "due": days >= INTERVAL_DAYS}
+    return {"last_run": last, "days_since": round(days, 1), "due": days >= INTERVAL_DAYS - SLACK_DAYS}
 
 
 def run_collect(db_path: Path = db.DEFAULT_DB_PATH, state_db: Path = state.DEFAULT_STATE_DB,
