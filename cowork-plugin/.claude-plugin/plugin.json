@@ -1,6 +1,6 @@
 {
   "name": "job-finder",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "The setup launcher for the job-finder engine. job-finder-setup installs the engine into a connected folder and hands over to its setup procedure. Everything after setup (the weekly run, the company list, applying to a pasted job, interview prep) is a skill in that folder, which updates itself.",
   "author": {
     "name": "job-finder"

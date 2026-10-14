@@ -1,6 +1,6 @@
 ---
 name: job-finder-setup
-description: Set up job-finder for a new person from inside Cowork, with no terminal, no git and no Python knowledge on their side. Installs the engine into the connected folder, builds their profile and search settings through a plain-language interview, builds and probes a company list they only have to prune, and proves the first collect runs. Use when someone says "set me up", "set up job finder", "get started", or has just installed this plugin.
+description: Set up job-finder for a new person from inside Cowork, with no terminal, no git and no Python knowledge on their side. Installs the engine into the connected folder, builds their profile and search settings through a plain-language interview, builds and probes a company list they only have to prune, and proves the first collect runs. Use when someone says "set me up", "update me", "set up job finder", "get started", or has just installed this plugin.
 ---
 
 # job-finder-setup
@@ -95,8 +95,9 @@ Tell them the engine is in place. One line.
 
 ## 2. Hand over
 
-Read `$ROOT/.claude/skills/job-finder-setup/SKILL.md` and follow it from its
-step 1. Everything about the profile, the search, the companies, the
+Read `$ROOT/.claude/skills/job-finder-setup/SKILL.md` and follow it: its
+"Updating an existing folder" section when `$ROOT/profile/profile.toml`
+exists, otherwise from its step 1. Everything about the profile, the search, the companies, the
 schedule and the hand-off is there.
 
 If that file is missing after step 1, the download did not complete. Say

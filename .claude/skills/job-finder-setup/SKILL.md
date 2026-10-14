@@ -15,6 +15,23 @@ theirs to tell you.
   `.venv/Scripts/python.exe` with no prefix in Claude Code on Windows.
 - Every step skips what already exists, so a second run resumes. A user
   changing one thing starts at the step that covers it.
+- **`profile/profile.toml` already exists** ("update me", or "set me up"
+  again): follow "Updating an existing folder" below, not steps 1 to 7.
+
+## Updating an existing folder
+
+The launcher has already updated the engine. Never re-ask anything already in
+their files.
+
+1. `PYTHONPATH=".cowork-deps:src" python3 -m job_finder.profile_init` adds
+   starting files newer versions need and touches nothing that exists.
+2. `PYTHONPATH=".cowork-deps:src" python3 -m job_finder.profile_check`. For
+   each issue, do only the step below that covers it.
+3. List the scheduled tasks. Keep a **Job finder weekly run** that has this
+   folder. Otherwise create it as step 6 says, on the old task's day and time
+   if there was one, deleting any copy without a folder; then have them allow
+   the folder as step 6 says.
+4. Tell them in one line that they are up to date.
 
 ## How to talk
 

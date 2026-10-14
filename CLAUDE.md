@@ -35,7 +35,7 @@ to one procedure:
 | Add, remove, list or find more companies; stop one being auto-applied | `.claude/skills/manage-companies/SKILL.md` |
 | Interview prep or a mock interview | `.claude/skills/interview-prep/SKILL.md` |
 | Change profile, resume, voice, titles, places, pay or schedule | `.claude/skills/job-finder-setup/SKILL.md`, from the step that covers it |
-| Update the engine now | `sh scripts/self_update.sh` |
+| "Update me" | `sh scripts/self_update.sh`, then "Updating an existing folder" in `.claude/skills/job-finder-setup/SKILL.md` |
 
 - **Python:** `PYTHONPATH=".cowork-deps:src" python3` from the folder root on
   Cowork (build a missing `.cowork-deps/` with
