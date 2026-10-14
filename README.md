@@ -55,7 +55,7 @@ plugin again when a release note says to.
 
 ## For developers
 
-- [DEVELOPMENT.md](DEVELOPMENT.md): setup in Claude Code, architecture, tests,
+- [DEVELOPMENT.md](DEVELOPMENT.md): architecture, tests,
   evals and releasing.
 - [CLAUDE.md](CLAUDE.md): the rules and tools every agent working in the
   folder follows.
