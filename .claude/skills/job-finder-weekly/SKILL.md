@@ -44,10 +44,10 @@ PYTHONPATH=".cowork-deps:src" python3 -m job_finder.weekly status
 ```
 
 `due` is true when no run has ever finished or the last one is seven or more
-days old. **If it is false and `--force` was not given, skip to step 5** (the
-apply batch still runs against the existing digest) and say in the report that
-the pipeline was not due. This is what makes a daily trigger safe: six days
-out of seven the pipeline half costs nothing.
+days old. **If it is false and `--force` was not given, stop here**: report in
+one line that the run was not due, and spend nothing else. The apply batch runs
+only after a fresh digest, or when the user asks with `--apply-only`. This is
+what makes a daily trigger safe: six days out of seven the run costs nothing.
 
 ## 2. Collect
 

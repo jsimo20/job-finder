@@ -97,6 +97,9 @@ to one procedure:
   `journal_mode = TRUNCATE`; the default mode deletes its journal, a Cowork
   folder mount blocks the delete, and the database wedges.
 - **Don't spend tokens unasked**: no pipeline run to test a change.
+- **A scheduled run never repeats work.** When the weekly pipeline is not due it
+  stops after the update; it never re-prepares roles from a digest it already
+  worked.
 
 ## Tools
 
