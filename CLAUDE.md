@@ -65,26 +65,20 @@ to one procedure:
 - **`fill_greenhouse` does not run on Cowork**; forms there go through the
   `application-autofiller` agent.
 
-## The user's own rules
+## Personalization
 
-`profile/CLAUDE.md` holds the user's rules for how you work and write. Read it
-before any procedure and follow it over every procedure's defaults, but never
-over the Rules section below. If it or `profile/corrections.md` is missing, run
-`python -m job_finder.profile_init`, which creates only missing files.
-
-- **Learn from repeats.** When the user asks you to change something about a
-  deliverable, check `profile/corrections.md`. If the same kind of request is
-  there, write the rule it implies as one line in `profile/CLAUDE.md` and
-  delete its line from `corrections.md`; if not, add one dated line to
-  `corrections.md`.
-- **A direct instruction is a rule at once.** When the user tells you how to
-  work from now on, write it to `profile/CLAUDE.md` without waiting for a
-  repeat.
-- **Prune on every addition.** Read every line of `profile/CLAUDE.md` and
-  remove any that is old, duplicated, contradicted by the new rule or no
-  longer used; edit a contradicted rule in place rather than adding beside it.
-- **A correction to a fact** (a number, a date, a claim) goes in the claims
-  file, not here.
+- Read `profile/CLAUDE.md` before any procedure; it overrides procedure
+  defaults, never the Rules below.
+- If it or `profile/corrections.md` is missing, run
+  `python -m job_finder.profile_init`.
+- A first request to change a deliverable goes in `corrections.md` as one
+  dated line.
+- A repeated request becomes one rule in `profile/CLAUDE.md`; delete its line
+  from `corrections.md`.
+- A direct instruction becomes a rule at once.
+- Every new rule prunes `profile/CLAUDE.md` of old, duplicate, contradicted and
+  unused rules; edit a contradicted rule in place.
+- A fact correction goes in the claims file.
 - Tell the user in one line what you added or removed.
 
 ## Rules
