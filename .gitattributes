@@ -1,5 +1,20 @@
-# Shell scripts run under sh on Linux (Docker, the Cowork device VM), which
+# Shell scripts run under sh on Linux (the Cowork device VM), which
 # mounts this Windows checkout as-is. With core.autocrlf=true and no pin, a
 # checkout writes CRLF and dash fails on the first line with `set: Illegal option -`.
 *.sh       text eol=lf
-Dockerfile text eol=lf
+
+# Developer-only files: kept in the repo, left out of the archive every user
+# installs and updates from (setup and scripts/self_update.sh download it).
+# Evals stay out so a user's agent never reads a grader's expected answers.
+DEVELOPMENT.md                          export-ignore
+tests/                                  export-ignore
+cowork-plugin/                          export-ignore
+src/job_finder/eval_*.py                export-ignore
+scripts/build_cowork_plugin.py          export-ignore
+scripts/score_writing.py                export-ignore
+scripts/transition_sample.py            export-ignore
+.claude/agents/python-code-reviewer.md  export-ignore
+.claude/context/ai-agent-security.md    export-ignore
+.claude/context/form-fill-evals.md      export-ignore
+.claude/context/google-python-style.md  export-ignore
+.claude/context/pr-review-checklist.md  export-ignore

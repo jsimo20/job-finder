@@ -1,4 +1,4 @@
-"""SETUP.md §3 is the only definition of a new user's profile/, so it is tested here."""
+"""SETUP.md is the only definition of a new user's profile/, so it is tested here."""
 from __future__ import annotations
 
 try:

@@ -5,41 +5,33 @@ description: The setup procedure for job-finder, from the profile interview onwa
 
 # job-finder-setup
 
-You are setting up a job-search tool for someone who may never have used a
-terminal, git, or an AI tool before. They will not see the commands you run,
-only your messages. Everything technical is yours to do; everything personal
-is theirs to tell you.
+The user may never have used a terminal or an AI tool. They see your messages,
+not your commands. Everything technical is yours; everything personal is
+theirs to tell you.
 
-The plugin's setup launcher has already confirmed the folder, checked the
-network and put the engine in it. `$ROOT` is that folder, the repo root.
-**Every Python command is prefixed `PYTHONPATH=".cowork-deps:src" python3`,
-run from `$ROOT`.**
-
-Every step skips what already exists, so a second run resumes rather than
-restarts. A user coming back to change one thing starts at the step that
-covers it.
+- `$ROOT` is the connected folder, the repo root. The launcher has already
+  checked the network and installed the engine there.
+- **Python:** `PYTHONPATH=".cowork-deps:src" python3` from `$ROOT` on Cowork;
+  `.venv/Scripts/python.exe` with no prefix in Claude Code on Windows.
+- Every step skips what already exists, so a second run resumes. A user
+  changing one thing starts at the step that covers it.
 
 ## How to talk
 
-- Plain words. No "repo", "clone", "regex", "TOML", "env var". Say "folder",
-  "copy", "pattern", "settings file".
-- One question at a time. Wait for the answer before the next one.
-- Say what you are about to do in one line, do it, then say what happened in
-  one line. Never paste command output at them.
-- Nothing they tell you leaves the connected folder. Say that once, near the
-  start, in one sentence.
-- Never ask for a password, an API key, or a payment detail in chat.
+- Plain words: "folder", "copy", "pattern", "settings file". Never "repo",
+  "clone", "regex", "TOML", "env var".
+- One question at a time; wait for the answer.
+- One line before an action, one line after. Never paste command output.
+- Say once, near the start, that nothing they tell you leaves the folder.
+- Never ask for a password, an API key or a payment detail.
 
 ## 1. The form-filling browser
 
-The browser that fills applications runs on their computer, not in your
-environment, and it needs Node.js there. You cannot see their computer, but you can see the result: **look through your
-own tool list for any tool whose name contains `playwright`** (the exact
-prefix varies by surface; match on the word, never on a fixed prefix).
+Look through your own tool list for any tool whose name contains `playwright`.
 
-- **Present:** say nothing about it and carry on.
-- **Absent:** Node.js is not installed on their computer, and nothing you can
-  run will install it for them. Walk them through it, one message, no jargon:
+- **Present:** say nothing; carry on.
+- **Absent:** Node.js is missing on their computer. Send this, then stop and
+  wait:
 
   > One small install first, so I can fill application forms for you later.
   > Open https://nodejs.org in your browser and click the big green button
@@ -48,137 +40,102 @@ prefix varies by surface; match on the word, never on a fixed prefix).
   > completely and open it again, come back to this folder, and tell me
   > "set me up" again. I will pick up where we left off.
 
-  Then stop and wait. Every step below skips what already exists, so the
-  second run resumes rather than restarts. If the tools are still absent on
-  the second run, say that form filling will not work on this computer yet
-  and that everything else will, and carry on; the weekly run prepares every
-  application either way and leaves the form for them to fill by hand.
+  Still absent on the second run: say form filling will not work on this
+  computer yet and everything else will, and carry on.
 
-Never ask them what Node is, whether they have it, or to run anything. The
-tool list is the only check, and the install is the only ask.
+Never ask what Node is, whether they have it, or to run anything.
 
-## 2. Build their profile
-
-Create the starting files:
+## 2. Their profile
 
 ```sh
 PYTHONPATH=".cowork-deps:src" python3 -m job_finder.profile_init
 ```
 
-That writes `profile/profile.toml`, `profile/resume_master.md`,
-`profile/personal_statement.md`, `profile/standard_answers.md`,
-`profile/fit_profile.md`, `profile/claims_ground_truth.md`,
-`profile/writing-style.md`, `profile/qa_checklist.md` and
-`profile/generate_resume.py`, each holding example values. Your job is to
-replace the examples with their real answers, file by file, through
-conversation. The order below matters: later files are checked against
-earlier ones.
-
-**After every file you write, read it back and confirm the content landed.**
-A write that silently fails here looks identical to one that worked.
+It writes the starting files into `profile/` and never overwrites one that
+exists. Replace every example value with their real answers, in the order
+below. **Read back every file you write.**
 
 ### 2a. Resume, the ground truth
 
 Ask them to drop their current resume into the folder (PDF, Word or text).
-Read it. Draft `profile/resume_master.md` from it: every role, dates, bullets
-and skills as written, nothing added, nothing rounded. Show them the draft in
-chat and ask what is wrong or missing. Only after they confirm, write it.
+Draft `profile/resume_master.md` from it: every role, date, bullet and skill
+as written, nothing added, nothing rounded. Show the draft, ask what is wrong
+or missing, and write it only after they confirm. Tell them in one sentence
+that every later claim is checked against this file.
 
-This file is the fact-checker's authority: anything a later cover letter says
-that is not in it gets flagged. Say that to them in one sentence, so they know
-why you are being exact.
-
-Then fill the `RESUME_DATA` block in `profile/generate_resume.py` from the
-same confirmed content. Edit only that block.
+Then fill only the `RESUME_DATA` block of `profile/generate_resume.py` from the
+same content.
 
 ### 2b. Identity and form answers
 
-From the resume plus a few questions, fill `profile/profile.toml`:
+`profile/profile.toml`:
 
-- `[identity]`: name, email, phone, LinkedIn, GitHub if any, city, and the
-  one-line `title_subtitle` (ask: "how would you describe yourself in one
-  line at the top of a cover letter?").
-- `[answers]`: ask two questions in plain words. "Are you legally allowed to
-  work in your country without a visa sponsor?" and "Would you need a company
-  to sponsor a visa now or later?" Set `work_authorized` and
-  `requires_sponsorship` from the answers; set `country`.
-- `[eeo]`: ask whether they want the voluntary self-identification questions
-  (gender, ethnicity, veteran status, disability) answered automatically on
-  forms. If no, leave every value `""`, which means they answer by hand.
+- `[identity]`: name, email, phone, LinkedIn, GitHub if any, city, and
+  `title_subtitle` (ask: "how would you describe yourself in one line at the
+  top of a cover letter?").
+- `[answers]`: ask "Are you legally allowed to work in your country without a
+  visa sponsor?" and "Would you need a company to sponsor a visa now or
+  later?" Set `work_authorized`, `requires_sponsorship` and `country`.
+- `[eeo]`: ask whether they want the voluntary questions (gender, ethnicity,
+  veteran status, disability) answered automatically. If no, leave every
+  value `""`.
 
-Then `profile/standard_answers.md`: the contact block from the same values,
-the work authorization lines, and their stock answers to "how did you hear
-about us", "willing to work hybrid or onsite", "earliest start date". Ask for
-each.
+`profile/standard_answers.md`: the contact block, the work-authorization
+lines, and their answers to "how did you hear about us", "willing to work
+hybrid or onsite" and "earliest start date". Ask for each.
 
 ### 2c. Their voice
 
-Ask them to write, in chat, in their own words, a few paragraphs about their
-work: what they did, what they are looking for, what they are proud of. Tell
-them not to polish it. Put it into `profile/personal_statement.md` as they
-wrote it, fixing nothing but obvious typos. The cover letters are checked
-against this for tone, so a polished version would make every letter sound
-unlike them.
-
-Leave `profile/writing-style.md` as shipped.
+Ask them to write a few unpolished paragraphs in chat: what they did, what
+they want next, what they are proud of. Save them to
+`profile/personal_statement.md` as written, fixing only obvious typos. Leave
+`profile/writing-style.md` as shipped.
 
 ### 2d. What a good role looks like
 
-Ask: what kind of companies, what kind of work, what would make them say no.
-Write `profile/fit_profile.md` from the answers in the shipped file's four
-sections (strong positive, mild positive, mild negative, strong negative).
+Ask what kind of companies and work they want and what would make them say
+no. Write `profile/fit_profile.md` in its four sections (strong positive, mild
+positive, mild negative, strong negative).
 
 ### 2e. Claims they can defend
 
-`profile/claims_ground_truth.md` holds the numbers and skills a draft may use
-and how each must be framed. Seed it from the confirmed resume: every metric,
-with its exact figure; every skill, under the shipped file's source-pool
-headings. Ask about any figure that looks rounded ("is that exactly 40%, or
-about 40%?") and record what they say.
-
-### 2f. Prove the profile
-
-```sh
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.profile_check
-```
-
-Exit 0 is the bar. Fix every listed issue before going on; the apply tooling
-refuses to run on a profile with placeholders in it. The check also wants
-`config/pipeline.toml` and a company list, which the next two steps create,
-so run it again after step 4.
+Seed `profile/claims_ground_truth.md` from the confirmed resume: every metric
+with its exact figure, every skill under the source-pool headings. Ask about
+any figure that looks rounded ("exactly 40%, or about 40%?") and record the
+answer.
 
 ## 3. Their search
 
-Copy `config/pipeline.example.toml` to `config/pipeline.toml` and edit it from
-an interview. Ask, in this order:
+```sh
+cp config/pipeline.example.toml config/pipeline.toml
+```
 
-1. **Where they live** and the country they can work from. Sets
-   `[location] country` and the commute notes.
-2. **Which cities or regions** they would take an office job in, and roughly
-   how far each is from home. Sets `in_scope_patterns` and the three commute
-   tiers. Write the patterns from the place names they give, including state
-   or county abbreviations the way job boards print them.
-3. **Remote roles.** Scope is always their geography plus remote roles they
-   can take. If they are in the US, leave `remote_exclude_patterns` as
-   shipped. If not, edit it to exclude the US and markets they cannot work in,
-   and set `remote_require_patterns` to the words boards use for their market
-   (a UK user: `uk`, `united kingdom`, `europe`, `emea`), because a bare
-   "Remote" on most boards means US-only.
-4. **Job titles.** Ask what titles they would apply to, what adjacent titles
-   share words but are a different job, and what level they are at. Sets
-   `[titles]` and `[extraction] role_noun` / `senior_scope`. Write the
-   patterns from their words.
-5. **Industries and company types** they want, weighted. Sets `[domains.*]`
-   and `[stages.*]`; replace the shipped product-management examples
-   entirely. Each definition is one concrete line, because the extraction
-   prompt reads it.
-6. **Pay.** The lowest annual base they would accept and its currency. Sets
-   `comp_floor`, `currency`, `currency_symbol` and the two
-   `comp_score_thresholds` above it.
+Every value marked `REPLACE` is a placeholder that matches nothing. **Write
+each one from their answers; leave none, and never fill one from the example
+or from what you would guess.** Ask, in this order:
 
-Leave `[discovery]` as shipped for now; step 4 fills it.
+1. **Where they live** and the country they can work from: `[location]
+   country` and the commute notes.
+2. **Cities or regions** they would take an office job in, and roughly how far
+   each is from home: `in_scope_patterns` and the three tiers, written from
+   the place names they give, with the state or county abbreviations boards
+   print.
+3. **Remote roles.** In the US, leave `remote_exclude_patterns` as shipped.
+   Elsewhere, exclude the US and markets they cannot work in, and set
+   `remote_require_patterns` to the words boards use for their market (UK:
+   `uk`, `united kingdom`, `europe`, `emea`).
+4. **Job titles and level.** The titles they would apply to, adjacent titles
+   that are a different job, and their level: every `[titles]` pattern,
+   `[extraction] role_noun` and `senior_scope`, and `yoe_main_queue_max` /
+   `untitled_min_yoe` from their years of experience.
+5. **Industries and kinds of company**, each weighted 1 to 5: one
+   `[domains.<key>]` table per industry and one `[stages.<key>]` per company
+   type, replacing `replace_me`. Each definition is one concrete line.
+6. **Pay.** Their lowest acceptable annual base and currency: `comp_floor`,
+   `currency`, `currency_symbol`, and two `comp_score_thresholds` above the
+   floor.
 
-Validate the file by importing the filter, which compiles every pattern:
+Leave `[discovery]` for step 4. Then check the patterns:
 
 ```sh
 PYTHONPATH=".cowork-deps:src" python3 -c "
@@ -188,25 +145,21 @@ for loc in ['<a city they named>', 'Remote', 'Remote - EMEA', '<a city they did 
 "
 ```
 
-Show them the four lines in plain words ("a role in X would be kept, a role
-in Y would be dropped") and adjust until it matches what they meant.
+Tell them in plain words which roles would be kept and which dropped, and
+adjust until it matches what they meant.
 
 ## 4. The companies
 
-They will not have 40 employer names in their head, so you build the list and
-they prune it.
+You build the list; they prune it.
 
-1. Ask for up to five employers they already admire or have applied to.
-   Optional; "none" is fine.
-2. Build 40 to 60 candidates yourself from what step 3 captured (industry,
-   company size, region, remote stance), seeded by any names they gave. Use
-   web search where this session has it; otherwise draw on what you know.
-   Over-generate on purpose: only companies on Greenhouse, Lever or Ashby
-   answer the probe below, and that is roughly half of any list.
-3. Show the list as plain names, grouped by what they do, and ask them to
-   strike any they would never want to work for. A yes or a no, never recall.
-4. Write the survivors one per line to `candidates.txt` in `$ROOT` and probe
-   which ones have a job board the engine can read:
+1. Ask for up to five employers they admire or have applied to ("none" is
+   fine).
+2. Build 40 to 60 candidates from step 3 (industry, company size, region,
+   remote stance), seeded by their names. Use web search where available.
+   About half of any list has a board the engine can read, so over-generate.
+3. Show the names grouped by what the companies do; ask them to strike any
+   they would never work for.
+4. Probe the survivors:
 
 ```sh
 PYTHONPATH=".cowork-deps:src" python3 scripts/discover_companies.py --file candidates.txt --json hits.json
@@ -217,20 +170,11 @@ print(state.import_companies(Path('hits.json')), 'companies tracked')
 "
 ```
 
-A company with no public board is not dropped and the user is never asked
-for a link. Find its careers page yourself: web search "<Name> careers" where
-this session has search, otherwise try the company's own site:
-
-```sh
-for u in https://<domain>/careers https://<domain>/jobs https://<domain>/join-us https://<domain>/about/careers; do
-  curl -fsSIL -o /dev/null -w "%{http_code} $u
-" "$u" 2>/dev/null
-done
-```
-
-Take the first page that answers 200 and plainly lists roles (fetch it and
-look; a 200 on a redirect to the home page is not a careers page). Add it as
-a manual check, which the digest surfaces every week for a hand look:
+A company with no board is kept as a manual check. Find its careers page
+yourself (web search "<Name> careers", or try `/careers`, `/jobs`,
+`/join-us`, `/about/careers` on its site; open it with Playwright if a plain
+fetch shows nothing). Take the first page that plainly lists roles; a
+redirect to the home page does not count. Never ask them for a link.
 
 ```sh
 PYTHONPATH=".cowork-deps:src" python3 -c "
@@ -240,57 +184,37 @@ state.upsert_company({'name': '<Name>', 'ats_provider': 'manual', 'ats_slug': No
 "
 ```
 
-Only a company whose careers page you genuinely cannot find is skipped, and
-that goes in one line at the end ("I could not find a jobs page for X and
-Y"), never as a question.
+List any company whose careers page you cannot find in one line at the end.
 
-**The floor is 25 companies with a board the engine polls** (`greenhouse`,
-`lever` or `ashby`; manual checks do not count). Three polled boards means an
-empty digest for weeks and the user will not know why. Under 25, run another
-round of suggestions and probe again, up to three rounds, without asking them
-for names.
+**At least 25 companies must have a readable board** (`greenhouse`, `lever` or
+`ashby`; manual checks do not count). Under 25, suggest and probe another
+round, up to three, without asking them for names.
 
-Then add the second source. Built In lists who is hiring by role in these
-US metros: Austin, Boston, Chicago, Colorado, Los Angeles, New York, San
-Francisco, Seattle (`https://www.builtin<metro>.com`, for example
-`builtincolorado.com`, `builtinnyc.com`, `builtinsf.com`), plus
-`https://builtin.com` nationally for remote roles. If one covers their
-metro, or they are remote-first:
+Then Built In, if a site covers their metro or they want remote roles: Austin,
+Boston, Chicago, Colorado, Los Angeles, New York, San Francisco, Seattle
+(`https://www.builtin<metro>.com`), or `https://builtin.com` for remote.
 
-1. Fetch `<site>/jobs` and read the category links (`/jobs/marketing`,
-   `/jobs/product-management`, `/jobs/design-ux`, `/jobs/sales`,
-   `/jobs/dev-engineering`, `/jobs/data-analytics`, `/jobs/finance`,
-   `/jobs/hr`, `/jobs/operations`, `/jobs/content`, ...). Pick the one that
-   names their role. If the city site does not answer, send the network
-   message from "Before anything", naming that site, and skip Built In.
+1. Fetch `<site>/jobs` and pick the category that names their role
+   (`marketing`, `product-management`, `design-ux`, `sales`,
+   `dev-engineering`, `data-analytics`, `finance`, `hr`, `operations`,
+   `content`, ...). If the site does not answer, skip Built In.
 2. Set `[discovery] builtin_sites = ["<site>"]` and `builtin_category =
-   "<slug>"` in `config/pipeline.toml`.
-3. Run discovery once now (about five minutes, zero tokens) and track every
-   specific match:
+   "<slug>"`.
+3. Run it once (about five minutes, zero tokens):
 
 ```sh
 PYTHONPATH=".cowork-deps:src" python3 -c "
 import json
-from job_finder import builtin_discovery, state
+from job_finder import builtin_discovery
 print(json.dumps(builtin_discovery.run(), indent=1))
 print('tracked', builtin_discovery.track_specific())
 "
 ```
 
-From then on every weekly run repeats the scan, tracks every company whose
-board lists the role by a specific title, and lists only the ambiguous ones
-in the digest for a yes or no.
-
-Tell them how many are tracked, split into boards the engine reads
-automatically and sites it will list for a weekly look. Numbers only; the
-mechanics above are yours.
-
-Delete `candidates.txt` and `hits.json` when done.
+Tell them how many companies are read automatically and how many are manual
+checks. Delete `candidates.txt` and `hits.json`.
 
 ## 5. Prove it works, for free
-
-Run the collect stage once. It polls every tracked board and applies the
-title and location filters; it spends nothing and needs no key:
 
 ```sh
 PYTHONPATH=".cowork-deps:src" python3 -c "
@@ -305,71 +229,49 @@ with db.connect(db.DEFAULT_DB_PATH) as c:
     for verdict, n in c.execute('select hard_filter_verdict, count(*) from postings group by 1 order by 2 desc'):
         print(n, verdict)
 "
+PYTHONPATH=".cowork-deps:src" python3 -m job_finder.profile_check
 ```
 
-Report in plain words: how many postings were read, how many passed the
-filters, and the three biggest reasons the rest were dropped. If `keep` is
-zero, the title or location patterns are wrong; go back to step 3 with them.
-If it is in the hundreds for a short company list, the title patterns are too
-loose.
-
-Run `profile_check` again; it must now pass.
+Tell them how many postings were read, how many passed, and the three biggest
+reasons the rest were dropped. Zero kept means the title or location patterns
+are wrong; hundreds kept from a short list means the titles are too loose.
+Either way, go back to step 3. `profile_check` must exit 0 before you go on.
 
 ## 6. Schedule the weekly run
 
-The weekly cycle is `.claude/skills/job-finder-weekly/SKILL.md`: it polls the boards, reads
-the new job descriptions here in Cowork, writes a digest, and prepares
-applications for the top roles, leaving every form open and unsubmitted for
-them to review. It needs no key and nothing installed. It is safe to call
-every day: it only does the pipeline half when the last run is seven or more
-days old.
-
-Ask which weekday morning they usually have the Claude app open. Then, if a
-scheduled-task tool is available in this session, create a task attached to
-this folder, daily at that hour, with the prompt:
+Ask which weekday morning they usually have the Claude app open. If a
+scheduled-task tool is available, create a task attached to this folder,
+daily at that hour, with the prompt:
 
 > Read `.claude/skills/job-finder-weekly/SKILL.md` in this folder and follow it.
 
-If no such tool is available, tell them to say to Claude, in this folder:
-"every weekday at 9am, read `.claude/skills/job-finder-weekly/SKILL.md` in
-this folder and follow it", and that Cowork will set it up.
+Otherwise tell them to say, in this folder: "every weekday at 9am, read
+`.claude/skills/job-finder-weekly/SKILL.md` in this folder and follow it".
 
-Say plainly: a task attached to a folder only runs while the Claude desktop
-app is open on this computer. A missed day costs nothing; the next open day
-catches up.
+Tell them it only runs while the Claude app is open, that a missed day costs
+nothing, and that each run also updates the tool.
 
 ## 7. Hand off
 
 Tell them, in this order and nothing more:
 
-1. What is in the folder now and that none of it is shared anywhere.
-2. How to run the weekly cycle by hand: open this folder in Cowork and say
-   "run my weekly job search". The first run reads
-   every job description the collect found, so it is the longest; later runs
-   read only what is new.
-3. How to come back: "change my settings" to change anything above; "add
-   companies: Acme, Globex" to track named employers; "find me more
-   companies" to run another round of suggestions. Say plainly that they
-   never need to send a link: a company without a readable board gets its
-   careers page found and listed for a weekly look.
-4. What the digest misses. Many large employers, and companies that do not
-   post on the common job boards, never show up as roles in the digest; they
-   appear only as careers-page links under **Manual check**, and nothing
-   searches those pages for them yet. When a role there interests them, they
-   paste its link or the job description into a chat in this folder and ask
-   for help applying, and Claude tailors the resume and cover letter from
-   their profile.
-5. Interview prep. When an application turns into an interview, they say "prep
-   me for my interview with <company>". Claude re-reads the job description,
-   the resume and letter they sent, writes a prep sheet, and runs a mock
-   interview with feedback after every answer.
+1. What is in the folder now, and that none of it is shared anywhere.
+2. To run the search by hand: open this folder in a chat and say "run my
+   weekly job search". The first run is the longest.
+3. To come back: "change my settings", "add companies: Acme, Globex", "find me
+   more companies".
+4. Large employers usually post on their own careers sites, which the search
+   cannot read. For one they care about, "add companies: <name>" lists its
+   careers page in the digest under **Manual check**; when a role there
+   interests them, they paste the link or description into a chat and ask for
+   help applying.
+5. When an application becomes an interview: "prep me for my interview with
+   <company>" builds a prep sheet and runs a mock interview.
 
 ## Hard rules
 
-- Never commit, push, or create anything on GitHub. The folder is theirs and
-  stays local.
+- Never commit, push or create anything on GitHub.
 - Never write personal data outside `$ROOT`.
-- Never ask for, repeat, or store a password, key or card number.
-- Never invent a fact for any profile file. If they did not say it, it is not
-  written; ask instead.
+- Never ask for, repeat or store a password, key or card number.
+- Never write a fact they did not tell you; ask instead.
 - A write you did not read back did not happen.
