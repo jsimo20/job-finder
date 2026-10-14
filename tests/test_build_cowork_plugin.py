@@ -28,6 +28,20 @@ def test_shipped_plugin_passes():
     assert build_cowork_plugin.validation_errors() == []
 
 
+def test_repo_skills_pass():
+    # Cowork lists these to the model for every user, so they meet the same bar.
+    assert build_cowork_plugin.skill_errors(REPO_ROOT / ".claude/skills") == []
+
+
+def test_skill_name_must_match_its_folder(tmp_path):
+    plugin = _plugin(tmp_path, description="Fine.", skill_description="Fine.")
+    skill = plugin / "skills/demo/SKILL.md"
+    skill.write_text(skill.read_text(encoding="utf-8").replace("name: demo", "name: other"),
+                     encoding="utf-8")
+    assert build_cowork_plugin.validation_errors(plugin) == [
+        "skill 'demo': SKILL.md name must match its folder"]
+
+
 def test_long_plugin_description_is_rejected(tmp_path):
     plugin = _plugin(tmp_path, description="a" * 501, skill_description="Fine.")
     assert build_cowork_plugin.validation_errors(plugin) == [
