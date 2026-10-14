@@ -1,12 +1,9 @@
 """Apply-prep: turn a posting row into a per-job folder with tailored resume,
 cover letter, standard answers, and apply notes.
 
-Two entry points:
-- tailor(posting_row): runs an LLM call to propose RESUME_DATA + cover letter
-  + why-this-matches. Used when called from a plain script (no Claude in loop).
-- render(posting_row, resume_data, cover_letter, why_this_matches): pure,
-  deterministic. Writes the per-job folder. Called by /job-apply after the
-  user approves the tailoring proposals shown by Claude.
+render(posting_row, resume_data, cover_letter, why_this_matches) is
+deterministic: it writes the per-job folder after the session has drafted and
+fact-checked the materials (.claude/skills/job-apply/SKILL.md).
 """
 from __future__ import annotations
 

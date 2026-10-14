@@ -39,7 +39,7 @@ config/pipeline.toml
 data/
 digests/
 
-# Personal profile — identity, EEO answers, driving docs. SETUP.md §3 defines
+# Personal profile — identity, EEO answers, driving docs. SETUP.md defines
 # its starting files. Never commit the real thing.
 profile/
 
