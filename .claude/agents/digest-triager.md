@@ -26,7 +26,7 @@ ls digests/ | sort | tail -1
 Read that file. `digests/` is gitignored working output and only exists after a local pipeline run, so if the directory is missing or empty, fall back to the digest archive in `data/state.db`:
 
 ```sh
-job-finder digest-archive show
+sh scripts/py -m job_finder.cli digest-archive show
 ```
 
 That prints the latest archived digest body (`--date YYYY-MM-DD` for a specific one). Parse its output the same way you would the file.
@@ -35,7 +35,7 @@ Either way, parse the main queue and stretch queue sections. Each role has: comp
 
 If neither a digest file nor an archived digest exists, report the absence and stop.
 
-Also run `job-finder no-auto list`. Any role whose company matches an entry (case-insensitive) still gets ranked and surfaced — the user wants the signal — but tag it `[MANUAL-ONLY]` in the output line and note the listed reason in its Fit sentence. The downstream apply command hard-blocks these; your job is to make the flag visible so the user isn't surprised.
+Also run `sh scripts/py -m job_finder.cli no-auto list`. Any role whose company matches an entry (case-insensitive) still gets ranked and surfaced — the user wants the signal — but tag it `[MANUAL-ONLY]` in the output line and note the listed reason in its Fit sentence. The downstream apply command hard-blocks these; your job is to make the flag visible so the user isn't surprised.
 
 ### 2. Score each pending role against the user's fit profile
 

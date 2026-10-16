@@ -20,11 +20,11 @@ Argument: `$ARGUMENTS`.
 
 - **A specific external_id** → jump straight to that role.
 - **`all`** → process every role in the pending queue, one at a time, in score order.
-- **Empty, `--top N`, or "what should I apply to"** → **Dispatch the `digest-triager` subagent** (Sonnet) with `top_n` = N (default 5). The agent reads the latest digest in `digests/` (falling back to `job-finder digest-archive show` when the directory is missing or empty — `digests/` is gitignored working output that only exists after a local pipeline run), ranks pending roles against the fit profile in `profile/fit_profile.md`, and returns a ranked list with one-sentence reasoning per role. Surface the triager's list verbatim to the user and ask which to work — one external_id, several, or `all`.
+- **Empty, `--top N`, or "what should I apply to"** → **Dispatch the `digest-triager` subagent** (Sonnet) with `top_n` = N (default 5). The agent reads the latest digest in `digests/` (falling back to `sh scripts/py -m job_finder.cli digest-archive show` when the directory is missing or empty — `digests/` is gitignored working output that only exists after a local pipeline run), ranks pending roles against the fit profile in `profile/fit_profile.md`, and returns a ranked list with one-sentence reasoning per role. Surface the triager's list verbatim to the user and ask which to work — one external_id, several, or `all`.
 
-  Fallback if the digest subagent dispatch fails: read the latest archived digest with `job-finder digest-archive show`. **Do not hand-roll a query against `data/jobs.db`.** Its `postings.applied_at` is rebuilt to NULL on every pipeline run, so a role applied to before that run reads as pending: filtering on it re-offered two roles on 2026-08-31 and both were applied to a second time. The durable answer lives in `data/state.db`. If you genuinely have to query `jobs.db`, pass the rows through `job_finder.applied.drop_applied()` before showing them, which is what `digest.py` and `review.py` both do.
+  Fallback if the digest subagent dispatch fails: read the latest archived digest with `sh scripts/py -m job_finder.cli digest-archive show`. **Do not hand-roll a query against `data/jobs.db`.** Its `postings.applied_at` is rebuilt to NULL on every pipeline run, so a role applied to before that run reads as pending: filtering on it re-offered two roles on 2026-08-31 and both were applied to a second time. The durable answer lives in `data/state.db`. If you genuinely have to query `jobs.db`, pass the rows through `job_finder.applied.drop_applied()` before showing them, which is what `digest.py` and `review.py` both do.
 
-- **No-auto-apply gate (runs for every chosen role, no exceptions).** After a role is picked but before drafting any materials, check its `company_name` (case-insensitive) against `job-finder no-auto list`. If it matches, **do not enter the apply loop for that role** — skip steps 2a–2i entirely. Instead, tell the user: the company is on the no-auto-apply list, surface the listed reason and the posting URL, and remind them to apply through their own channel. These companies stay in the digest on purpose (they want the signal); only the agent-driven apply is blocked. If the user said `all` or passed multiple ids, silently skip the blocked ones and process the rest, then note which were skipped in the batch summary.
+- **No-auto-apply gate (runs for every chosen role, no exceptions).** After a role is picked but before drafting any materials, check its `company_name` (case-insensitive) against `sh scripts/py -m job_finder.cli no-auto list`. If it matches, **do not enter the apply loop for that role** — skip steps 2a–2i entirely. Instead, tell the user: the company is on the no-auto-apply list, surface the listed reason and the posting URL, and remind them to apply through their own channel. These companies stay in the digest on purpose (they want the signal); only the agent-driven apply is blocked. If the user said `all` or passed multiple ids, silently skip the blocked ones and process the rest, then note which were skipped in the batch summary.
 
 ### 2. For each chosen role, do this loop:
 
@@ -82,13 +82,10 @@ f. **Dispatch the `materials-fact-checker` subagent** (Sonnet) with `resume_data
    - If **FLAGS PRESENT**, surface the findings to the user, propose one-line fixes for each, and revise after they confirm. Re-dispatch the fact-checker on the revised drafts if any CRITICAL finding was edited. Loop until CLEAN.
    - If **BLOCK** (a fabricated metric or banned framing slipped in), do not proceed to render — fix the underlying claim first.
 
-g. **On final approval, call render()** by running this in the repo's venv. **Pass `open_browser=False`** because step h dispatches the autofill subagent, which drives its own Playwright-controlled browser.
-
-   Two forms, because the two surfaces differ. **Windows / Claude Code** (the repo
-   venv has `job_finder` installed and every dependency):
+g. **On final approval, call render()** by running this from the repo root. **Pass `open_browser=False`** because step h dispatches the autofill subagent, which drives its own Playwright-controlled browser.
 
    ```
-   .venv/Scripts/python.exe -c "
+   sh scripts/py -c "
    from job_finder import job_apply, db
    import json
    posting_row = json.loads('''<POSTING_ROW_JSON>''')  # build from DB row or hand-construct if DB is empty
@@ -101,19 +98,6 @@ g. **On final approval, call render()** by running this in the repo's venv. **Pa
    print(out)
    "
    ```
-
-   **A Linux device VM / Cowork** (no editable install, so `job_finder` is not
-   importable and `.venv/Scripts/` does not exist). Same call, different prefix:
-
-   ```
-   PYTHONPATH=".cowork-deps:src" python3 -c "
-   ...the identical body...
-   "
-   ```
-
-   Build `.cowork-deps/` first with `sh scripts/bootstrap_cowork_deps.sh` if it is
-   missing. `render()` needs `reportlab`, which an import-only check will not
-   catch.
 
    `posting_row` must contain at minimum: `external_id`, `title`, `url`, `company_name`. Optional but used in `apply.md`: `total_score`, `queue`, `location`. Always include `jd_text` (the DB row carries it; for a hand-constructed row, the JD you fetched or the user pasted): `render()` saves it as `jd.md`, which interview prep reads after the posting has closed. If you're hand-constructing because the DB is empty (CI doesn't preserve `data/jobs.db` across runs), include all of these so the rendered `apply.md` is complete.
 
@@ -137,7 +121,7 @@ i. **Handoff.** Tell the user:
    - Folder path (markdown link)
    - That the resume + cover letter PDFs are inside
    - To review every field in the open browser window before submitting
-   - To run `.venv/Scripts/job-finder.exe mark-applied <external_id>` from the repo root after submitting
+   - To run `sh scripts/py -m job_finder.cli mark-applied <external_id>` from the repo root after submitting
 
 ### 3. Batching
 
@@ -146,7 +130,7 @@ If the user said `all` or multiple ids, process them sequentially. Between roles
 ## Rules
 
 - **The ATS never gates prep — only who pushes Submit.** Every role with a readable JD gets the full loop (tailor, fact-check, render). Autofill runs when the form is reachable; when it isn't, the loop ends with a complete package plus an `APPLY_NOTES.md` handoff, never with a skipped role.
-- **Honor the no-auto-apply list.** `job-finder no-auto list` names companies the user handles through their own contacts. Never draft, render, or autofill an application for any role whose company is on that list — surface it for awareness and stop. This gate is non-negotiable even if they pass the role's `external_id` directly.
+- **Honor the no-auto-apply list.** `sh scripts/py -m job_finder.cli no-auto list` names companies the user handles through their own contacts. Never draft, render, or autofill an application for any role whose company is on that list — surface it for awareness and stop. This gate is non-negotiable even if they pass the role's `external_id` directly.
 - **Never invent facts.** Every claim must be in `resume_master.md`, `personal_statement.md`, an untagged detail of `story_bank.md`, or something the user said in this conversation. Free-text answers on a form follow the same rule: draft them from the story bank rather than leaving the autofill agent to improvise.
 - **Anti-overstatement.** Read the session-context file named in `profile/profile.toml [paths]` and apply every rule in it literally (per-claim framing rules, the fixed skill-category count, the skill source pool). The `materials-fact-checker` subagent will also enforce these — they're belt-and-suspenders.
 - **Show before render.** Always show the user the RESUME_DATA changes and cover letter draft, then run the fact-checker, then surface findings. They get the last word on every revision before render() fires.

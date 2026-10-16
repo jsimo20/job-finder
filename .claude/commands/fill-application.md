@@ -32,7 +32,7 @@ The autofiller runs on Sonnet and handles everything from there. It will produce
 
 When the subagent returns, present its report verbatim to the user. Add no commentary unless something needs flagging. End with:
 
-> Ready for your review — check every answer in the open browser window and click Submit yourself. If this was a tracked role, run `job-finder mark-applied <external_id>` after submitting.
+> Ready for your review — check every answer in the open browser window and click Submit yourself. If this was a tracked role, run `sh scripts/py -m job_finder.cli mark-applied <external_id>` after submitting.
 
 ### 4. If the form is unreachable — hand off, don't stop short
 

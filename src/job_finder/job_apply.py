@@ -117,7 +117,7 @@ def archive_applications(config: Config | None = None, *, dry_run: bool = False
 
     render() writes inside the repo because that is the one location every
     surface can write to: a Cowork session sees a Linux VM with the repo
-    mounted, where an absolute Windows path to a synced documents folder does
+    mounted, where an absolute host path to a synced documents folder does
     not exist at all. The durable home for finished folders is that synced
     directory, so moving them is a separate step run from a machine that can
     see it, rather than a render target that only works from one surface.
@@ -349,7 +349,7 @@ def _render_cover_letter(identity: Mapping[str, str], cover_letter: dict,
 
 APPLY_MD_TEMPLATE = """# Apply notes — {company} / {title}
 
-- **External ID:** `{external_id}` (use `job-finder mark-applied {external_id}` after submit)
+- **External ID:** `{external_id}` (use `sh scripts/py -m job_finder.cli mark-applied {external_id}` after submit)
 - **Score / Queue:** {score} / {queue}
 - **Location:** {location}
 - **URL:** {url}

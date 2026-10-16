@@ -1,6 +1,6 @@
 # Profile starting files
 
-`python -m job_finder.profile_init` writes each block below to the `profile/`
+`sh scripts/py -m job_finder.profile_init` writes each block below to the `profile/`
 path its first line names, and never overwrites a file that exists. Keep those
 first lines intact. Setup then replaces every example value with the user's
 own answers. `profile/` is gitignored and never committed.
@@ -23,7 +23,7 @@ own answers. `profile/` is gitignored and never committed.
 With no `[paths]` table every file sits directly in `profile/`. Name a path in
 `[paths]` to keep a file elsewhere; relative paths resolve against the repo
 root. Nothing outside `profile.toml` may assume a layout: prompts and scripts
-resolve paths through `job_apply.load_config()`. `python -m
+resolve paths through `job_apply.load_config()`. `sh scripts/py -m
 job_finder.profile_check` exits 0 only when no placeholder remains.
 
 ## The blocks

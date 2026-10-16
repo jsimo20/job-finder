@@ -9,7 +9,7 @@ against what it replaced.
 Baselines are measured from the personal statement that `job_apply.load_config()`
 resolves, not invented.
 
-Usage:  python3 scripts/score_writing.py <dir> [<dir> ...]
+Usage:  sh scripts/py scripts/score_writing.py <dir> [<dir> ...]
         where each dir holds <slug>/cover_letter.json and/or form_answers.json
 """
 from __future__ import annotations

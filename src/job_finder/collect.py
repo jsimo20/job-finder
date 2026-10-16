@@ -26,12 +26,12 @@ _WINDOW_MULTIPLE = 4
 
 
 def load_companies(state_db: Path = state.DEFAULT_STATE_DB) -> list[dict]:
-    """Tracked companies from state.db. `job-finder companies import <json>`
+    """Tracked companies from state.db. `sh scripts/py -m job_finder.cli companies import <json>`
     populates it; an empty list is a setup problem, so say so loudly."""
     companies = state.list_companies(state_db)
     if not companies:
         logger.warning("no tracked companies in %s — run "
-                       "`job-finder companies import <file.json>` (the manage-companies skill)",
+                       "`sh scripts/py -m job_finder.cli companies import <file.json>` (the manage-companies skill)",
                        state_db)
     return companies
 

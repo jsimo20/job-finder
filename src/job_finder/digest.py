@@ -194,7 +194,7 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
     _section(
         "Main queue — carried forward",
         f"Pending from prior digests (top {CARRY_FORWARD_CAP} by score). "
-        "Mark applied or dismissed via `job-finder review`.",
+        "Mark applied or dismissed via `sh scripts/py -m job_finder.cli review`.",
         main_carry,
     )
     _section("Stretch queue — new", stretch_blurb, stretch_rows)
@@ -204,8 +204,8 @@ def render(target_date: str | None = None, db_path: Path = db.DEFAULT_DB_PATH,
     discovered = state.list_discovered("pending", state_db)
     lines.append(f"## New companies to review ({len(discovered)})")
     lines.append("Hiring the target role on Built In, not tracked, and their board lists "
-                 "that role. Track with `job-finder discover add \"Name\"` (or `--all`); "
-                 "skip with `job-finder discover dismiss \"Name\"`.\n")
+                 "that role. Track with `sh scripts/py -m job_finder.cli discover add \"Name\"` (or `--all`); "
+                 "skip with `sh scripts/py -m job_finder.cli discover dismiss \"Name\"`.\n")
     if discovered:
         for d in discovered:
             check = (" · generic title match, check the board is theirs"
