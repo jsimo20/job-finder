@@ -11,9 +11,9 @@ Companies on Workday/ICIMS/Taleo/SuccessFactors have no public API and will
 simply report "no board found" — that is the answer, not a bug.
 
 Usage:
-    python scripts/discover_companies.py --names "Company A" "Company B" ...
-    python scripts/discover_companies.py --file candidates.txt          # one name per line
-    python scripts/discover_companies.py --file candidates.txt --json out.json
+    sh scripts/py scripts/discover_companies.py --names "Company A" "Company B" ...
+    sh scripts/py scripts/discover_companies.py --file candidates.txt          # one name per line
+    sh scripts/py scripts/discover_companies.py --file candidates.txt --json out.json
 
 Verify each hit's careers page before adding it to data/companies.json
 (slug collisions exist: an acquirer's board can answer for a dead brand).

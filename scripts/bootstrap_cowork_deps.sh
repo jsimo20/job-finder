@@ -7,7 +7,7 @@
 # `.venv`, so this installs pyproject.toml's runtime dependencies into
 # `.cowork-deps/`. After it, every Python call on the VM is:
 #
-#     PYTHONPATH=".cowork-deps:src" python3 -m job_finder.<module>
+#     sh scripts/py -m job_finder.<module>
 #
 # Keep runtime dependencies pure Python, so the folder survives a Python
 # minor-version bump.

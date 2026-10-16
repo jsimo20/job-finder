@@ -11,8 +11,7 @@ theirs to tell you.
 
 - `$ROOT` is the connected folder, the repo root. The launcher has already
   checked the network and installed the engine there.
-- **Python:** `PYTHONPATH=".cowork-deps:src" python3` from `$ROOT` on Cowork;
-  `.venv/Scripts/python.exe` with no prefix in Claude Code on Windows.
+- **Python:** `sh scripts/py` from `$ROOT`.
 - Every step skips what already exists, so a second run resumes. A user
   changing one thing starts at the step that covers it.
 - **`profile/profile.toml` already exists** ("update me", or "set me up"
@@ -23,9 +22,9 @@ theirs to tell you.
 The launcher has already updated the engine. Never re-ask anything already in
 their files.
 
-1. `PYTHONPATH=".cowork-deps:src" python3 -m job_finder.profile_init` adds
+1. `sh scripts/py -m job_finder.profile_init` adds
    starting files newer versions need and touches nothing that exists.
-2. `PYTHONPATH=".cowork-deps:src" python3 -m job_finder.profile_check`. For
+2. `sh scripts/py -m job_finder.profile_check`. For
    each issue, do only the step below that covers it.
 3. List the scheduled tasks. Any task whose prompt names `job-finder-weekly`
    is a job-finder run, whatever its name; older versions made them daily,
@@ -67,7 +66,7 @@ Never ask what Node is, whether they have it, or to run anything.
 ## 2. Their profile
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.profile_init
+sh scripts/py -m job_finder.profile_init
 ```
 
 It writes the starting files into `profile/` and never overwrites one that
@@ -157,7 +156,7 @@ or from what you would guess.** Ask, in this order:
 Leave `[discovery]` for step 4. Then check the patterns:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -c "
+sh scripts/py -c "
 from job_finder import filter as f
 for loc in ['<a city they named>', 'Remote', 'Remote - EMEA', '<a city they did not>']:
     print(loc, f.stage1(title='<a title they named>', location=loc, workplace_type=None).reason)
@@ -181,8 +180,8 @@ You build the list; they prune it.
 4. Probe the survivors:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 scripts/discover_companies.py --file candidates.txt --json hits.json
-PYTHONPATH=".cowork-deps:src" python3 -c "
+sh scripts/py scripts/discover_companies.py --file candidates.txt --json hits.json
+sh scripts/py -c "
 from pathlib import Path
 from job_finder import state
 print(state.import_companies(Path('hits.json')), 'companies tracked')
@@ -196,7 +195,7 @@ fetch shows nothing). Take the first page that plainly lists roles; a
 redirect to the home page does not count. Never ask them for a link.
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -c "
+sh scripts/py -c "
 from job_finder import state
 state.upsert_company({'name': '<Name>', 'ats_provider': 'manual', 'ats_slug': None,
                       'careers_url': '<url>', 'sector_tags': [], 'size_band': None})
@@ -222,7 +221,7 @@ Boston, Chicago, Colorado, Los Angeles, New York, San Francisco, Seattle
 3. Run it once (about five minutes, zero tokens):
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -c "
+sh scripts/py -c "
 import json
 from job_finder import builtin_discovery
 print(json.dumps(builtin_discovery.run(), indent=1))
@@ -236,19 +235,19 @@ checks. Delete `candidates.txt` and `hits.json`.
 ## 5. Prove it works, for free
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -c "
+sh scripts/py -c "
 import json
 from job_finder import collect, db
 db.init_db(db.DEFAULT_DB_PATH)
 print(json.dumps(collect.run(db_path=db.DEFAULT_DB_PATH), indent=1))
 "
-PYTHONPATH=".cowork-deps:src" python3 -c "
+sh scripts/py -c "
 from job_finder import db
 with db.connect(db.DEFAULT_DB_PATH) as c:
     for verdict, n in c.execute('select hard_filter_verdict, count(*) from postings group by 1 order by 2 desc'):
         print(n, verdict)
 "
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.profile_check
+sh scripts/py -m job_finder.profile_check
 ```
 
 Tell them how many postings were read, how many passed, and the three biggest

@@ -13,7 +13,7 @@ Promote the check to CRITICAL when precision is high enough that a block is
 cheaper than a missed defect; keep it advisory while false positives would
 stall unattended runs.
 
-Usage:  python3 scripts/transition_sample.py [--out FILE]
+Usage:  sh scripts/py scripts/transition_sample.py [--out FILE]
 """
 from __future__ import annotations
 

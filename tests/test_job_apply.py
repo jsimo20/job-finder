@@ -183,7 +183,7 @@ def test_render_creates_per_job_folder_with_expected_files(
     assert "test-123" in apply_md
     assert "Test Corp" in apply_md
     assert "Bullet one" in apply_md
-    assert "job-finder mark-applied test-123" in apply_md
+    assert "sh scripts/py -m job_finder.cli mark-applied test-123" in apply_md
     assert not (outdir / "jd.md").exists()
 
 

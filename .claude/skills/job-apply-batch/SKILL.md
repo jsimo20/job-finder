@@ -31,23 +31,9 @@ changes when nobody is watching. Two copies of that loop would drift.
 
 ## 1. Preflight, before drafting anything
 
-**Every Python call below is prefixed `PYTHONPATH=".cowork-deps:src" python3`.**
-`job_finder` lives under `src/` and the only editable install is a .pth file in
-the Windows `.venv`, which a Linux device VM cannot see, so a bare `python -c`
-dies on `No module named 'job_finder'` before it reaches any real work.
-
-**On Windows, drop the prefix and use `.venv/Scripts/python.exe`.** The editable
-install already puts `job_finder` on the path there, and Windows separates
-PYTHONPATH entries with `;` rather than `:`, so the prefix as written resolves to
-one nonexistent directory.
-
-If `.cowork-deps/` is missing, build it rather than failing:
-
-```sh
-sh scripts/bootstrap_cowork_deps.sh
-```
-
-It is gitignored, so a fresh clone or a different machine will not have it.
+**Every Python call below runs as `sh scripts/py` from the repo root.** A bare
+`python -c` dies on `No module named 'job_finder'` wherever the folder has no
+venv.
 **If the bootstrap itself fails** (no egress, no pip), say so plainly in the
 report and carry on: liveness treats unknown as live, so losing it costs tokens
 on dead postings rather than correctness. Losing `reportlab` is different and
@@ -59,7 +45,7 @@ way the code does rather than naming them; a layout that is right for one user
 is wrong for the next:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -c "
+sh scripts/py -c "
 from job_finder import job_apply, settings
 c = job_apply.load_config(settings.require_profile())
 for p in (c.resume_master_md, c.personal_statement_md, c.standard_answers_md,
@@ -76,14 +62,8 @@ no revision pass will reach CLEAN.
 Then check the digest is current:
 
 ```sh
-job-finder digest-archive list
+sh scripts/py -m job_finder.cli digest-archive list
 ```
-
-The `job-finder` console script comes from the editable install, so on a device
-VM it is not on PATH either. There the equivalent is
-`PYTHONPATH=".cowork-deps:src" python3 -m job_finder.cli digest-archive list`,
-which needs the `--cli` extras. **Prefer running this on Windows**, where the install already works; pulling `anthropic` into
-`.cowork-deps` locks it to one Python build.
 
 **Report the date of the latest digest, and stop if it is more than 7 days old.**
 The roles come from that digest; a stale one means applying to postings that may
@@ -93,7 +73,7 @@ Then drop the roles that have already closed, **before spending anything on
 them**:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -c "
+sh scripts/py -c "
 from job_finder import liveness
 import json,sys
 roles = json.load(sys.stdin)
@@ -144,7 +124,7 @@ install`), call the tool whose name contains `browser_install` once, then
 retry. That is the server fetching its own browser build; it is not something
 the user has to do and it never goes in the report as an action for them.
 
-For Greenhouse specifically, `python -m job_finder.fill_greenhouse` is cheaper
+For Greenhouse specifically, `sh scripts/py -m job_finder.fill_greenhouse` is cheaper
 than the agent by roughly 30x and drives its own browser too. Prefer it in Claude
 Code on Windows. **It is not available on Cowork** — see the note at the top of
 this file; do not attempt it there and do not report it as a fill path.
@@ -194,7 +174,7 @@ Three outcomes, and they are not two:
   configuration is visible, so it is the diagnosis rather than just the symptom.
   Say plainly: **every role in this batch will need its resume and cover letter
   attached by hand**, and the fix is to rebuild and reinstall the plugin
-  (`python scripts/build_cowork_plugin.py`, then the + next to the message box, or Customize ->
+  (`sh scripts/py scripts/build_cowork_plugin.py`, then the + next to the message box, or Customize ->
   Plugins -> upload the zip). **Do not stop.** Prep is still worth doing: the
   tailoring, fact-checking and rendering are all still good, and the forms still
   get filled with everything that is not a file.
@@ -208,7 +188,7 @@ Three outcomes, and they are not two:
   folder (the default `~/Downloads` is this environment's, not theirs):
 
   ```sh
-  PYTHONPATH=".cowork-deps:src" python3 scripts/build_cowork_plugin.py --out .
+  sh scripts/py scripts/build_cowork_plugin.py --out .
   ```
 
   then tell them to add `job-finder-cowork-plugin.zip` from this folder with
@@ -288,7 +268,7 @@ Two gates. Run the letter linter **after render and before any fill**, so a bad
 letter never reaches a form:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.letter_linter --date <today>
+sh scripts/py -m job_finder.letter_linter --date <today>
 ```
 
 - **0** — no critical violation.
@@ -309,7 +289,7 @@ unattended, because each has legitimate exceptions.
 Also verify the resume's skill terms for each role, before render:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.skill_terms --folder <per-app folder>
+sh scripts/py -m job_finder.skill_terms --folder <per-app folder>
 ```
 
 - **0** — every term traces to the source pool or a recorded swap.
@@ -329,7 +309,7 @@ So every free-text answer you type gets written into the per-app folder as
 `form_answers.json` and linted:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 scripts/lint_form_answers.py --date <today>
+sh scripts/py scripts/lint_form_answers.py --date <today>
 ```
 
     [{"question": "Why Anthropic?", "paragraphs": ["...", "..."]}]
@@ -341,7 +321,7 @@ broke: fix the text and re-paste it into the form before moving on.**
 Then, after the last fill:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.fill_grader --date <today> --gate
+sh scripts/py -m job_finder.fill_grader --date <today> --gate
 ```
 
 Read the exit code, not the wording:

@@ -2,6 +2,7 @@
 # mounts this Windows checkout as-is. With core.autocrlf=true and no pin, a
 # checkout writes CRLF and dash fails on the first line with `set: Illegal option -`.
 *.sh       text eol=lf
+scripts/py text eol=lf
 
 # Developer-only files: kept in the repo, left out of the archive every user
 # installs and updates from (setup and scripts/self_update.sh download it).

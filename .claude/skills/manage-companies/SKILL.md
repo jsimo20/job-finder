@@ -9,10 +9,6 @@ The tracked-company list lives in `data/state.db` (gitignored, local-only)
 and drives every weekly run. Change it only through the `state` functions
 below, never by editing the database file.
 
-**`$PY` below means `PYTHONPATH=".cowork-deps:src" python3` on Cowork and
-`.venv/Scripts/python.exe` on Windows, run from the repo root.** The
-`job-finder` console script does not exist on Cowork, so nothing here uses it.
-
 Talk to the user in plain words: "company", "job board", "careers page".
 Report results as names and counts, never as command output.
 
@@ -33,7 +29,7 @@ hand. Say so whenever you add one.
 ### List
 
 ```sh
-$PY -c "
+sh scripts/py -c "
 from job_finder import state
 rows = state.list_companies()
 for c in rows:
@@ -50,7 +46,7 @@ many are manual checks. List names only if they asked to see them.
 1. Probe which job boards answer for each name:
 
    ```sh
-   $PY scripts/discover_companies.py --names "Name One" "Name Two" --json hits.json
+   sh scripts/py scripts/discover_companies.py --names "Name One" "Name Two" --json hits.json
    ```
 
 2. Check each hit is really that company: read the posting titles and
@@ -59,7 +55,7 @@ many are manual checks. List names only if they asked to see them.
 3. Track the verified hits:
 
    ```sh
-   $PY -c "
+   sh scripts/py -c "
    from pathlib import Path
    from job_finder import state
    print(state.import_companies(Path('hits.json')), 'tracked')
@@ -76,7 +72,7 @@ many are manual checks. List names only if they asked to see them.
    `playwright`) before deciding it lists nothing. Track it as manual:
 
    ```sh
-   $PY -c "
+   sh scripts/py -c "
    from job_finder import state
    state.upsert_company({'name': '<Name>', 'ats_provider': 'manual', 'ats_slug': None,
                          'careers_url': '<url>', 'sector_tags': [], 'size_band': None})
@@ -102,7 +98,7 @@ the companies do, ask them to strike any they would never work for, then run
 ### Remove
 
 ```sh
-$PY -c "
+sh scripts/py -c "
 from job_finder import state
 print(state.remove_company('<Name>'))
 "
@@ -130,7 +126,7 @@ The weekly run proposes untracked companies from Built In in the digest's
 **New companies to review**. To track one:
 
 ```sh
-$PY -c "
+sh scripts/py -c "
 from job_finder import builtin_discovery
 print(builtin_discovery.promote('<Name>'))
 "

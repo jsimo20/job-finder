@@ -107,7 +107,7 @@ DOM state instead of a reconstruction.
 1. Get the inventory function once per dispatch (not once per form):
 
    ```sh
-   PYTHONPATH=".cowork-deps:src" python3 -c "from job_finder.form_inventory import INVENTORY_JS; print(INVENTORY_JS)"
+   sh scripts/py -c "from job_finder.form_inventory import INVENTORY_JS; print(INVENTORY_JS)"
    ```
 
 2. Pass it verbatim to `browser_evaluate`.
@@ -200,7 +200,7 @@ mid-fill, fields left required-and-blank, and values that landed in the wrong bo
 ### 13. Run the gate before you report
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.fill_grader <the .post.json paths you just wrote> --gate --quiet
+sh scripts/py -m job_finder.fill_grader <the .post.json paths you just wrote> --gate --quiet
 ```
 
 The prefix makes `job_finder` importable where the repo is mounted but not
@@ -246,6 +246,6 @@ When you stop, your final message must include:
 2. **Blank** — list every field left empty and why: salary (always), unmappable (which ones), short-answer needing Opus judgment (which ones), required fields still empty (call these out loudly — they block submission).
 3. **Audits** — one line per form: `<slug>: pre N fields, post M fields`, or the reason a capture failed. Paths only, never the JSON.
 3b. **Gate** — `PASS` or `FAIL`, and on failure every critical finding the grader named.
-4. **One closing line**: "Ready for review — check every answer in the open browser window and click Submit yourself. If this was a tracked role, run `job-finder mark-applied <external_id>` after submitting."
+4. **One closing line**: "Ready for review — check every answer in the open browser window and click Submit yourself. If this was a tracked role, run `sh scripts/py -m job_finder.cli mark-applied <external_id>` after submitting."
 
 Keep the report tight. The dispatching conversation will surface it to the user.

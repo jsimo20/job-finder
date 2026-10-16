@@ -9,7 +9,7 @@ This proposes companies; it never adds them. A candidate is recorded as
 `pending` only when one of its ATS boards lists the same role Built In showed,
 because slug guessing collides ("relay", "general") and a title match is what
 proves the board belongs to the company. The digest lists pending candidates
-for a yes/no, and `job-finder discover add|dismiss` records the answer.
+for a yes/no, and `sh scripts/py -m job_finder.cli discover add|dismiss` records the answer.
 
 Zero LLM tokens. Built In's robots.txt allows its /jobs category pages; each
 page is one request, paced a second apart.

@@ -40,19 +40,12 @@ to one procedure:
 - **A set-up folder never reruns setup.** When `profile/profile.toml` exists,
   "set me up" or "get started" means "Updating an existing folder" in
   `.claude/skills/job-finder-setup/SKILL.md`, never a plugin's own setup steps.
-- **Python:** `PYTHONPATH=".cowork-deps:src" python3` from the folder root on
-  Cowork (build a missing `.cowork-deps/` with
-  `sh scripts/bootstrap_cowork_deps.sh`); `.venv/Scripts/python.exe` with no
-  prefix in Claude Code on Windows.
-- **The `job-finder` console script does not exist on Cowork.** Where a
-  procedure names one, call the module:
-
-  | Console command | Module call |
-  |---|---|
-  | `job-finder no-auto list` | `state.is_no_auto('<company>')` |
-  | `job-finder digest-archive show` | `state.get_digest()['body']` |
-  | `job-finder mark-applied <id>` / `applied add` | `applied.record_applied('<id>', company=..., title=..., url=...)` |
-  | `job-finder companies ...` | `.claude/skills/manage-companies/SKILL.md` |
+- **Python:** every call is `sh scripts/py`, from the folder root, on every
+  surface and OS. It picks the folder's venv when one runs and otherwise
+  `python3` with `.cowork-deps/`, building that if missing. Never call a venv
+  interpreter or `python` directly.
+- **The CLI is `sh scripts/py -m job_finder.cli <args>`.** Changes to the
+  company list go through `.claude/skills/manage-companies/SKILL.md`.
 
 - **Subagents: dispatch every repo agent as a general-purpose agent, on every
   surface.** Cowork does not load `.claude/agents/`. The prompt opens "Read
@@ -73,7 +66,7 @@ to one procedure:
 - Read `profile/CLAUDE.md` before any procedure; it overrides procedure
   defaults, never the Rules below.
 - If it or `profile/corrections.md` is missing, run
-  `python -m job_finder.profile_init`.
+  `sh scripts/py -m job_finder.profile_init`.
 - A first request to change a deliverable goes in `corrections.md` as one
   dated line.
 - A repeated request becomes one rule in `profile/CLAUDE.md`; delete its line
@@ -104,15 +97,15 @@ to one procedure:
 
 | Tool | Does | Result |
 |---|---|---|
-| `python -m job_finder.weekly status\|collect\|prompt\|import-extractions\|finish` | The weekly cycle's steps | `status` says whether a run is due |
-| `python -m job_finder.profile_check` | Profile and search settings are filled in | 0 ready, 1 issues listed |
+| `sh scripts/py -m job_finder.weekly status\|collect\|prompt\|import-extractions\|finish` | The weekly cycle's steps | `status` says whether a run is due |
+| `sh scripts/py -m job_finder.profile_check` | Profile and search settings are filled in | 0 ready, 1 issues listed |
 | `job_apply.render(...)` | Writes the application folder: PDFs, `cover_letter.json`, `jd.md`, `apply.md`, `standard_answers.md` | the folder path |
-| `python -m job_finder.skill_terms --folder <dir>` | Resume swaps anchor to the pool | 0 clean, 3 nothing to check, 4 critical |
-| `python -m job_finder.letter_linter --date <d>` | Flat voice rules in drafted letters | CRITICAL blocks the fill |
-| `python -m job_finder.fill_grader --date <d> --gate` | Grades a fill batch, including injection suspects | 0 ready, 3 nothing filled, 4 critical |
-| `python -m job_finder.fill_greenhouse --url <u> --folder <dir>` | Deterministic Greenhouse fill (Claude Code only) | report; never submits |
+| `sh scripts/py -m job_finder.skill_terms --folder <dir>` | Resume swaps anchor to the pool | 0 clean, 3 nothing to check, 4 critical |
+| `sh scripts/py -m job_finder.letter_linter --date <d>` | Flat voice rules in drafted letters | CRITICAL blocks the fill |
+| `sh scripts/py -m job_finder.fill_grader --date <d> --gate` | Grades a fill batch, including injection suspects | 0 ready, 3 nothing filled, 4 critical |
+| `sh scripts/py -m job_finder.fill_greenhouse --url <u> --folder <dir>` | Deterministic Greenhouse fill (Claude Code only) | report; never submits |
 | `liveness.partition(rows)` | Drops postings no longer listed; unknown counts as live | (live, dead) |
-| `python scripts/discover_companies.py --file <f> --json <out>` | Which job boards answer for each company name | board rows |
+| `sh scripts/py scripts/discover_companies.py --file <f> --json <out>` | Which job boards answer for each company name | board rows |
 | `outreach` and `applied` modules | The outreach log and the applied ledger | |
 
 ## Behaviour worth knowing
