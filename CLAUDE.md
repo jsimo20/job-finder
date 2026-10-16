@@ -58,6 +58,9 @@ to one procedure:
   contains `playwright` opens a real Chromium window that runs JavaScript. Use
   it for any page a plain fetch cannot read, before asking the user for
   anything; never ask them to install a browser tool.
+- **On Cowork the folder must be `job-finder`, directly in the user's home
+  folder.** The plugin's browser attaches files only from there. Run
+  `.claude/context/upload-probe.md` before anything uploads.
 - **`fill_greenhouse` does not run on Cowork**; forms there go through the
   `application-autofiller` agent.
 

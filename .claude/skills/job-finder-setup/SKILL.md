@@ -26,13 +26,15 @@ their files.
    starting files newer versions need and touches nothing that exists.
 2. `sh scripts/py -m job_finder.profile_check`. For
    each issue, do only the step below that covers it.
-3. List the scheduled tasks. Any task whose prompt names `job-finder-weekly`
+3. Do step 1, the form-filling browser. If its upload probe is rejected, stop
+   there.
+4. List the scheduled tasks. Any task whose prompt names `job-finder-weekly`
    is a job-finder run, whatever its name; older versions made them daily,
    under other names, sometimes without a folder. Leave exactly one: weekly,
    named **Job finder weekly run**, with this folder. If none qualifies,
    create it as step 6 says, at the old task's hour and weekday, then delete
    every other job-finder run and have them allow the folder as step 6 says.
-4. Tell them in one line that they are up to date.
+5. Tell them in one line that they are up to date.
 
 ## How to talk
 
@@ -47,7 +49,9 @@ their files.
 
 Look through your own tool list for any tool whose name contains `playwright`.
 
-- **Present:** say nothing; carry on.
+- **Present:** run `.claude/context/upload-probe.md`. Accepted: say nothing
+  and carry on. Rejected: send the probe's message to the user, then stop and
+  wait. Inconclusive: carry on.
 - **Absent:** Node.js is missing on their computer. Send this, then stop and
   wait:
 

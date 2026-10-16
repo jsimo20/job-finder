@@ -136,76 +136,19 @@ not a new limitation.
 
 ### Probe the upload path before drafting anything
 
-**The server accepts uploads only from its `--output-dir` and its cwd.** Cowork
-spawns it with `cwd=C:\Windows\System32`, so if the installed plugin was built
-without `--output-dir`, every staged PDF is rejected as outside allowed roots and
-no application gets a resume or a cover letter attached. On 2026-08-31 that
-surfaced only after seven roles had been tailored, rendered and filled, which is
-the expensive place to find it.
+Run `.claude/context/upload-probe.md` now, before any role is tailored. A
+rejected upload found after rendering and filling is the expensive place to
+find it.
 
-So test it first, with one throwaway file, on the real path:
-
-```sh
-mkdir -p .playwright-mcp/uploads
-echo upload probe > .playwright-mcp/uploads/_probe.txt
-```
-
-Then, using the Playwright tools:
-
-1. `browser_navigate` to
-   `data:text/html,<input type="file" id="probe">`
-2. `browser_snapshot` to get the ref, then `browser_click` it, which opens the
-   file chooser. **The ref goes in `target`, not `ref`** — `ref` is rejected as a
-   missing argument and costs a round trip.
-3. `browser_file_upload` the **absolute** path of `.playwright-mcp/uploads/_probe.txt`
-4. Confirm it actually attached, because a call that returns without an error is
-   not proof:
-   ```
-   browser_evaluate: () => document.getElementById('probe').files.length
-   ```
-   Verified 2026-08-31 in Claude Code, where the output dir is set: returns 1.
-
-Three outcomes, and they are not two:
-
-- **Accepted** — step 4 returns 1. Uploads work. Say so in one line and carry on.
-- **Rejected** — quote the error verbatim at the **top** of your first message,
-  before anything about roles. The rejection names the roots the running server
-  actually allows, and that text is the only place the installed plugin's real
-  configuration is visible, so it is the diagnosis rather than just the symptom.
-  Say plainly: **every role in this batch will need its resume and cover letter
-  attached by hand**, and the fix is to rebuild and reinstall the plugin
-  (`sh scripts/py scripts/build_cowork_plugin.py`, then the + next to the message box, or Customize ->
-  Plugins -> upload the zip). **Do not stop.** Prep is still worth doing: the
-  tailoring, fact-checking and rendering are all still good, and the forms still
-  get filled with everything that is not a file.
-
-  **On a machine that is not the developer's, the usual cause is that
-  `cowork-plugin/.mcp.json` names the developer's absolute `--output-dir`.**
-  Offer the fix once, after the report, and do it when they say yes: set
-  `--output-dir` in that file to this folder's own `.playwright-mcp` as an
-  absolute path on their computer (ask them for the folder's location if the
-  mounted path is not the host path), build with `--out` pointing into this
-  folder (the default `~/Downloads` is this environment's, not theirs):
-
-  ```sh
-  sh scripts/py scripts/build_cowork_plugin.py --out .
-  ```
-
-  then tell them to add `job-finder-cowork-plugin.zip` from this folder with
-  the + next to the message box, which replaces the installed plugin. The next
-  run's probe confirms it. This edits only their local copy; nothing reaches
-  the repository.
-- **Inconclusive** — the probe itself could not run (no file chooser, the
-  `data:` URL blocked, the tools absent). Report it as inconclusive. **Never
-  report an inconclusive probe as a pass**, and expect the hand-attach.
-
-Delete `_probe.txt` afterwards.
-
-**Do not work around a rejection.** The allowed-roots restriction is a security
-boundary on a browser-driving agent. No `browser_run_code_unsafe`, no
-self-written JS, no copying PDFs into Windows temp to land inside the server's
-own directory. The fix is the server's configuration, and a run that cannot
-upload reports that it cannot upload.
+- **Accepted:** say so in one line, and pass its uploads root to every
+  autofiller dispatch as `uploads_root`.
+- **Rejected:** quote the errors verbatim at the **top** of your first
+  message, before anything about roles, followed by the probe's message to the
+  user. Say plainly that **every role in this batch will need its resume and
+  cover letter attached by hand**. **Do not stop:** tailoring, fact-checking
+  and rendering are still good, and the forms still get filled with everything
+  that is not a file.
+- **Inconclusive:** report it as inconclusive and expect the hand-attach.
 
 ## 3. Pick the roles
 

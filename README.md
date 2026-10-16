@@ -18,8 +18,9 @@ your computer.
    https://github.com/jsimo20/job-finder/releases/latest/download/job-finder-cowork-plugin.zip
 4. **Install it.** In the Claude app, start a new chat, click the **+** next to
    the message box and add the plugin from the zip.
-5. **Make an empty folder** (for example `Documents/job-finder`), click **+**
-   again and connect it.
+5. **Make an empty folder called `job-finder` directly in your home folder**
+   (on a Mac, Finder > Go > Home; on Windows, `C:\Users\<your name>`), not in
+   Documents. Click **+** again and connect it.
 6. **Say "set me up".** It's a conversation of about 20 to 30 minutes: where
    you live, the jobs you want, your pay floor, your resume and a few
    paragraphs about yourself in your own words. It may stop once to have you

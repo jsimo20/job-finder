@@ -24,6 +24,7 @@ The dispatching command will pass you (in the prompt):
 
 - `application_url` — the form URL to navigate to.
 - `folder_path` — absolute path to the per-job folder containing the tailored resume PDF, cover-letter PDF, and a per-app `standard_answers.md`.
+- Optional `uploads_root` — the uploads root from an accepted upload probe (`.claude/context/upload-probe.md`). Without it, run that probe yourself before step 2.
 - Optional `short_answer_drafts` — if the main conversation already drafted any short-answer text (cover letter paste boxes, "why this company," etc.), it'll be inline in the prompt. Type those drafts verbatim — do not redraft.
 
 If the folder is missing, fall back to the global `standard_answers.md` in the configured `inputs_dir` (see `profile/profile.toml` `[paths]`; default `profile/`) and report that the per-job answers weren't available.
@@ -69,7 +70,7 @@ Read once and keep in memory:
 
 ### 2. Stage upload files into a Playwright-accessible path
 
-The Playwright MCP restricts file access to a set of allowed roots, and those roots are not always the repo: a plugin-bundled server spawned with no `--output-dir` allows only its own temp directory. A rejected upload names the allowed roots in the error, so stage beneath one of those. PDFs in an applications folder outside the repo (a cloud-synced documents directory, say) cannot be uploaded directly — the MCP will reject them with `File access denied`.
+The Playwright MCP accepts uploads only from its allowed roots, and the uploads root is the one the probe found. PDFs anywhere else, such as an applications folder outside this folder, are rejected with `File access denied`. If the probe was rejected or inconclusive, skip uploads and say every file needs attaching by hand.
 
 Workaround: discover the PDFs in the per-job folder via the `Glob` tool, then copy each by its exact (quoted) path into `.playwright-mcp/uploads/` (gitignored). Do **not** put the wildcard inside a quoted shell string — `cp "{folder_path}/...*.pdf"` won't expand the `*` and the copy will fail silently.
 
@@ -86,7 +87,7 @@ Step by step:
    ```
    Copy, never rename. The role slug is the folder; the filename stays as rendered.
 
-4. Use the staged paths (`<uploads root>\<role-slug>\<exact filename>`) in `browser_file_upload`. The exact filename is whatever `render()` wrote; never rename it.
+4. In `browser_file_upload`, pass the uploads root + `uploads` + role slug + exact filename, joined with the uploads root's own separator. The exact filename is whatever `render()` wrote; never rename it.
 
 ### 3. Navigate and snapshot
 
