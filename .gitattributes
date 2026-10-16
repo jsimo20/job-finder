@@ -1,6 +1,6 @@
-# Shell scripts run under sh on Linux (the Cowork device VM), which
-# mounts this Windows checkout as-is. With core.autocrlf=true and no pin, a
-# checkout writes CRLF and dash fails on the first line with `set: Illegal option -`.
+# Shell scripts run under sh on Linux (the Cowork device VM), which mounts the
+# user's folder as-is. A checkout with core.autocrlf=true and no pin writes
+# CRLF, and dash fails on the first line with `set: Illegal option -`.
 *.sh       text eol=lf
 scripts/py text eol=lf
 

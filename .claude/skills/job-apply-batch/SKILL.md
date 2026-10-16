@@ -21,7 +21,7 @@ Cowork device VM does not have, and a browser launched inside that VM is not one
 the user can see or click, which defeats leaving tabs open for review. Tested
 2026-08-31: it does not run there. So a Cowork batch fills every form through the
 autofill agent at roughly 63k tokens per form, and that is a ceiling on how many
-roles one batch can carry, not a preference to weigh. In Claude Code on Windows
+roles one batch can carry, not a preference to weigh. In Claude Code
 `fill_greenhouse` does run, costs about 2k per form, and is the better path
 wherever the ATS is Greenhouse.
 
@@ -126,7 +126,7 @@ the user has to do and it never goes in the report as an action for them.
 
 For Greenhouse specifically, `sh scripts/py -m job_finder.fill_greenhouse` is cheaper
 than the agent by roughly 30x and drives its own browser too. Prefer it in Claude
-Code on Windows. **It is not available on Cowork** — see the note at the top of
+Code. **It is not available on Cowork** — see the note at the top of
 this file; do not attempt it there and do not report it as a fill path.
 
 **Playwright starts from a fresh profile with no cookies or logins.** Any form

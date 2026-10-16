@@ -203,9 +203,6 @@ mid-fill, fields left required-and-blank, and values that landed in the wrong bo
 sh scripts/py -m job_finder.fill_grader <the .post.json paths you just wrote> --gate --quiet
 ```
 
-The prefix makes `job_finder` importable where the repo is mounted but not
-installed, which is every Linux device VM. It is harmless on Windows.
-
 Read the exit code, not the wording:
 
 - **0** — no critical violation. The forms are safe to present for review.

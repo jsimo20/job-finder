@@ -117,7 +117,7 @@ def archive_applications(config: Config | None = None, *, dry_run: bool = False
 
     render() writes inside the repo because that is the one location every
     surface can write to: a Cowork session sees a Linux VM with the repo
-    mounted, where an absolute Windows path to a synced documents folder does
+    mounted, where an absolute host path to a synced documents folder does
     not exist at all. The durable home for finished folders is that synced
     directory, so moving them is a separate step run from a machine that can
     see it, rather than a render target that only works from one surface.

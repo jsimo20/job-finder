@@ -338,7 +338,7 @@ def test_archive_dry_run_moves_nothing(tmp_path):
 
 
 def test_archive_refuses_an_unreachable_destination(tmp_path):
-    """From the Cowork VM the archive is a Windows path that does not exist."""
+    """From the Cowork VM the archive is a host path that does not exist."""
     config = job_apply.Config(inputs_dir=tmp_path, applications_dir=tmp_path,
                               claims_ground_truth=tmp_path / "c.md",
                               resume_skill=tmp_path / "g.py",

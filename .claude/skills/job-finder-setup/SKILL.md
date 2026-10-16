@@ -53,10 +53,11 @@ Look through your own tool list for any tool whose name contains `playwright`.
 
   > One small install first, so I can fill application forms for you later.
   > Open https://nodejs.org in your browser and click the big green button
-  > marked **LTS** to download it. Open the downloaded file and click Next
-  > until it finishes; the defaults are fine. Then quit the Claude app
-  > completely and open it again, come back to this folder, and tell me
-  > "set me up" again. I will pick up where we left off.
+  > marked **LTS** to download it. Open the downloaded file and click through
+  > its steps until it finishes; the defaults are fine. A Mac asks for your
+  > computer's password at the end. Then quit the Claude app completely (on
+  > a Mac, press Cmd+Q) and open it again, come back to this folder, and tell
+  > me "set me up" again. I will pick up where we left off.
 
   Still absent on the second run: say form filling will not work on this
   computer yet and everything else will, and carry on.

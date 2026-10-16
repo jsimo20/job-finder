@@ -1,4 +1,4 @@
-"""CLI entrypoint for Claude Code on Windows. The stage subcommands (collect,
+"""CLI entrypoint, run as `sh scripts/py -m job_finder.cli`. The stage subcommands (collect,
 score, digest) run pieces of the pipeline; the rest manage durable state in
 data/state.db (companies, no-auto, applied, digest-archive, outreach) or the
 working DB (review, mark-applied, dismiss, unmark). The weekly cycle itself is
