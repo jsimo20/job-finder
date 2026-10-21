@@ -37,9 +37,12 @@ main() {
     fi
 
     before=$(cksum < pyproject.toml)
-    # --overwrite rewrites files in place. tar's default deletes and recreates,
-    # and a Cowork folder mount blocks deletes.
-    if ! tar xzf "$tmp" --strip-components=1 --overwrite; then
+    # GNU tar's default deletes and recreates each file, and a Cowork folder
+    # mount blocks deletes, so GNU tar needs --overwrite to rewrite in place.
+    # BSD tar (macOS) already writes in place and rejects the flag.
+    overwrite=
+    tar --version 2>/dev/null | grep -q 'GNU tar' && overwrite=--overwrite
+    if ! tar xzf "$tmp" --strip-components=1 $overwrite; then
         echo "update failed: extract"
         return 1
     fi
