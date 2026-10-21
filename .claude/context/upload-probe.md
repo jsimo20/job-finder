@@ -5,14 +5,14 @@ Proves the Playwright server can attach a file from this folder, and finds the
 `browser_file_upload` path starts from. Run it before anything that uploads.
 
 The server accepts uploads only from its output folder and its working folder.
-The plugin sets the output folder to `job-finder/.playwright-mcp` inside the
-user's home folder, so on Cowork uploads work only when the connected folder
-is `job-finder`, directly in the home folder. In Claude Code the repo is the
-working folder and uploads work wherever it is.
+The marketplace plugin sets the output folder to `job-finder/.playwright-mcp`
+inside the user's home folder. A folder anywhere else gets its own browser
+plugin, under Rejected below. In Claude Code the repo is the working folder
+and uploads work wherever it is.
 
 Use one Playwright tool set, any tool whose name contains `playwright`. If two
-sets are present, probe the first; if it is rejected, probe the second, and
-use whichever is accepted for the whole run.
+sets are present, probe each until one is accepted, and use that one for the
+whole run.
 
 If any call fails with a `[File chooser]` modal state, call
 `browser_file_upload` with no `paths` to close it, then repeat the call.
@@ -43,16 +43,32 @@ prompt, and the next probe overwrites it.
 - **Accepted:** step 6 returns 1. Pass the uploads root to whatever uploads
   next.
 - **Rejected:** step 4 names no root ending in `.playwright-mcp`, or step 5
-  errors, or step 6 returns 0. Quote the errors verbatim. Every resume and
-  cover letter then needs attaching by hand; the forms still get filled with
-  everything that is not a file. On Cowork the cause is the folder's location.
-  Tell the user, once:
+  errors, or step 6 returns 0. Quote the errors verbatim. Until it is fixed,
+  every resume and cover letter needs attaching by hand; forms still get
+  filled with everything that is not a file.
 
-  > To attach your resume and cover letter, I need your `job-finder` folder
-  > to sit directly in your home folder: on a Mac, open Finder and choose
-  > **Go > Home**; on Windows, it's `C:\Users\<your name>`. Move the folder
-  > there, connect it again with the **+** next to the message box, and say
-  > "set me up" so the weekly run uses the new spot.
+  On Cowork, with the user there to answer, give the folder its own browser
+  plugin:
+
+  1. Take the folder's path on the user's computer exactly as the session
+     states it (a note such as "The user picked these folders on their
+     computer"). Never build or guess it from a username, the mount path or a
+     usual folder layout. If the session does not state it, stop here.
+  2. Build the plugin into the folder:
+
+     ```sh
+     sh scripts/py -m job_finder.browser_plugin --host-dir '<that path>'
+     ```
+
+  3. Tell the user, then stop and wait:
+
+     > One more step so I can attach your resume and cover letter. In the
+     > Claude app, open **Customize > Plugins**, choose the option to upload a
+     > plugin, and pick **job-finder-browser.zip** from your job-finder
+     > folder. Then start a new chat in this folder and say "set me up".
+
+  A run with nobody to answer, or with no stated path, ends its report with:
+  say "set me up" in this folder to fix attaching files.
 
 - **Inconclusive:** the probe could not run (no Playwright tools, no file
   chooser, the `data:` URL blocked). Report it as inconclusive, never as a

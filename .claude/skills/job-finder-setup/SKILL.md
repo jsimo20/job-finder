@@ -50,8 +50,8 @@ their files.
 Look through your own tool list for any tool whose name contains `playwright`.
 
 - **Present:** run `.claude/context/upload-probe.md`. Accepted: say nothing
-  and carry on. Rejected: send the probe's message to the user, then stop and
-  wait. Inconclusive: carry on.
+  and carry on. Rejected: follow the probe's Rejected steps, which end by
+  waiting for the user. Inconclusive: carry on.
 - **Absent:** Node.js is missing on their computer. Send this, then stop and
   wait:
 

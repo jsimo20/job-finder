@@ -1,5 +1,5 @@
 {
-  "_comment": "Cowork reads MCP servers only from a plugin; the repo-root .mcp.json serves Claude Code. Keep the version pin identical in both. Cowork passes the server no folder, so it accepts uploads only from --output-dir and its own start folder. Both servers point --output-dir at job-finder/.playwright-mcp in the user's home folder: playwright through HOME (macOS, Linux), playwright-win through USERPROFILE (Windows). A server whose variable is unset does not start. Nothing here takes effect until the plugin is rebuilt (sh scripts/py scripts/build_cowork_plugin.py) and uploaded again.",
+  "_comment": "Cowork reads MCP servers only from a plugin; the repo-root .mcp.json serves Claude Code. Keep the version pin identical here, in the repo-root .mcp.json and in job_finder.browser_plugin. Cowork passes the server no folder, so it accepts uploads only from --output-dir and its own start folder. Both servers point --output-dir at job-finder/.playwright-mcp in the user's home folder: playwright through HOME (macOS, Linux), playwright-win through USERPROFILE (Windows). A server whose variable is unset does not start. A folder anywhere else gets its own plugin from job_finder.browser_plugin. Users receive a change through the marketplace only when .claude-plugin/plugin.json's version changes.",
   "mcpServers": {
     "playwright": {
       "command": "npx",

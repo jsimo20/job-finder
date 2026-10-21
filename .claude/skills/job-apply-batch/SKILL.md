@@ -143,8 +143,8 @@ find it.
 - **Accepted:** say so in one line, and pass its uploads root to every
   autofiller dispatch as `uploads_root`.
 - **Rejected:** quote the errors verbatim at the **top** of your first
-  message, before anything about roles, followed by the probe's message to the
-  user. Say plainly that **every role in this batch will need its resume and
+  message, before anything about roles, followed by the probe's closing line
+  for a run with nobody to answer. Say plainly that **every role in this batch will need its resume and
   cover letter attached by hand**. **Do not stop:** tailoring, fact-checking
   and rendering are still good, and the forms still get filled with everything
   that is not a file.
