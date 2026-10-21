@@ -19,8 +19,8 @@ your computer.
    automatically**, and install **job-finder**. Claude warns that the plugin
    runs programs on your computer: that is the browser it fills forms with,
    so click **Continue**. Updates then arrive on their own.
-4. **Make an empty folder called `job-finder` directly in your home folder**
-   (on a Mac, Finder > Go > Home; on Windows, `C:\Users\<your name>`), not in
+4. **Make an empty folder called `job-finder` directly in your home folder**,
+   the folder named after you that holds Documents and Downloads, not inside
    Documents. In a new chat, click the **+** next to the message box and
    connect it.
 5. **Say "set me up".** It's a conversation of about 20 to 30 minutes: where

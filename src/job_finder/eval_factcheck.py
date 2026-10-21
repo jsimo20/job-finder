@@ -29,9 +29,9 @@ keywords over loosening the check.
 Costs real tokens (one call per case), so it is never part of the pytest run.
 
 Usage:
-    python -m job_finder.eval_factcheck
-    python -m job_finder.eval_factcheck --repeat 3     # same cases, 3 samples
-    python -m job_finder.eval_factcheck --case invented_metric --show-report
+    sh scripts/py -m job_finder.eval_factcheck
+    sh scripts/py -m job_finder.eval_factcheck --repeat 3     # same cases, 3 samples
+    sh scripts/py -m job_finder.eval_factcheck --case invented_metric --show-report
 
 **Repeat before acting on a change.** A single pass is one sample from a
 stochastic grader, so 14/14 and 12/14 on an unchanged prompt are both ordinary

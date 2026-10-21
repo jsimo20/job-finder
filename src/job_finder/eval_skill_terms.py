@@ -15,9 +15,9 @@ Ground truth is synthetic — the pool in tests/fixtures/skill_pool_sample.md an
 invented postings. The real profile is never read, so a bad case cannot be fixed
 by quietly making the candidate more qualified.
 
-    python -m job_finder.eval_skill_terms
-    python -m job_finder.eval_skill_terms --repeat 3     # same cases, 3 samples
-    python -m job_finder.eval_skill_terms --case gap-databricks --show-report
+    sh scripts/py -m job_finder.eval_skill_terms
+    sh scripts/py -m job_finder.eval_skill_terms --repeat 3     # same cases, 3 samples
+    sh scripts/py -m job_finder.eval_skill_terms --case gap-databricks --show-report
 
 **Repeat before you act on a change.** A single pass is one sample from a
 stochastic grader: 7/8 and 6/8 on the same prompt are not a regression, and
