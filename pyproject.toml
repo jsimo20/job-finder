@@ -1,6 +1,6 @@
 [project]
 name = "job-finder"
-version = "1.3.0"
+version = "1.3.1"
 description = "Finds roles worth applying to, tailors the application, and fills the form up to Submit; runs in a Claude Cowork folder."
 # 3.10 is the floor because the Cowork device VM runs it. tomllib is the only
 # 3.11+ import in the codebase and is backfilled by tomli below.
