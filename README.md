@@ -16,8 +16,9 @@ your computer.
    https://claude.com/download
 3. **Install the plugin.** In the Claude app, open **Customize > Plugins**,
    choose **Add marketplace**, enter `jsimo20/job-finder`, turn on **Sync
-   automatically**, and install **job-finder**. Updates then arrive on their
-   own.
+   automatically**, and install **job-finder**. Claude warns that the plugin
+   runs programs on your computer: that is the browser it fills forms with,
+   so click **Continue**. Updates then arrive on their own.
 4. **Make an empty folder called `job-finder` directly in your home folder**
    (on a Mac, Finder > Go > Home; on Windows, `C:\Users\<your name>`), not in
    Documents. In a new chat, click the **+** next to the message box and
