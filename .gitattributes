@@ -9,7 +9,6 @@ scripts/py text eol=lf
 # Evals stay out so a user's agent never reads a grader's expected answers.
 tests/                                  export-ignore
 .github/                                export-ignore
-cowork-plugin/                          export-ignore
 src/job_finder/eval_*.py                export-ignore
 scripts/build_cowork_plugin.py          export-ignore
 scripts/score_writing.py                export-ignore
