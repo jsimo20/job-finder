@@ -29,8 +29,8 @@ Grade is the median percentile of applied roles within their trigger digest:
 A >= 80%, B >= 65%, C >= 50%, D >= 35%, F below.
 
 Usage:
-    python -m job_finder.eval_calibration
-    python -m job_finder.eval_calibration --min-support 3 --json
+    sh scripts/py -m job_finder.eval_calibration
+    sh scripts/py -m job_finder.eval_calibration --min-support 3 --json
 """
 from __future__ import annotations
 

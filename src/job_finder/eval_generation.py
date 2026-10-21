@@ -30,8 +30,8 @@ cannot grade against a letter that already exists.
 Roughly 25k tokens per case. Manual, and never part of pytest.
 
 Usage:
-    python -m job_finder.eval_generation --n 3
-    python -m job_finder.eval_generation --n 1 --show-letter
+    sh scripts/py -m job_finder.eval_generation --n 3
+    sh scripts/py -m job_finder.eval_generation --n 1 --show-letter
 """
 from __future__ import annotations
 

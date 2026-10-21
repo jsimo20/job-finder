@@ -17,9 +17,9 @@ question at a time, and never paste command output at them.
 ## Before anything
 
 Confirm there is a connected folder. If there is none, ask them to make an
-empty folder called `job-finder` directly in their home folder (on a Mac, open
-Finder and choose **Go > Home**; on Windows, `C:\Users\<your name>`), not in
-Documents, connect it with the **+** next to the message box, and wait. That
+empty folder called `job-finder` directly in their home folder (the folder
+named after them that holds Documents and Downloads), not inside Documents,
+connect it with the **+** next to the message box, and wait. That
 spot lets the form-filling browser attach files with no extra step. Everything below happens inside it. Call its path `$ROOT`.
 
 Check the tools you need exist in your own environment, silently:
