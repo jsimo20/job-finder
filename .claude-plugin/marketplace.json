@@ -1,0 +1,12 @@
+{
+  "name": "job-finder",
+  "description": "job-finder: finds roles worth applying to, tailors each application and fills the form up to Submit.",
+  "owner": { "name": "jsimo20" },
+  "plugins": [
+    {
+      "name": "job-finder",
+      "source": "./cowork-plugin",
+      "description": "Sets job-finder up in a connected folder and gives it a browser that fills application forms."
+    }
+  ]
+}
