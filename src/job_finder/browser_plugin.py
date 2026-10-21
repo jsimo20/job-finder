@@ -22,7 +22,7 @@ from pathlib import Path
 
 from . import settings
 
-# Keep in step with the version pinned in cowork-plugin/.mcp.json.
+# Keep in step with the version pinned in cowork-plugin/launch.js.
 PLAYWRIGHT_MCP = "@playwright/mcp@0.0.79"
 PLUGIN_NAME = "job-finder-browser"
 ARCHIVE_NAME = f"{PLUGIN_NAME}.zip"

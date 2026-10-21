@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import zipfile
 from pathlib import Path
 
@@ -43,10 +44,18 @@ def test_build_writes_an_installable_plugin(tmp_path):
 
 def test_every_playwright_pin_matches():
     pins = {B.PLAYWRIGHT_MCP}
-    for path in (REPO_ROOT / ".mcp.json", REPO_ROOT / "cowork-plugin/.mcp.json"):
-        for server in json.loads(path.read_text(encoding="utf-8"))["mcpServers"].values():
-            pins.add(server["args"][0])
+    for server in json.loads((REPO_ROOT / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"].values():
+        pins.add(server["args"][0])
+    launcher = (REPO_ROOT / "cowork-plugin/launch.js").read_text(encoding="utf-8")
+    pins.update(re.findall(r'"(@playwright/mcp@[^"]+)"', launcher))
     assert len(pins) == 1, pins
+
+
+def test_the_plugin_runs_one_server_through_the_launcher():
+    servers = json.loads((REPO_ROOT / "cowork-plugin/.mcp.json").read_text(encoding="utf-8"))["mcpServers"]
+    assert servers == {"playwright": {"command": "node",
+                                      "args": ["${CLAUDE_PLUGIN_ROOT}/launch.js"]}}
+    assert (REPO_ROOT / "cowork-plugin/launch.js").exists()
 
 
 def test_marketplace_entry_matches_the_plugin():

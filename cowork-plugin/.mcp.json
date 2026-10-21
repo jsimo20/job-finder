@@ -1,20 +1,10 @@
 {
-  "_comment": "Cowork reads MCP servers only from a plugin; the repo-root .mcp.json serves Claude Code. Keep the version pin identical here, in the repo-root .mcp.json and in job_finder.browser_plugin. Cowork passes the server no folder, so it accepts uploads only from --output-dir and its own start folder. Both servers point --output-dir at job-finder/.playwright-mcp in the user's home folder: playwright through HOME (macOS, Linux), playwright-win through USERPROFILE (Windows). A server whose variable is unset does not start. A folder anywhere else gets its own plugin from job_finder.browser_plugin. Users receive a change through the marketplace only when .claude-plugin/plugin.json's version changes.",
+  "_comment": "Cowork reads MCP servers only from a plugin; the repo-root .mcp.json serves Claude Code. launch.js starts Playwright with --output-dir set to job-finder/.playwright-mcp in the user's home folder, found with os.homedir() on any OS. Cowork passes the server no folder, so it accepts uploads only from that folder and its own start folder; a folder anywhere else gets its own plugin from job_finder.browser_plugin. Keep the version pin in launch.js identical to the repo-root .mcp.json and job_finder.browser_plugin. Users receive a change only when .claude-plugin/plugin.json's version moves, and a changed server starts only after they restart the Claude app.",
   "mcpServers": {
     "playwright": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "@playwright/mcp@0.0.79",
-        "--output-dir",
-        "${HOME}/job-finder/.playwright-mcp"
-      ]
-    },
-    "playwright-win": {
-      "command": "npx",
-      "args": [
-        "@playwright/mcp@0.0.79",
-        "--output-dir",
-        "${USERPROFILE}/job-finder/.playwright-mcp"
+        "${CLAUDE_PLUGIN_ROOT}/launch.js"
       ]
     }
   }
