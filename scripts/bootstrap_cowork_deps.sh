@@ -3,11 +3,11 @@
 #
 #     sh scripts/bootstrap_cowork_deps.sh
 #
-# The VM ships bare Python with no site-packages and cannot see the Windows
+# The VM ships bare Python with no site-packages and cannot run the host's
 # `.venv`, so this installs pyproject.toml's runtime dependencies into
 # `.cowork-deps/`. After it, every Python call on the VM is:
 #
-#     PYTHONPATH=".cowork-deps:src" python3 -m job_finder.<module>
+#     sh scripts/py -m job_finder.<module>
 #
 # Keep runtime dependencies pure Python, so the folder survives a Python
 # minor-version bump.
@@ -15,7 +15,7 @@ set -eu
 
 cd "$(dirname "$0")/.."
 
-# python3 on the Cowork VM; Windows has only `python` (its python3 is a Store stub).
+# python3 where it exists; some Windows installs have only `python`.
 PY=python3
 "$PY" -c "" 2>/dev/null || PY=python
 

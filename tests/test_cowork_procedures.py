@@ -1,6 +1,7 @@
 """Rules every procedure must follow to run on Cowork as well as Claude Code."""
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -36,4 +37,31 @@ def test_no_procedure_names_a_profile_layout():
                  for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
                  for m in re.finditer(r"profile/([A-Za-z_-]+)/", line)
                  if m.group(1) != "applications"]
+    assert offenders == []
+
+
+# A venv interpreter, a Cowork-only PYTHONPATH prefix or a drive-letter path
+# runs on one surface or OS only; procedures call `sh scripts/py` instead. The
+# lookahead admits the placeholder `C:\Users\<your name>` shown to users.
+OS_SPECIFIC = re.compile(r"\.venv[/\\]|python\.exe|job-finder\.exe|PYTHONPATH=|System32"
+                         r"|\b[A-Za-z]:\\(?!Users\\<)")
+
+
+def test_no_procedure_names_an_os_specific_path():
+    files = (PROCEDURES + sorted(REPO_ROOT.glob(".claude/agents/*.md"))
+             + sorted(REPO_ROOT.glob(".claude/context/*.md")) + [REPO_ROOT / "CLAUDE.md"])
+    offenders = [f"{p.relative_to(REPO_ROOT)}:{n}: {m.group(0)}"
+                 for p in files
+                 for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
+                 for m in OS_SPECIFIC.finditer(line)]
+    assert offenders == []
+
+
+def test_no_mcp_config_names_an_absolute_path():
+    # One machine's absolute --output-dir breaks uploads on every other machine.
+    offenders = [f"{path.relative_to(REPO_ROOT)}: {server}: {arg}"
+                 for path in (REPO_ROOT / ".mcp.json", REPO_ROOT / "cowork-plugin/.mcp.json")
+                 for server, cfg in json.loads(path.read_text(encoding="utf-8"))["mcpServers"].items()
+                 for arg in cfg.get("args", [])
+                 if re.match(r"[A-Za-z]:[\\/]|/", arg)]
     assert offenders == []

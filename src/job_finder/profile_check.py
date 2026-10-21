@@ -1,7 +1,7 @@
 """Profile doctor: verify the gitignored profile/ is filled in, not still the
 starting values profile_init wrote. Run it after setup and before the first real application:
 
-    python -m job_finder.profile_check
+    sh scripts/py -m job_finder.profile_check
 
 Exit code 0 = ready; 1 = issues listed below the report.
 """
@@ -41,7 +41,7 @@ def check() -> list[str]:
     real = settings.PROFILE_DIR / "profile.toml"
     if not real.exists():
         issues.append("profile/profile.toml does not exist — run "
-                      "`python -m job_finder.profile_init` and fill it in")
+                      "`sh scripts/py -m job_finder.profile_init` and fill it in")
         return issues
 
     profile = settings.load_profile(real)
@@ -83,7 +83,7 @@ def check() -> list[str]:
                       "the tailoring and fact-checking workflows read it")
     if not config.resume_skill.exists():
         issues.append(f"resume generator not found at {config.resume_skill} — "
-                      "`python -m job_finder.profile_init` writes it; then edit its "
+                      "`sh scripts/py -m job_finder.profile_init` writes it; then edit its "
                       "RESUME_DATA block")
     if not (settings.PROFILE_DIR / "fit_profile.md").exists():
         issues.append("profile/fit_profile.md missing — the digest triager ranks roles with it")
@@ -97,7 +97,7 @@ def main() -> int:
         print("profile check: PASS — pipeline config, identity, driving docs, "
               "and generator all present.")
         print("Reminder: the tracked-company list lives in data/state.db — "
-              "`job-finder companies list` to inspect it (the manage-companies skill).")
+              "`sh scripts/py -m job_finder.cli companies list` to inspect it (the manage-companies skill).")
         return 0
     print(f"profile check: {len(issues)} issue(s)\n")
     for issue in issues:

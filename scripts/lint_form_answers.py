@@ -13,7 +13,7 @@ This closes that. Each application folder may carry `form_answers.json`:
 Every answer is run through the letter linter's checks, minus the two that are
 letter-specific: a form answer has no "Thanks," closing and no fixed final line.
 
-    python -m scripts.lint_form_answers --date 2026-09-27
+    sh scripts/py scripts/lint_form_answers.py --date 2026-09-27
 """
 from __future__ import annotations
 

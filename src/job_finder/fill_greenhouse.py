@@ -9,13 +9,13 @@ Answers come from profile/profile.toml (identity, EEO, work authorization)
 and the per-app folder's standard_answers.md.
 
 Usage (single):
-    python -m job_finder.fill_greenhouse --url <application_url> \
+    sh scripts/py -m job_finder.fill_greenhouse --url <application_url> \
         --folder "<per-app folder>" [--city "Anytown"] [--no-hold]
 
 Usage (batch): repeat --url and --folder in matching order. All applications
 fill in ONE browser, one tab each, and every tab is left open for review.
 
-    python -m job_finder.fill_greenhouse \
+    sh scripts/py -m job_finder.fill_greenhouse \
         --url <url_a> --folder "<folder_a>" \
         --url <url_b> --folder "<folder_b>"
 

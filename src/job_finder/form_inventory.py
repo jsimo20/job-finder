@@ -17,7 +17,7 @@ Audits carry the user's contact details in the `value` column, so
 requires `redact()` first — Layer 1 asserts on structure, never on contents.
 
 Usage as a script (captures a blank form, before any fill):
-    python -m job_finder.form_inventory --url <application_url> \
+    sh scripts/py -m job_finder.form_inventory --url <application_url> \
         --slug <company>-<role-slug> [--phase pre]
 """
 

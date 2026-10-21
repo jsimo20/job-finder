@@ -207,7 +207,7 @@ def substitution_note(subs: list[Substitution]) -> str:
 def _main(argv: list[str] | None = None) -> int:
     """Check one application folder's skills against the pool and its swaps.
 
-        python -m job_finder.skill_terms --folder <per-app folder>
+        sh scripts/py -m job_finder.skill_terms --folder <per-app folder>
 
     Exit 0 clean, 4 a critical violation, 3 nothing to check. 3 and 4 are
     separate because an unattended caller cannot act on "no resume here" and

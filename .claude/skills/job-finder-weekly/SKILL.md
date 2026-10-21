@@ -12,11 +12,7 @@ the apply batch; `--force` runs the pipeline even when the stamp says it is not
 due; `--no-update` skips the engine update in step 0. Confirm what you are
 about to do in your first message, in one line.
 
-**Every Python call below is prefixed `PYTHONPATH=".cowork-deps:src" python3`,
-run from the repo root.** On Windows in Claude Code, drop the prefix and use
-`.venv/Scripts/python.exe`. If `.cowork-deps/` is missing, build it first with
-`sh scripts/bootstrap_cowork_deps.sh`; it is gitignored and a fresh clone will
-not have it.
+**Every Python call below runs as `sh scripts/py` from the repo root.**
 
 ## 0. Update the engine
 
@@ -40,7 +36,7 @@ by an overlay and are harmless.
 ## 1. Is a run due?
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.weekly status
+sh scripts/py -m job_finder.weekly status
 ```
 
 `due` is true when no run has ever finished or the last one is three or more
@@ -52,7 +48,7 @@ what makes an early or repeated trigger safe: it costs nothing until a run is du
 ## 2. Collect
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.weekly collect
+sh scripts/py -m job_finder.weekly collect
 ```
 
 Zero tokens. Polls every tracked board, applies the title and location
@@ -72,7 +68,7 @@ proceed; a scheduled run has nobody to ask.
 Get the instructions, verbatim, and split the work into batches of 25:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.weekly prompt > data/weekly/extraction_prompt.txt
+sh scripts/py -m job_finder.weekly prompt > data/weekly/extraction_prompt.txt
 cd data/weekly && rm -f batch_* answers_* && split -l 25 -d pending_extractions.jsonl batch_ && cd ../..
 ls data/weekly/batch_*
 ```
@@ -96,7 +92,7 @@ Then store the answers:
 
 ```sh
 cat data/weekly/answers_*.jsonl > data/weekly/extractions.jsonl
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.weekly import-extractions data/weekly/extractions.jsonl
+sh scripts/py -m job_finder.weekly import-extractions data/weekly/extractions.jsonl
 ```
 
 Read `imported`, `skipped` and `errors_detail`. A skipped line is malformed
@@ -107,7 +103,7 @@ whatever is still missing as unread rather than trying a third time.
 ## 4. Finish
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.weekly finish
+sh scripts/py -m job_finder.weekly finish
 ```
 
 Scores every extraction, scans the configured discovery sites (a failure

@@ -9,15 +9,12 @@ The user has an interview coming. Your job is a prep document they can read
 the night before and a mock interview that grades each answer against what
 they actually did.
 
-**`$PY` below means `PYTHONPATH=".cowork-deps:src" python3` on Cowork and
-`.venv/Scripts/python.exe` on Windows, run from the repo root.**
-
 ## 1. Find the application
 
 Resolve every path through the profile; never assume a folder layout:
 
 ```sh
-$PY -c "
+sh scripts/py -c "
 from job_finder import job_apply
 c = job_apply.load_config()
 for k in ('applications_dir', 'claims_ground_truth', 'resume_master_md',

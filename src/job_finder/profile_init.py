@@ -7,7 +7,7 @@ three backticks, `toml` and `profile/profile.toml`. This writes every such
 block into profile/ and never overwrites a file that is already there, so
 running it over a real profile changes nothing.
 
-    python -m job_finder.profile_init
+    sh scripts/py -m job_finder.profile_init
 """
 from __future__ import annotations
 
@@ -71,7 +71,7 @@ def main() -> int:
     for p in kept:
         print(f"kept    {p.relative_to(settings.REPO_ROOT).as_posix()} (already exists)")
     print("\nEvery written file still holds example values. Fill them in through "
-          "setup, then run `python -m job_finder.profile_check`.")
+          "setup, then run `sh scripts/py -m job_finder.profile_check`.")
     return 0
 
 

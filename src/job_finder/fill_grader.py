@@ -30,9 +30,9 @@ backlog, not counted against the grade — the fix for those is adding
 answers, not fixing the filler.
 
 Usage:
-    python -m job_finder.fill_grader data/fill_audits/<slug>.post.json ...
-    python -m job_finder.fill_grader --date <YYYY-MM-DD>
-    python -m job_finder.fill_grader --date <YYYY-MM-DD> --gate
+    sh scripts/py -m job_finder.fill_grader data/fill_audits/<slug>.post.json ...
+    sh scripts/py -m job_finder.fill_grader --date <YYYY-MM-DD>
+    sh scripts/py -m job_finder.fill_grader --date <YYYY-MM-DD> --gate
 
 --gate turns the report into a check. An unattended run has nobody reading the
 report, so the batch needs something that refuses rather than something that

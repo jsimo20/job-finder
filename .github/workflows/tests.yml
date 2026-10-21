@@ -10,7 +10,11 @@ permissions:
 
 jobs:
   pytest:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
       # The Cowork VM's version, the floor in pyproject.toml.
@@ -19,3 +23,6 @@ jobs:
           python-version: "3.10"
       - run: pip install -e ".[dev,apply]"
       - run: python -m pytest -q
+      # No .venv here, so the launcher takes the Cowork path: it builds
+      # .cowork-deps and runs python3 against it.
+      - run: sh scripts/py -c "import job_finder.weekly, job_finder.job_apply, reportlab"

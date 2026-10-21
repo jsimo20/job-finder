@@ -4,7 +4,7 @@
 #
 # Every value marked REPLACE is a placeholder that matches nothing, so a search
 # never runs on someone else's preferences. Write each from the user's own
-# answers; `python -m job_finder.profile_check` refuses a config that still
+# answers; `sh scripts/py -m job_finder.profile_check` refuses a config that still
 # contains REPLACE. Contact details and EEO answers never go here; they live in
 # profile/.
 

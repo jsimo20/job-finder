@@ -3,13 +3,13 @@
 `collect` writes the surviving job descriptions out as JSON lines, the session
 (or its subagents) reads them against `prompt` and writes the answers back,
 `import-extractions` stores them, and `finish` scores, renders the digest and
-stamps the run. No API key; it runs under `PYTHONPATH=".cowork-deps:src" python3`.
+stamps the run. No API key; it runs under `sh scripts/py`.
 
-    python -m job_finder.weekly status
-    python -m job_finder.weekly collect
-    python -m job_finder.weekly prompt
-    python -m job_finder.weekly import-extractions data/weekly/extractions.jsonl
-    python -m job_finder.weekly finish
+    sh scripts/py -m job_finder.weekly status
+    sh scripts/py -m job_finder.weekly collect
+    sh scripts/py -m job_finder.weekly prompt
+    sh scripts/py -m job_finder.weekly import-extractions data/weekly/extractions.jsonl
+    sh scripts/py -m job_finder.weekly finish
 
 A run is due when the last stamped run finished at least `MIN_DAYS` ago. The
 schedule fires weekly, and the app catches up a missed trigger when it next

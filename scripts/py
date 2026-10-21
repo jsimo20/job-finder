@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+# Run job_finder's Python from the folder root, on any surface:
+#
+#     sh scripts/py -m job_finder.weekly status
+#
+# A working venv wins (.venv/bin on macOS and Linux, .venv/Scripts on
+# Windows). Without one, as on a Cowork device VM, it runs python3 against
+# .cowork-deps/, building that first if it is missing. Each venv interpreter is
+# run once before use because a mounted folder can carry another OS's venv.
+set -eu
+
+cd "$(dirname "$0")/.."
+
+for py in .venv/bin/python .venv/Scripts/python.exe; do
+    if [ -x "$py" ] && "$py" -c "" 2>/dev/null; then
+        exec "$py" "$@"
+    fi
+done
+
+[ -d .cowork-deps ] || sh scripts/bootstrap_cowork_deps.sh >&2
+PYTHONPATH=".cowork-deps:src"
+export PYTHONPATH
+exec python3 "$@"

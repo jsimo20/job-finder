@@ -21,7 +21,7 @@ Cowork device VM does not have, and a browser launched inside that VM is not one
 the user can see or click, which defeats leaving tabs open for review. Tested
 2026-08-31: it does not run there. So a Cowork batch fills every form through the
 autofill agent at roughly 63k tokens per form, and that is a ceiling on how many
-roles one batch can carry, not a preference to weigh. In Claude Code on Windows
+roles one batch can carry, not a preference to weigh. In Claude Code
 `fill_greenhouse` does run, costs about 2k per form, and is the better path
 wherever the ATS is Greenhouse.
 
@@ -31,23 +31,9 @@ changes when nobody is watching. Two copies of that loop would drift.
 
 ## 1. Preflight, before drafting anything
 
-**Every Python call below is prefixed `PYTHONPATH=".cowork-deps:src" python3`.**
-`job_finder` lives under `src/` and the only editable install is a .pth file in
-the Windows `.venv`, which a Linux device VM cannot see, so a bare `python -c`
-dies on `No module named 'job_finder'` before it reaches any real work.
-
-**On Windows, drop the prefix and use `.venv/Scripts/python.exe`.** The editable
-install already puts `job_finder` on the path there, and Windows separates
-PYTHONPATH entries with `;` rather than `:`, so the prefix as written resolves to
-one nonexistent directory.
-
-If `.cowork-deps/` is missing, build it rather than failing:
-
-```sh
-sh scripts/bootstrap_cowork_deps.sh
-```
-
-It is gitignored, so a fresh clone or a different machine will not have it.
+**Every Python call below runs as `sh scripts/py` from the repo root.** A bare
+`python -c` dies on `No module named 'job_finder'` wherever the folder has no
+venv.
 **If the bootstrap itself fails** (no egress, no pip), say so plainly in the
 report and carry on: liveness treats unknown as live, so losing it costs tokens
 on dead postings rather than correctness. Losing `reportlab` is different and
@@ -59,7 +45,7 @@ way the code does rather than naming them; a layout that is right for one user
 is wrong for the next:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -c "
+sh scripts/py -c "
 from job_finder import job_apply, settings
 c = job_apply.load_config(settings.require_profile())
 for p in (c.resume_master_md, c.personal_statement_md, c.standard_answers_md,
@@ -76,14 +62,8 @@ no revision pass will reach CLEAN.
 Then check the digest is current:
 
 ```sh
-job-finder digest-archive list
+sh scripts/py -m job_finder.cli digest-archive list
 ```
-
-The `job-finder` console script comes from the editable install, so on a device
-VM it is not on PATH either. There the equivalent is
-`PYTHONPATH=".cowork-deps:src" python3 -m job_finder.cli digest-archive list`,
-which needs the `--cli` extras. **Prefer running this on Windows**, where the install already works; pulling `anthropic` into
-`.cowork-deps` locks it to one Python build.
 
 **Report the date of the latest digest, and stop if it is more than 7 days old.**
 The roles come from that digest; a stale one means applying to postings that may
@@ -93,7 +73,7 @@ Then drop the roles that have already closed, **before spending anything on
 them**:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -c "
+sh scripts/py -c "
 from job_finder import liveness
 import json,sys
 roles = json.load(sys.stdin)
@@ -144,9 +124,9 @@ install`), call the tool whose name contains `browser_install` once, then
 retry. That is the server fetching its own browser build; it is not something
 the user has to do and it never goes in the report as an action for them.
 
-For Greenhouse specifically, `python -m job_finder.fill_greenhouse` is cheaper
+For Greenhouse specifically, `sh scripts/py -m job_finder.fill_greenhouse` is cheaper
 than the agent by roughly 30x and drives its own browser too. Prefer it in Claude
-Code on Windows. **It is not available on Cowork** — see the note at the top of
+Code. **It is not available on Cowork** — see the note at the top of
 this file; do not attempt it there and do not report it as a fill path.
 
 **Playwright starts from a fresh profile with no cookies or logins.** Any form
@@ -156,76 +136,19 @@ not a new limitation.
 
 ### Probe the upload path before drafting anything
 
-**The server accepts uploads only from its `--output-dir` and its cwd.** Cowork
-spawns it with `cwd=C:\Windows\System32`, so if the installed plugin was built
-without `--output-dir`, every staged PDF is rejected as outside allowed roots and
-no application gets a resume or a cover letter attached. On 2026-08-31 that
-surfaced only after seven roles had been tailored, rendered and filled, which is
-the expensive place to find it.
+Run `.claude/context/upload-probe.md` now, before any role is tailored. A
+rejected upload found after rendering and filling is the expensive place to
+find it.
 
-So test it first, with one throwaway file, on the real path:
-
-```sh
-mkdir -p .playwright-mcp/uploads
-echo upload probe > .playwright-mcp/uploads/_probe.txt
-```
-
-Then, using the Playwright tools:
-
-1. `browser_navigate` to
-   `data:text/html,<input type="file" id="probe">`
-2. `browser_snapshot` to get the ref, then `browser_click` it, which opens the
-   file chooser. **The ref goes in `target`, not `ref`** — `ref` is rejected as a
-   missing argument and costs a round trip.
-3. `browser_file_upload` the **absolute** path of `.playwright-mcp/uploads/_probe.txt`
-4. Confirm it actually attached, because a call that returns without an error is
-   not proof:
-   ```
-   browser_evaluate: () => document.getElementById('probe').files.length
-   ```
-   Verified 2026-08-31 in Claude Code, where the output dir is set: returns 1.
-
-Three outcomes, and they are not two:
-
-- **Accepted** — step 4 returns 1. Uploads work. Say so in one line and carry on.
-- **Rejected** — quote the error verbatim at the **top** of your first message,
-  before anything about roles. The rejection names the roots the running server
-  actually allows, and that text is the only place the installed plugin's real
-  configuration is visible, so it is the diagnosis rather than just the symptom.
-  Say plainly: **every role in this batch will need its resume and cover letter
-  attached by hand**, and the fix is to rebuild and reinstall the plugin
-  (`python scripts/build_cowork_plugin.py`, then the + next to the message box, or Customize ->
-  Plugins -> upload the zip). **Do not stop.** Prep is still worth doing: the
-  tailoring, fact-checking and rendering are all still good, and the forms still
-  get filled with everything that is not a file.
-
-  **On a machine that is not the developer's, the usual cause is that
-  `cowork-plugin/.mcp.json` names the developer's absolute `--output-dir`.**
-  Offer the fix once, after the report, and do it when they say yes: set
-  `--output-dir` in that file to this folder's own `.playwright-mcp` as an
-  absolute path on their computer (ask them for the folder's location if the
-  mounted path is not the host path), build with `--out` pointing into this
-  folder (the default `~/Downloads` is this environment's, not theirs):
-
-  ```sh
-  PYTHONPATH=".cowork-deps:src" python3 scripts/build_cowork_plugin.py --out .
-  ```
-
-  then tell them to add `job-finder-cowork-plugin.zip` from this folder with
-  the + next to the message box, which replaces the installed plugin. The next
-  run's probe confirms it. This edits only their local copy; nothing reaches
-  the repository.
-- **Inconclusive** — the probe itself could not run (no file chooser, the
-  `data:` URL blocked, the tools absent). Report it as inconclusive. **Never
-  report an inconclusive probe as a pass**, and expect the hand-attach.
-
-Delete `_probe.txt` afterwards.
-
-**Do not work around a rejection.** The allowed-roots restriction is a security
-boundary on a browser-driving agent. No `browser_run_code_unsafe`, no
-self-written JS, no copying PDFs into Windows temp to land inside the server's
-own directory. The fix is the server's configuration, and a run that cannot
-upload reports that it cannot upload.
+- **Accepted:** say so in one line, and pass its uploads root to every
+  autofiller dispatch as `uploads_root`.
+- **Rejected:** quote the errors verbatim at the **top** of your first
+  message, before anything about roles, followed by the probe's closing line
+  for a run with nobody to answer. Say plainly that **every role in this batch will need its resume and
+  cover letter attached by hand**. **Do not stop:** tailoring, fact-checking
+  and rendering are still good, and the forms still get filled with everything
+  that is not a file.
+- **Inconclusive:** report it as inconclusive and expect the hand-attach.
 
 ## 3. Pick the roles
 
@@ -288,7 +211,7 @@ Two gates. Run the letter linter **after render and before any fill**, so a bad
 letter never reaches a form:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.letter_linter --date <today>
+sh scripts/py -m job_finder.letter_linter --date <today>
 ```
 
 - **0** — no critical violation.
@@ -309,7 +232,7 @@ unattended, because each has legitimate exceptions.
 Also verify the resume's skill terms for each role, before render:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.skill_terms --folder <per-app folder>
+sh scripts/py -m job_finder.skill_terms --folder <per-app folder>
 ```
 
 - **0** — every term traces to the source pool or a recorded swap.
@@ -329,7 +252,7 @@ So every free-text answer you type gets written into the per-app folder as
 `form_answers.json` and linted:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 scripts/lint_form_answers.py --date <today>
+sh scripts/py scripts/lint_form_answers.py --date <today>
 ```
 
     [{"question": "Why Anthropic?", "paragraphs": ["...", "..."]}]
@@ -341,7 +264,7 @@ broke: fix the text and re-paste it into the form before moving on.**
 Then, after the last fill:
 
 ```sh
-PYTHONPATH=".cowork-deps:src" python3 -m job_finder.fill_grader --date <today> --gate
+sh scripts/py -m job_finder.fill_grader --date <today> --gate
 ```
 
 Read the exit code, not the wording:

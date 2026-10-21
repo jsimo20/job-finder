@@ -8,7 +8,7 @@ placeholders that match nothing, so no one inherits another person's search.
 profile/ — gitignored. Identity, EEO answers, and paths to the driving docs
 (master resume, personal statement, standard answers). Only the local apply
 workflow reads it; the pipeline never does. A new user creates it from the
-setup skill's file blocks (`python -m job_finder.profile_init`).
+setup skill's file blocks (`sh scripts/py -m job_finder.profile_init`).
 """
 from __future__ import annotations
 
@@ -61,7 +61,7 @@ def require_profile() -> dict:
     real = PROFILE_DIR / "profile.toml"
     if not real.exists():
         raise FileNotFoundError(
-            "profile/profile.toml not found. Run `python -m job_finder.profile_init` "
+            "profile/profile.toml not found. Run `sh scripts/py -m job_finder.profile_init` "
             "and fill in your details."
         )
     return load_profile(real)
